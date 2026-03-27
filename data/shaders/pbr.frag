@@ -168,7 +168,14 @@ void main() {
   }
 
   if (debugViewMode == 5) {
-    fragColor.rgb = specular;
+    float specularMap =
+      clamp(
+        dot(F0mix, vec3(0.3333333)) *
+        (1.0 - roughness * 0.5),
+        0.0,
+        1.0
+      );
+    fragColor.rgb = vec3(specularMap);
     return;
   }
 

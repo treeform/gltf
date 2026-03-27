@@ -1,5 +1,5 @@
 import
-  std/[os, strformat, strutils, times],
+  std/[algorithm, os, strformat, strutils, times],
   opengl, windy, chroma, silky, silky/atlas, jsony, pixie,
   pixie/fileformats/png, vmath,
   ../src/gltf/[models, pbr, reader]
@@ -46,6 +46,10 @@ var
   useShadows = true
   lightFollowCamera = true
   debugViewName = "Lit"
+  skyboxOptions = @["Solid Color"]
+  skyboxPatterns: seq[(string, string)]
+  selectedSkybox = "Solid Color"
+  lastSkybox = ""
   skyboxLod: float32 = 7.0
   modelPath = params[0]
   camCenter = vec3(0, 0, 0)
@@ -132,6 +136,77 @@ proc drawDirectionControls(id, title: string, value: var Vec3) =
 
 applyTheme(sk)
 
+proc skyboxPattern(path: string): string =
+  ## Converts one cubemap face path into a wildcard pattern.
+  for face in ["px", "nx", "py", "ny", "pz", "nz"]:
+    let token = "." & face & "."
+    if token in path:
+      return path.replace(token, ".*.")
+  path
+
+proc skyboxName(pattern: string): string =
+  ## Extracts a readable skybox name from a wildcard pattern.
+  pattern.splitFile.name.replace(".*", "")
+
+proc selectedSkyboxPattern(): string =
+  ## Looks up the selected skybox pattern by name.
+  for (name, pattern) in skyboxPatterns:
+    if name == selectedSkybox:
+      return pattern
+  ""
+
+proc discoverSkyboxes() =
+  ## Scans the skybox folder for cubemap patterns.
+  skyboxOptions = @[]
+  skyboxPatterns.setLen(0)
+  if not dirExists("tools/skybox"):
+    skyboxOptions = @["Solid Color"]
+    return
+
+  for path in walkDirRec("tools/skybox"):
+    let lower = path.toLowerAscii()
+    if not (lower.endsWith(".png") or
+            lower.endsWith(".jpg") or
+            lower.endsWith(".jpeg")):
+      continue
+    let pattern = skyboxPattern(path.replace("\\", "/"))
+    if pattern == path:
+      continue
+    let name = skyboxName(pattern)
+    var known = false
+    for (_, knownPattern) in skyboxPatterns:
+      if knownPattern == pattern:
+        known = true
+        break
+    if not known:
+      skyboxPatterns.add((name, pattern))
+      skyboxOptions.add(name)
+
+  skyboxOptions.sort()
+  skyboxOptions.insert("Solid Color", 0)
+
+proc updateEnvironmentMap(force = false) =
+  ## Reloads the environment map when the selection changes.
+  if selectedSkybox == "Solid Color":
+    if force or
+       lastSkybox != selectedSkybox or
+       backgroundColor.r != lastBackgroundColor.r or
+       backgroundColor.g != lastBackgroundColor.g or
+       backgroundColor.b != lastBackgroundColor.b:
+      loadDefaultEnvironmentMap(colorToRgbx(backgroundColor))
+      lastBackgroundColor = backgroundColor
+      lastSkybox = selectedSkybox
+    return
+
+  if force or lastSkybox != selectedSkybox:
+    let pattern = selectedSkyboxPattern()
+    if pattern.len == 0:
+      selectedSkybox = "Solid Color"
+      updateEnvironmentMap(force = true)
+      return
+    loadEnvironmentMap(pattern)
+    lastSkybox = selectedSkybox
+
 proc hasModel(node: Node): bool =
   ## Returns true when the node tree has geometry to draw.
   if node == nil:
@@ -193,8 +268,10 @@ proc reloadFile(): bool =
 proc loadAssets() =
   ## Loads the renderer assets and the requested model.
   setupPbr()
-  loadDefaultEnvironmentMap(colorToRgbx(backgroundColor))
-  lastBackgroundColor = backgroundColor
+  discoverSkyboxes()
+  if selectedSkybox notin skyboxOptions:
+    selectedSkybox = "Solid Color"
+  updateEnvironmentMap(force = true)
   discard reloadFile()
 
 proc withStrengthDisabled(value: Color, enabled: bool): Color =
@@ -253,8 +330,12 @@ proc drawOverlay(
     checkBox("Light follow camera", lightFollowCamera)
     text("Debug View")
     dropDown(debugViewName, debugViewOptions)
-    scrubber("skybox_lod", skyboxLod, 0.0'f32, 10.0'f32, "Skybox LOD")
-    drawRgbControls("background", "Background", backgroundColor)
+    text("Skybox")
+    dropDown(selectedSkybox, skyboxOptions)
+    if selectedSkybox == "Solid Color":
+      drawRgbControls("background", "Background", backgroundColor)
+    else:
+      scrubber("skybox_lod", skyboxLod, 0.0'f32, 10.0'f32, "Skybox Blur")
 
     text("")
     text("Ambient Light")
@@ -355,11 +436,7 @@ window.onFrame = proc() =
   aspectRatio = window.size.x.float32 / window.size.y.float32
   proj = perspective(VerticalFov, aspectRatio, 0.001, 2000)
 
-  if backgroundColor.r != lastBackgroundColor.r or
-     backgroundColor.g != lastBackgroundColor.g or
-     backgroundColor.b != lastBackgroundColor.b:
-    loadDefaultEnvironmentMap(colorToRgbx(backgroundColor))
-    lastBackgroundColor = backgroundColor
+  updateEnvironmentMap()
 
   if model != nil:
     model.updateAnimation(dt)
