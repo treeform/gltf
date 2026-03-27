@@ -1,0 +1,22 @@
+name: Docs
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+env:
+  deploy-dir: .gh-pages
+  nim-src: src/gltf.nim
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: treeform/setup-nim-action@v6
+      - run: nim doc --index:on --project --git.url:https://github.com/${{ github.repository }} --git.commit:master --out:${{ env.deploy-dir }} ${{ env.nim-src }}
+      - uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ${{ env.deploy-dir }}
