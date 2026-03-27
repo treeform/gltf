@@ -341,6 +341,11 @@ proc renderPbrNode(
     return
 
   if node.material != nil and (not (deferBlend and isBlend)):
+    let useNormalTexture =
+      node.material.hasNormalTexture and
+      node.normals.len > 0 and
+      node.tangents.len > 0
+
     glActiveTexture(GL_TEXTURE0)
     glUniform1i(glGetUniformLocation(pbrShader, "baseColorTexture"), 0)
     glBindTexture(GL_TEXTURE_2D, node.material.baseColorId)
@@ -373,6 +378,10 @@ proc renderPbrNode(
     glUniform1f(
       glGetUniformLocation(pbrShader, "normalScale"),
       node.material.normalScale
+    )
+    glUniform1i(
+      glGetUniformLocation(pbrShader, "useNormalTexture"),
+      useNormalTexture.ord.GLint
     )
 
     glActiveTexture(GL_TEXTURE3)
@@ -648,9 +657,12 @@ proc drawPbrWithShadow*(
   let (lightView, lightProj, lightSpace, _) =
     getShadowMatrices(node, transform, sunLightDirection)
 
-  # Save viewport.
-  var oldViewport: array[4, GLint]
+  # Save viewport and framebuffer.
+  var
+    oldViewport: array[4, GLint]
+    oldFramebuffer: GLint
   glGetIntegerv(GL_VIEWPORT, oldViewport[0].addr)
+  glGetIntegerv(GL_FRAMEBUFFER_BINDING, oldFramebuffer.addr)
 
   # Depth pass.
   glViewport(0, 0, ShadowMapSize, ShadowMapSize)
@@ -672,7 +684,7 @@ proc drawPbrWithShadow*(
     skipBlend=true
   )
 
-  glBindFramebuffer(GL_FRAMEBUFFER, 0)
+  glBindFramebuffer(GL_FRAMEBUFFER, oldFramebuffer.GLuint)
 
   # Restore viewport.
   glViewport(oldViewport[0], oldViewport[1], oldViewport[2], oldViewport[3])

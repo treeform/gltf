@@ -29,6 +29,7 @@ type
     metallicFactor*: float32
     roughnessFactor*: float32
     normal*: Image
+    hasNormalTexture*: bool
     normalScale*: float32
     occlusion*: Image
     occlusionStrength*: float32

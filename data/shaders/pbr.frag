@@ -27,6 +27,7 @@ uniform sampler2DShadow shadowMap;
 
 uniform mat4 lightSpace;
 uniform bool useShadow = false;
+uniform bool useNormalTexture = false;
 
 uniform float alphaCutoff;
 
@@ -90,10 +91,17 @@ void main() {
   float ambientOcclusion = texture(occlusionTexture, uv).g * occlusionStrength;
   vec3 emissiveValue = texture(emissiveTexture, uv).rgb * emissiveFactor;
 
+  // Triangle normal fallback for missing normal maps and debug views.
+  vec3 triangleNormal = normalize(cross(dFdx(position), dFdy(position)));
+  if (!gl_FrontFacing) {
+    triangleNormal = -triangleNormal;
+  }
+
   // Normal mapping
   vec3 normalValue = texture(normalTexture, uv).rgb;
   normalValue = normalize(normalValue * 2.0 - 1.0) * normalScale;
-  vec3 computedNormal = normalize(TBN * normalValue);
+  vec3 mappedNormal = normalize(TBN * normalValue);
+  vec3 computedNormal = useNormalTexture ? mappedNormal : triangleNormal;
 
   // Calculate lighting
   vec3 sunDir = normalize(-sunLightDirection);

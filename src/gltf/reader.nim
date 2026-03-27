@@ -43,10 +43,12 @@ proc loadPrimitive(
 
     if material.normalTexture.index >= 0:
       n.material.normal = images[textures[material.normalTexture.index].source]
+      n.material.hasNormalTexture = true
       n.material.normalScale = material.normalTexture.scale
     else:
       n.material.normal = newImage(1, 1)
       n.material.normal.fill(rgbx(128, 128, 255, 255))
+      n.material.hasNormalTexture = false
       n.material.normalScale = 1.0
 
     if material.occlusionTexture.index >= 0:
