@@ -211,9 +211,11 @@ proc createSolidCubeTexture(color: ColorRGBX): GLuint =
 proc loadEnvironmentMap*(cubeMapPath: string) =
   environmentMapId = loadCubeTexture(cubeMapPath)
 
-proc loadDefaultEnvironmentMap*() =
+proc loadDefaultEnvironmentMap*(color = rgbx(180, 190, 220, 255)) =
   ## Loads a fallback environment map when no skybox images are available.
-  environmentMapId = createSolidCubeTexture(rgbx(180, 190, 220, 255))
+  if environmentMapId != 0:
+    glDeleteTextures(1, environmentMapId.addr)
+  environmentMapId = createSolidCubeTexture(color)
 
 proc drawSkybox*(view, proj: Mat4, lod: float32 = 0.0) =
   ## Draws the skybox using a full-screen quad.
@@ -243,6 +245,14 @@ proc drawSkybox*(view, proj: Mat4, lod: float32 = 0.0) =
   glEnable(GL_DEPTH_TEST)
 
 type
+  DebugView* = enum
+    dvLit,
+    dvUnlit,
+    dvNormals,
+    dvAoBake,
+    dvMetallic,
+    dvSpecular
+
   BlendEntry = object
     node: Node
     transform: Mat4
@@ -251,9 +261,12 @@ proc renderPbrNode(
   node: Node,
   transform, view, proj: Mat4,
   tint: Color,
-  lightPosition: Vec3,
-  lightColor: Color,
-  lightAmbient: Color,
+  ambientLightColor: Color,
+  sunLightDirection: Vec3,
+  sunLightColor: Color,
+  rimLightDirection: Vec3,
+  rimLightColor: Color,
+  debugView: DebugView,
   cameraPosition: Vec3,
   useShadow: bool,
   lightSpace: Mat4,
@@ -309,9 +322,12 @@ proc renderPbrNode(
           view,
           proj,
           tint,
-          lightPosition,
-          lightColor,
-          lightAmbient,
+          ambientLightColor,
+          sunLightDirection,
+          sunLightColor,
+          rimLightDirection,
+          rimLightColor,
+          debugView,
           cameraPosition,
           useShadow,
           lightSpace,
@@ -416,17 +432,42 @@ proc renderPbrNode(
       glEnable(GL_CULL_FACE)
 
     # Add lights
+    glUniform4f(
+      glGetUniformLocation(pbrShader, "ambientLightColor"),
+      ambientLightColor.r,
+      ambientLightColor.g,
+      ambientLightColor.b,
+      ambientLightColor.a
+    )
     glUniform3f(
-      glGetUniformLocation(pbrShader, "lightPosition"),
-      lightPosition.x, lightPosition.y, lightPosition.z
+      glGetUniformLocation(pbrShader, "sunLightDirection"),
+      sunLightDirection.x,
+      sunLightDirection.y,
+      sunLightDirection.z
     )
     glUniform4f(
-      glGetUniformLocation(pbrShader, "lightColor"),
-      lightColor.r, lightColor.g, lightColor.b, lightColor.a
+      glGetUniformLocation(pbrShader, "sunLightColor"),
+      sunLightColor.r,
+      sunLightColor.g,
+      sunLightColor.b,
+      sunLightColor.a
+    )
+    glUniform3f(
+      glGetUniformLocation(pbrShader, "rimLightDirection"),
+      rimLightDirection.x,
+      rimLightDirection.y,
+      rimLightDirection.z
     )
     glUniform4f(
-      glGetUniformLocation(pbrShader, "lightAmbient"),
-      lightAmbient.r, lightAmbient.g, lightAmbient.b, lightAmbient.a
+      glGetUniformLocation(pbrShader, "rimLightColor"),
+      rimLightColor.r,
+      rimLightColor.g,
+      rimLightColor.b,
+      rimLightColor.a
+    )
+    glUniform1i(
+      glGetUniformLocation(pbrShader, "debugViewMode"),
+      debugView.int.GLint
     )
 
     # Add camera
@@ -476,9 +517,12 @@ proc renderPbrNode(
         view,
         proj,
         tint,
-        lightPosition,
-        lightColor,
-        lightAmbient,
+        ambientLightColor,
+        sunLightDirection,
+        sunLightColor,
+        rimLightDirection,
+        rimLightColor,
+        debugView,
         cameraPosition,
         useShadow,
         lightSpace,
@@ -497,9 +541,12 @@ proc drawPbr*(
   transform, view, proj: Mat4,
   tint: Color,
   useTrs = true,
-  lightPosition = vec3(10, 10, 10),
-  lightColor = color(1, 1, 1, 1),
-  lightAmbient = color(0.1, 0.1, 0.1, 1),
+  ambientLightColor = color(0.1, 0.1, 0.1, 1),
+  sunLightDirection = vec3(1, 4, 2),
+  sunLightColor = color(1, 1, 1, 1),
+  rimLightDirection = vec3(-1, 1, -1),
+  rimLightColor = color(0, 0, 0, 0),
+  debugView = dvLit,
   cameraPosition = vec3(0, 0, 10)
 ) =
   if not node.visible:
@@ -513,9 +560,12 @@ proc drawPbr*(
     view,
     proj,
     tint,
-    lightPosition,
-    lightColor,
-    lightAmbient,
+    ambientLightColor,
+    sunLightDirection,
+    sunLightColor,
+    rimLightDirection,
+    rimLightColor,
+    debugView,
     cameraPosition,
     useShadow=false,
     lightSpace=mat4(),
@@ -541,9 +591,12 @@ proc drawPbr*(
         view,
         proj,
         tint,
-        lightPosition,
-        lightColor,
-        lightAmbient,
+        ambientLightColor,
+        sunLightDirection,
+        sunLightColor,
+        rimLightDirection,
+        rimLightColor,
+        debugView,
         cameraPosition,
         useShadow=false,
         lightSpace=mat4(),
@@ -580,16 +633,20 @@ proc drawPbrWithShadow*(
   node: Node,
   transform, view, proj: Mat4,
   tint: Color,
-  lightDir = vec3(1, 4, 2),
+  sunLightDirection = vec3(1, 4, 2),
   useTrs = true,
-  lightColor = color(1, 1, 1, 1),
-  lightAmbient = color(0.1, 0.1, 0.1, 1),
+  ambientLightColor = color(0.1, 0.1, 0.1, 1),
+  sunLightColor = color(1, 1, 1, 1),
+  rimLightDirection = vec3(-1, 1, -1),
+  rimLightColor = color(0, 0, 0, 0),
+  debugView = dvLit,
   cameraPosition = vec3(0, 0, 10)
 ) =
   if not node.visible:
     return
 
-  let (lightView, lightProj, lightSpace, lightPos) = getShadowMatrices(node, transform, lightDir)
+  let (lightView, lightProj, lightSpace, _) =
+    getShadowMatrices(node, transform, sunLightDirection)
 
   # Save viewport.
   var oldViewport: array[4, GLint]
@@ -629,9 +686,12 @@ proc drawPbrWithShadow*(
     view,
     proj,
     tint,
-    lightPos,
-    lightColor,
-    lightAmbient,
+    ambientLightColor,
+    sunLightDirection,
+    sunLightColor,
+    rimLightDirection,
+    rimLightColor,
+    debugView,
     cameraPosition,
     useShadow=true,
     lightSpace=lightSpace,
@@ -657,9 +717,12 @@ proc drawPbrWithShadow*(
         view,
         proj,
         tint,
-        lightPos,
-        lightColor,
-        lightAmbient,
+        ambientLightColor,
+        sunLightDirection,
+        sunLightColor,
+        rimLightDirection,
+        rimLightColor,
+        debugView,
         cameraPosition,
         useShadow=false,
         lightSpace=mat4(),

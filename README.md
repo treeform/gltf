@@ -1,32 +1,59 @@
-# glTF Library and Viewer for Nim
+<img src="docs/gltf.png">
 
-This project provides a small glTF 2.0 toolkit for Nim.
+# gltf - glTF library and viewer for Nim.
 
-It currently gives you three useful pieces:
+`nimby install gltf`
 
-- A loader that reads `.gltf` and `.glb` files into a `Node` tree.
-- A small OpenGL PBR renderer that can draw that tree.
-- A `writeGLB` exporter for writing a `Node` tree back to binary glTF.
+![Github Actions](https://github.com/treeform/gltf/workflows/Github%20Actions/badge.svg)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/treeform/gltf)
+![GitHub Repo stars](https://img.shields.io/github/stars/treeform/gltf)
+![GitHub](https://img.shields.io/github/license/treeform/gltf)
+![GitHub issues](https://img.shields.io/github/issues/treeform/gltf)
 
-The code is still a work in progress, but the current surface is already
-useful for loading models, inspecting them, rendering them, and exporting
-simple scenes.
+[API reference](https://treeform.github.io/gltf)
 
-## Project Layout
+## About
 
-The project follows a simple layout:
+`gltf` is a small glTF 2.0 toolkit for Nim. It can load `.gltf` and
+`.glb` files into a `Node` tree, render that tree with a small OpenGL PBR
+pipeline, and write simple scenes back out as `.glb`.
 
-- `src/` contains the library.
-- `examples/` contains small runnable examples.
-- `tools/` contains helper programs, including the viewer.
-- `tests/` contains simple `doAssert` based tests.
-- `experiments/` contains shader and rendering experiments.
+The project is still growing, but it is already useful for:
 
-The examples are meant to double as small docs and quick smoke tests.
+- Loading glTF models in Nim code.
+- Inspecting models with a local viewer.
+- Rendering models with a simple PBR path.
+- Exporting simple scenes back to binary glTF.
+
+### Documentation
+
+- API reference: [treeform.github.io/gltf](https://treeform.github.io/gltf)
+- Source entry point: `src/gltf.nim`
+- Example program: `examples/load_model.nim`
+- Viewer tool: `tools/gltf_viewer.nim`
+
+## Installation
+
+Install the package with:
+
+```sh
+nimby install gltf
+```
+
+The package depends on:
+
+- `vmath`
+- `chroma`
+- `pixie`
+- `flatty`
+- `opengl`
+- `webby`
+- `windy`
+- `silky`
 
 ## Support
 
-The table below reflects what the code currently does today.
+The table below reflects the current code, not the full glTF 2.0 spec.
 
 | Feature | Read | Write | Notes |
 | --- | --- | --- | --- |
@@ -56,63 +83,9 @@ The table below reflects what the code currently does today.
 | Morph targets | No | No | Not implemented yet. |
 | Cameras and lights from glTF | No | No | Not implemented yet. |
 
-## Library Modules
+## Usage
 
-The top level package exports these modules:
-
-- `gltf/reader` for loading `.gltf` and `.glb`.
-- `gltf/models` for the `Node` tree, animation helpers, bounds, and draw
-  helpers.
-- `gltf/pbr` for the OpenGL PBR renderer and skybox helpers.
-- `gltf/writer` for `writeGLB`.
-- `gltf/perf` and `gltf/shaders` for small renderer utilities.
-
-If you only need the loader, you can import the specific modules you want
-instead of pulling in everything.
-
-## Examples
-
-### Load A Model
-
-The simplest example is `examples/load_model.nim`:
-
-```sh
-nim r examples/load_model.nim path/to/model.glb
-```
-
-It reads the file with `readGltfFile()` and prints a few basic facts about
-the loaded scene:
-
-- The file path.
-- The root node name.
-- The root child count.
-
-This is a good first place to start if you only want to inspect loading.
-
-### Run The Viewer
-
-The interactive viewer lives in `tools/gltf_viewer.nim`:
-
-```sh
-nim r tools/gltf_viewer.nim path/to/model.glb
-```
-
-The viewer sets up the PBR renderer, loads the model, prints the scene
-tree, computes bounds, and opens a window so you can inspect the result.
-
-Current viewer controls:
-
-- Middle mouse drag, or Command plus left drag, orbits the camera.
-- Mouse wheel dollies in and out.
-- `3` toggles whether the light follows the camera.
-- `4` snaps the light position to the current camera.
-
-This is the best way to check whether a model loads, renders, and animates
-the way you expect.
-
-## Using The Library
-
-For simple loading, the API is small:
+For simple loading:
 
 ```nim
 import gltf
@@ -127,13 +100,13 @@ echo root.getBoundingSphere().radius
 
 Useful helpers on `Node` include:
 
-- `walkNodes()` to flatten the tree.
-- `getAABounds()` and `getBoundingSphere()` for bounds.
-- `updateAnimation()` to advance the active clip.
-- `draw()` and `drawPbr()` style helpers for rendering.
-- `dumpTree()` for quick debugging output.
+- `walkNodes()`
+- `getAABounds()`
+- `getBoundingSphere()`
+- `updateAnimation()`
+- `dumpTree()`
 
-To export a simple scene back to glTF binary:
+To write a simple scene back to binary glTF:
 
 ```nim
 import gltf
@@ -141,24 +114,62 @@ import gltf
 writeGLB(root, "out.glb")
 ```
 
-## Tests
+## Examples
 
-The project uses simple `doAssert` based tests.
-
-Run them with:
+The repository includes a small example loader:
 
 ```sh
+nim r examples/load_model.nim path/to/model.glb
+```
+
+It uses `readGltfFile()` and prints:
+
+- The source file path.
+- The root node name.
+- The root child count.
+
+This is the simplest way to verify that loading works.
+
+## Viewer
+
+The interactive viewer lives in `tools/gltf_viewer.nim`:
+
+```sh
+nim r tools/gltf_viewer.nim path/to/model.glb
+```
+
+It sets up the PBR renderer, loads the file, prints the node tree,
+computes bounds, and opens a window for inspection.
+
+Current controls:
+
+- Middle mouse drag, or Command plus left drag, orbit the camera.
+- Mouse wheel dollies in and out.
+- `3` toggles light follow camera.
+- `4` sets the light to the current camera position.
+
+## Project Layout
+
+- `src/` contains the library modules.
+- `examples/` contains small runnable examples.
+- `tools/` contains helper programs such as the viewer.
+- `tests/` contains simple `doAssert` based tests.
+- `experiments/` contains rendering experiments and shader work.
+
+## Development
+
+The project includes standard build and docs workflows:
+
+- `.github/workflows/build.yml`
+- `.github/workflows/docs.yml`
+
+Run the checks locally with:
+
+```sh
+nim check src/gltf.nim
 nim r tests/tests.nim
 ```
 
-Right now the tests are small. They mostly cover the basic `GltfFile`,
-node walking, and bounds helpers.
+## License
 
-## Notes
-
-- The viewer uses `windy` and `silky`, but the loader can still be reused
-  in your own engine code.
-- The renderer is useful today, but it does not yet cover the full glTF
-  spec.
-- The writer is intentionally focused on a practical subset and currently
-  targets `.glb` output only.
+This project uses the MIT license. See `LICENSE`.

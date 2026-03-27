@@ -30,10 +30,13 @@ uniform bool useShadow = false;
 
 uniform float alphaCutoff;
 
-uniform vec3 lightPosition;
-uniform vec4 lightColor;
-uniform vec4 lightAmbient;
+uniform vec4 ambientLightColor;
+uniform vec3 sunLightDirection;
+uniform vec4 sunLightColor;
+uniform vec3 rimLightDirection;
+uniform vec4 rimLightColor;
 uniform vec3 cameraPosition;
+uniform int debugViewMode = 0;
 uniform float shadowBias = 0.0015;
 uniform float shadowKernelRadius = 2.0; // in texels
 
@@ -93,12 +96,13 @@ void main() {
   vec3 computedNormal = normalize(TBN * normalValue);
 
   // Calculate lighting
-  vec3 lightDir = normalize(lightPosition - position);
+  vec3 sunDir = normalize(-sunLightDirection);
+  vec3 rimDir = normalize(-rimLightDirection);
   vec3 viewDir = normalize(cameraPosition - position);
   vec3 reflectDir = reflect(-viewDir, computedNormal);
-  vec3 halfVector = normalize(viewDir + lightDir);
+  vec3 halfVector = normalize(viewDir + sunDir);
   float NdotH = max(dot(computedNormal, halfVector), 0.0);
-  float NdotL = max(dot(computedNormal, lightDir), 0.0);
+  float NdotL = max(dot(computedNormal, sunDir), 0.0);
 
   // Fresnel-Schlick approximation
   const vec3 F0 = vec3(0.04); // Base Reflectance at Normal Incidence
@@ -106,13 +110,33 @@ void main() {
   float cosTheta = max(dot(computedNormal, viewDir), 0.0);
   vec3 fresnel = F0mix + (1.0 - F0mix) * pow(1.0 - cosTheta, 5.0);
   float specComponent = NdotL * pow(NdotH, 2.0 / (roughness + 0.0001));
-  vec3 specular = lightColor.rgb * fresnel * specComponent;
+  vec3 specular =
+    sunLightColor.rgb *
+    sunLightColor.a *
+    fresnel *
+    specComponent;
 
   // Diffuse lighting
-  vec3 diffuse = (1.0 - metallic) * albedo * NdotL;
+  vec3 diffuse =
+    sunLightColor.rgb *
+    sunLightColor.a *
+    (1.0 - metallic) *
+    albedo *
+    NdotL;
 
   // Shadow
-  float shadow = sampleShadow(vPosLightSpace, computedNormal, lightDir);
+  float shadow = sampleShadow(vPosLightSpace, computedNormal, sunDir);
+
+  float rim =
+    pow(1.0 - max(dot(computedNormal, viewDir), 0.0), 2.5) *
+    (1.0 - metallic);
+  float rimFacing = max(dot(computedNormal, rimDir), 0.0);
+  vec3 rimLight =
+    rimLightColor.rgb *
+    rimLightColor.a *
+    rim *
+    (0.15 + 0.85 * rimFacing) *
+    (0.15 + 0.35 * ambientOcclusion);
 
   // Environment mapping
   // Calculate mipmap level based on roughness to simulate blurry reflections.
@@ -123,9 +147,37 @@ void main() {
   // Sample the environment map with the calculated mipmap level
   vec3 envColor = textureLod(environmentMap, reflectDir, mipLevel).rgb;
 
+  if (debugViewMode == 1) {
+    fragColor.rgb = albedo;
+    return;
+  }
+
+  if (debugViewMode == 2) {
+    fragColor.rgb = computedNormal * 0.5 + 0.5;
+    return;
+  }
+
+  if (debugViewMode == 3) {
+    fragColor.rgb = vec3(ambientOcclusion);
+    return;
+  }
+
+  if (debugViewMode == 4) {
+    fragColor.rgb = vec3(metallic);
+    return;
+  }
+
+  if (debugViewMode == 5) {
+    fragColor.rgb = specular;
+    return;
+  }
+
   // Combine light output
   vec3 direct = (specular + diffuse) * (1.0 - shadow);
-  vec3 Lo = direct + lightAmbient.rgb * ambientOcclusion;
+  vec3 Lo =
+    direct +
+    ambientLightColor.rgb * ambientLightColor.a * ambientOcclusion +
+    rimLight;
 
   // Reflective color blended with direct lighting
   fragColor.rgb = mix(Lo, envColor, fresnel * metallic);
