@@ -1,19 +1,18 @@
 import
   gltf
 
-echo "Testing default load options."
-let options = initLoadOptions()
-doAssert options.loadBuffers
-doAssert options.loadImages
-doAssert options.formatHint == gfJson
+echo "Testing empty glTF file."
+let gltfFile = GltfFile(
+  path: "demo.glb",
+  root: Node()
+)
+doAssert gltfFile.path == "demo.glb"
+doAssert gltfFile.root != nil
 
-echo "Testing renderer defaults."
-let rendererConfig = initRendererConfig()
-doAssert rendererConfig.usePbr
-doAssert rendererConfig.loadEnvironment
+echo "Testing bounding sphere defaults."
+let bounds = gltfFile.root.getBoundingSphere()
+doAssert bounds.radius == 0
 
-echo "Testing empty document layout."
-let document = Document()
-doAssert document.scenes.len == 0
-doAssert document.nodes.len == 0
-doAssert document.meshes.len == 0
+echo "Testing node tree walking."
+let nodes = gltfFile.root.walkNodes()
+doAssert nodes.len == 1

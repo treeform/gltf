@@ -1,0 +1,136 @@
+#version 410 core
+
+const float PI = 3.1415926535897932384626433832795;
+
+in vec3 position;
+in vec4 color;
+in vec3 normal;
+in vec2 uv;
+in mat3 TBN;
+in vec4 vPosLightSpace;
+
+uniform mat4 model;
+
+uniform sampler2D baseColorTexture;
+uniform vec4 baseColorFactor;
+uniform sampler2D metallicRoughnessTexture;
+uniform float metallicFactor;
+uniform float roughnessFactor;
+uniform sampler2D normalTexture;
+uniform float normalScale;
+uniform sampler2D occlusionTexture;
+uniform float occlusionStrength;
+uniform sampler2D emissiveTexture;
+uniform vec3 emissiveFactor;
+uniform samplerCube environmentMap;
+uniform sampler2DShadow shadowMap;
+
+uniform mat4 lightSpace;
+uniform bool useShadow = false;
+
+uniform float alphaCutoff;
+
+uniform vec3 lightPosition;
+uniform vec4 lightColor;
+uniform vec4 lightAmbient;
+uniform vec3 cameraPosition;
+uniform float shadowBias = 0.0015;
+uniform float shadowKernelRadius = 2.0; // in texels
+
+out vec4 fragColor;
+
+vec2 toSphericalUv(vec3 v) {
+  // Convert cartesian coordinates to spherical coordinates in the range [0, 1]
+  float phi = atan(v.z, v.x);
+  float theta = acos(v.y);
+  return vec2(phi / (2.0 * PI) + 0.5, theta / PI);
+}
+
+float sampleShadow(vec4 posLightSpace, vec3 normal, vec3 lightDir) {
+  if (!useShadow) return 0.0;
+  vec3 projCoords = posLightSpace.xyz / posLightSpace.w;
+  projCoords = projCoords * 0.5 + 0.5;
+  if (projCoords.z > 1.0 || projCoords.x < 0.0 || projCoords.x > 1.0 || projCoords.y < 0.0 || projCoords.y > 1.0) {
+    return 0.0;
+  }
+  float bias = max(shadowBias, 0.002 * (1.0 - dot(normal, lightDir)));
+  vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
+  float total = 0.0;
+  float weightSum = 0.0;
+  for (int x = -2; x <= 2; ++x) {
+    for (int y = -2; y <= 2; ++y) {
+      float wx = 1.0 - abs(float(x)) * 0.25;
+      float wy = 1.0 - abs(float(y)) * 0.25;
+      float w = wx * wy;
+      vec2 offset = vec2(x, y) * texelSize;
+      float lit = texture(shadowMap, vec3(projCoords.xy + offset, projCoords.z - bias));
+      total += w * lit;
+      weightSum += w;
+    }
+  }
+  float litAvg = total / weightSum;
+  return 1.0 - litAvg;
+}
+
+void main() {
+  fragColor.rgba = texture(baseColorTexture, uv).rgba;
+  fragColor *= baseColorFactor;
+  fragColor *= color;
+  if (fragColor.a < alphaCutoff) {
+    discard; // Discard pixel if alpha is below cutoff
+  }
+
+  // PBR parameters
+  vec3 albedo = fragColor.rgb;
+  float roughness = texture(metallicRoughnessTexture, uv).g * roughnessFactor;
+  float metallic = texture(metallicRoughnessTexture, uv).b * metallicFactor;
+  float ambientOcclusion = texture(occlusionTexture, uv).g * occlusionStrength;
+  vec3 emissiveValue = texture(emissiveTexture, uv).rgb * emissiveFactor;
+
+  // Normal mapping
+  vec3 normalValue = texture(normalTexture, uv).rgb;
+  normalValue = normalize(normalValue * 2.0 - 1.0) * normalScale;
+  vec3 computedNormal = normalize(TBN * normalValue);
+
+  // Calculate lighting
+  vec3 lightDir = normalize(lightPosition - position);
+  vec3 viewDir = normalize(cameraPosition - position);
+  vec3 reflectDir = reflect(-viewDir, computedNormal);
+  vec3 halfVector = normalize(viewDir + lightDir);
+  float NdotH = max(dot(computedNormal, halfVector), 0.0);
+  float NdotL = max(dot(computedNormal, lightDir), 0.0);
+
+  // Fresnel-Schlick approximation
+  const vec3 F0 = vec3(0.04); // Base Reflectance at Normal Incidence
+  vec3 F0mix = mix(F0, albedo, metallic);
+  float cosTheta = max(dot(computedNormal, viewDir), 0.0);
+  vec3 fresnel = F0mix + (1.0 - F0mix) * pow(1.0 - cosTheta, 5.0);
+  float specComponent = NdotL * pow(NdotH, 2.0 / (roughness + 0.0001));
+  vec3 specular = lightColor.rgb * fresnel * specComponent;
+
+  // Diffuse lighting
+  vec3 diffuse = (1.0 - metallic) * albedo * NdotL;
+
+  // Shadow
+  float shadow = sampleShadow(vPosLightSpace, computedNormal, lightDir);
+
+  // Environment mapping
+  // Calculate mipmap level based on roughness to simulate blurry reflections.
+  // Calculate mipmap level from roughness (textureQueryLevels not in GLSL 410).
+  float envMapSize = float(textureSize(environmentMap, 0).x);
+  float maxMipLevel = floor(log2(envMapSize));
+  float mipLevel = roughness * maxMipLevel;
+  // Sample the environment map with the calculated mipmap level
+  vec3 envColor = textureLod(environmentMap, reflectDir, mipLevel).rgb;
+
+  // Combine light output
+  vec3 direct = (specular + diffuse) * (1.0 - shadow);
+  vec3 Lo = direct + lightAmbient.rgb * ambientOcclusion;
+
+  // Reflective color blended with direct lighting
+  fragColor.rgb = mix(Lo, envColor, fresnel * metallic);
+
+  // Emissive
+  fragColor.rgb += emissiveValue;
+
+}

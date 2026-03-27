@@ -7,10 +7,9 @@ if params.len == 0:
   quit("Usage: nim r examples/load_model.nim <model.gltf>", 1)
 
 let path = params[0]
-let options = initLoadOptions()
+let gltfFile = readGltfFile(path)
 
-echo "Example project scaffold."
-echo "Model path: ", path
-echo "Load buffers: ", options.loadBuffers
-echo "Load images: ", options.loadImages
-echo "Call gltf.loadDocument(path) when the loader is implemented."
+echo "Loaded glTF file."
+echo "Model path: ", gltfFile.path
+echo "Root node name: ", gltfFile.root.name
+echo "Child count: ", gltfFile.root.nodes.len

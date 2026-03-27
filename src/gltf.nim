@@ -1,5 +1,15 @@
 import
-  gltf/[common, models, loaders, renderers]
+  gltf/common,
+  gltf/models,
+  gltf/pbr,
+  gltf/reader,
+  gltf/shaders,
+  gltf/writer
 
 export
-  common, models, loaders, renderers
+  common,
+  models,
+  pbr,
+  reader,
+  shaders,
+  writer
