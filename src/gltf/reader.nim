@@ -257,6 +257,46 @@ proc readAccessorVec2(
         readFloat32(sparseBuffer, off + 4)
       )
 
+proc readAccessorVec4(
+  accessorIdx: int,
+  accessors: seq[Accessor],
+  bufferViews: seq[BufferView],
+  buffers: seq[string]
+): seq[Vec4] =
+  ## Reads vec4 accessor data.
+  let
+    accessor = accessors[accessorIdx]
+    view = bufferViews[accessor.bufferView]
+    buffer = buffers[view.buffer]
+    start = view.byteOffset + accessor.byteOffset
+    stride = if view.byteStride > 0: view.byteStride else: 16
+  assertRaise accessor.kind == atVEC4, "Unsupported vec4 accessor kind"
+  assertRaise accessor.componentType == cGL_FLOAT,
+    "Unsupported vec4 component type"
+  result.setLen(accessor.count)
+  for i in 0 ..< accessor.count:
+    let off = start + i * stride
+    result[i] = vec4(
+      readFloat32(buffer, off),
+      readFloat32(buffer, off + 4),
+      readFloat32(buffer, off + 8),
+      readFloat32(buffer, off + 12)
+    )
+  if accessor.sparse.used:
+    let
+      indices = readSparseIndices(accessor, bufferViews, buffers)
+      sparseView = bufferViews[accessor.sparse.values.bufferView]
+      sparseBuffer = buffers[sparseView.buffer]
+      sparseStart = sparseView.byteOffset + accessor.sparse.values.byteOffset
+    for i, dstIndex in indices:
+      let off = sparseStart + i * 16
+      result[dstIndex] = vec4(
+        readFloat32(sparseBuffer, off),
+        readFloat32(sparseBuffer, off + 4),
+        readFloat32(sparseBuffer, off + 8),
+        readFloat32(sparseBuffer, off + 12)
+      )
+
 proc readAccessorMat4(
   accessorIdx: int,
   accessors: seq[Accessor],
@@ -772,6 +812,14 @@ proc loadPrimitive(
       buffers
     )
 
+  if primInfo.attributes.tangent >= 0:
+    result.tangents = readAccessorVec4(
+      primInfo.attributes.tangent,
+      accessors,
+      bufferViews,
+      buffers
+    )
+
   if primInfo.attributes.color0 >= 0:
     let
       accessor = accessors[primInfo.attributes.color0]
@@ -915,7 +963,8 @@ proc loadPrimitive(
   result.baseNormals = result.normals
   result.baseTangents = result.tangents
 
-  if primInfo.attributes.normal >= 0 and
+  if result.tangents.len == 0 and
+    primInfo.attributes.normal >= 0 and
     primInfo.attributes.texcoord0 >= 0:
     result.tangents.setLen(result.normals.len)
 
@@ -1327,6 +1376,10 @@ proc loadModelJsonInternal(
         prim.attributes.normal = attributes["NORMAL"].getInt()
       else:
         prim.attributes.normal = -1
+      if "TANGENT" in attributes:
+        prim.attributes.tangent = attributes["TANGENT"].getInt()
+      else:
+        prim.attributes.tangent = -1
       if "COLOR_0" in attributes:
         prim.attributes.color0 = attributes["COLOR_0"].getInt()
       else:
