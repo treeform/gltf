@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: treeform/setup-nim-action@v6
-      - run: nimble install -dy
+      - run: nimby install
       - run: nim doc --index:on --project --git.url:https://github.com/${{ github.repository }} --git.commit:master --out:${{ env.deploy-dir }} ${{ env.nim-src }}
       - uses: peaceiris/actions-gh-pages@v4
         if: github.event_name == 'push'

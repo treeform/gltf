@@ -534,6 +534,14 @@ proc trs*(node: Node): Mat4 =
   ## Get the transformation matrix of a node.
   translate(node.pos) * node.rot.mat4() * scale(node.scale)
 
+proc toMat4(m: DMat4): Mat4 =
+  gmat4(
+    m[0, 0].float32, m[0, 1].float32, m[0, 2].float32, m[0, 3].float32,
+    m[1, 0].float32, m[1, 1].float32, m[1, 2].float32, m[1, 3].float32,
+    m[2, 0].float32, m[2, 1].float32, m[2, 2].float32, m[2, 3].float32,
+    m[3, 0].float32, m[3, 1].float32, m[3, 2].float32, m[3, 3].float32
+  )
+
 proc draw*(
   node: Node,
   shader: GLuint,
@@ -633,7 +641,7 @@ proc dumpTree*(node: Node, indent: string = "") =
 
   # TRS
   echo &"{indent}  pos: {node.pos}"
-  let euler = node.rot.toAngles().toDegrees()
+  let euler = node.rot.mat4().toAngles().toDegrees()
   echo &"{indent}  rot: {node.rot} ({euler})"
   echo &"{indent}  scale: {node.scale}"
 
@@ -816,9 +824,9 @@ proc draw*(
   ## Draw the node using a double precision transformation matrix.
   node.draw(
     shader,
-    transform.mat4,
-    view.mat4,
-    proj.mat4,
+    transform.toMat4(),
+    view.toMat4(),
+    proj.toMat4(),
     tint,
     useTrs
   )
