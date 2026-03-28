@@ -156,6 +156,7 @@ proc writeGLB*(root: Node, path: string) =
   var meshIds = initTable[pointer, int]()
 
   proc primitiveJson(primitive: Primitive): JsonNode =
+    ## Builds one glTF primitive entry from runtime data.
     var attributes = newJObject()
 
     if primitive.points.len > 0:
@@ -164,16 +165,35 @@ proc writeGLB*(root: Node, path: string) =
         payload.writeFloat32(i * 12 + 0, p.x)
         payload.writeFloat32(i * 12 + 4, p.y)
         payload.writeFloat32(i * 12 + 8, p.z)
-      let acc = addAccessor(accessors, bufferViews, data, payload, atVEC3, cGL_FLOAT, primitive.points.len, 0)
+      let acc = addAccessor(
+        accessors,
+        bufferViews,
+        data,
+        payload,
+        atVEC3,
+        cGL_FLOAT,
+        primitive.points.len,
+        0
+      )
       attributes["POSITION"] = newJInt(acc)
 
-    if primitive.normals.len == primitive.points.len and primitive.normals.len > 0:
+    if primitive.normals.len == primitive.points.len and
+      primitive.normals.len > 0:
       var payload = newString(primitive.normals.len * 12)
       for i, p in primitive.normals:
         payload.writeFloat32(i * 12 + 0, p.x)
         payload.writeFloat32(i * 12 + 4, p.y)
         payload.writeFloat32(i * 12 + 8, p.z)
-      let acc = addAccessor(accessors, bufferViews, data, payload, atVEC3, cGL_FLOAT, primitive.normals.len, 0)
+      let acc = addAccessor(
+        accessors,
+        bufferViews,
+        data,
+        payload,
+        atVEC3,
+        cGL_FLOAT,
+        primitive.normals.len,
+        0
+      )
       attributes["NORMAL"] = newJInt(acc)
 
     if primitive.uvs.len == primitive.points.len and primitive.uvs.len > 0:
@@ -181,17 +201,36 @@ proc writeGLB*(root: Node, path: string) =
       for i, p in primitive.uvs:
         payload.writeFloat32(i * 8 + 0, p.x)
         payload.writeFloat32(i * 8 + 4, p.y)
-      let acc = addAccessor(accessors, bufferViews, data, payload, atVEC2, cGL_FLOAT, primitive.uvs.len, 0)
+      let acc = addAccessor(
+        accessors,
+        bufferViews,
+        data,
+        payload,
+        atVEC2,
+        cGL_FLOAT,
+        primitive.uvs.len,
+        0
+      )
       attributes["TEXCOORD_0"] = newJInt(acc)
 
-    if primitive.colors.len == primitive.points.len and primitive.colors.len > 0:
+    if primitive.colors.len == primitive.points.len and
+      primitive.colors.len > 0:
       var payload = newString(primitive.colors.len * 4)
       for i, c in primitive.colors:
         payload[i * 4 + 0] = char(c.r)
         payload[i * 4 + 1] = char(c.g)
         payload[i * 4 + 2] = char(c.b)
         payload[i * 4 + 3] = char(c.a)
-      let acc = addAccessor(accessors, bufferViews, data, payload, atVEC4, GL_UNSIGNED_BYTE, primitive.colors.len, 0)
+      let acc = addAccessor(
+        accessors,
+        bufferViews,
+        data,
+        payload,
+        atVEC4,
+        GL_UNSIGNED_BYTE,
+        primitive.colors.len,
+        0
+      )
       attributes["COLOR_0"] = newJInt(acc)
 
     var indicesAcc = -1
@@ -199,12 +238,30 @@ proc writeGLB*(root: Node, path: string) =
       var payload = newString(primitive.indices16.len * 2)
       for i, idxVal in primitive.indices16:
         payload.writeUint16AtLe(i * 2, idxVal)
-      indicesAcc = addAccessor(accessors, bufferViews, data, payload, atSCALAR, cGL_UNSIGNED_SHORT, primitive.indices16.len, 0)
+      indicesAcc = addAccessor(
+        accessors,
+        bufferViews,
+        data,
+        payload,
+        atSCALAR,
+        cGL_UNSIGNED_SHORT,
+        primitive.indices16.len,
+        0
+      )
     elif primitive.indices32.len > 0:
       var payload = newString(primitive.indices32.len * 4)
       for i, idxVal in primitive.indices32:
         payload.writeUint32AtLe(i * 4, idxVal)
-      indicesAcc = addAccessor(accessors, bufferViews, data, payload, atSCALAR, GL_UNSIGNED_INT, primitive.indices32.len, 0)
+      indicesAcc = addAccessor(
+        accessors,
+        bufferViews,
+        data,
+        payload,
+        atSCALAR,
+        GL_UNSIGNED_INT,
+        primitive.indices32.len,
+        0
+      )
 
     result = newJObject()
     result["attributes"] = attributes
@@ -224,7 +281,12 @@ proc writeGLB*(root: Node, path: string) =
       return meshIds[key]
 
     var meshObj = newJObject()
-    meshObj["name"] = newJString(if n.mesh.name.len > 0: n.mesh.name else: n.name)
+    let meshName =
+      if n.mesh.name.len > 0:
+        n.mesh.name
+      else:
+        n.name
+    meshObj["name"] = newJString(meshName)
     meshObj["primitives"] = newJArray()
     for primitive in n.mesh.primitives:
       meshObj["primitives"].add(primitiveJson(primitive))

@@ -131,28 +131,28 @@ proc defaultMaterialTexture(): MaterialTexture =
     strength: 1
   )
 
-proc readTextureTransform(entry: JsonNode, materialTexture: var MaterialTexture) =
+proc readTextureTransform(entry: JsonNode, texInfo: var MaterialTexture) =
   ## Reads core and KHR_texture_transform texture info.
   if "texCoord" in entry:
-    materialTexture.texCoord = entry["texCoord"].getInt()
+    texInfo.texCoord = entry["texCoord"].getInt()
 
   if "extensions" in entry and
     "KHR_texture_transform" in entry["extensions"]:
     let transform = entry["extensions"]["KHR_texture_transform"]
     if "offset" in transform:
-      materialTexture.offset = vec2(
+      texInfo.offset = vec2(
         transform["offset"][0].getFloat().float32,
         transform["offset"][1].getFloat().float32
       )
     if "scale" in transform:
-      materialTexture.uvScale = vec2(
+      texInfo.uvScale = vec2(
         transform["scale"][0].getFloat().float32,
         transform["scale"][1].getFloat().float32
       )
     if "rotation" in transform:
-      materialTexture.rotation = transform["rotation"].getFloat().float32
+      texInfo.rotation = transform["rotation"].getFloat().float32
     if "texCoord" in transform:
-      materialTexture.texCoord = transform["texCoord"].getInt()
+      texInfo.texCoord = transform["texCoord"].getInt()
 
 proc loadPrimitive(
   primitiveIndex: int,
@@ -179,22 +179,23 @@ proc loadPrimitive(
     result.wrapS = sampler.wrapS
     result.wrapT = sampler.wrapT
 
-  let primitiveDef = primitiveDefs[primitiveIndex]
-  result = Primitive(mode: primitiveDef.mode)
+  let primInfo = primitiveDefs[primitiveIndex]
+  result = Primitive(mode: primInfo.mode)
   result.material = Material()
   result.material.baseColorSampler = defaultTextureSampler()
   result.material.metallicRoughnessSampler = defaultTextureSampler()
   result.material.normalSampler = defaultTextureSampler()
   result.material.occlusionSampler = defaultTextureSampler()
   result.material.emissiveSampler = defaultTextureSampler()
-  if primitiveDef.material >= 0:
-    let material = materials[primitiveDef.material]
+  if primInfo.material >= 0:
+    let material = materials[primInfo.material]
 
     let pbr = material.pbrMetallicRoughness
     if pbr.baseColorTexture.index >= 0:
       result.material.baseColor =
         images[textures[pbr.baseColorTexture.index].source]
-      result.material.baseColorSampler = getTextureSampler(pbr.baseColorTexture.index)
+      result.material.baseColorSampler =
+        getTextureSampler(pbr.baseColorTexture.index)
     else:
       result.material.baseColor = newImage(1, 1)
       result.material.baseColor.fill(rgbx(255, 255, 255, 255))
@@ -224,8 +225,10 @@ proc loadPrimitive(
     result.material.roughnessFactor = pbr.roughnessFactor
 
     if material.normalTexture.index >= 0:
-      result.material.normal = images[textures[material.normalTexture.index].source]
-      result.material.normalSampler = getTextureSampler(material.normalTexture.index)
+      result.material.normal =
+        images[textures[material.normalTexture.index].source]
+      result.material.normalSampler =
+        getTextureSampler(material.normalTexture.index)
       result.material.hasNormalTexture = true
       result.material.normalScale = material.normalTexture.scale
     else:
@@ -259,7 +262,8 @@ proc loadPrimitive(
     if material.emissiveTexture.index >= 0:
       result.material.emissive =
         images[textures[material.emissiveTexture.index].source]
-      result.material.emissiveSampler = getTextureSampler(material.emissiveTexture.index)
+      result.material.emissiveSampler =
+        getTextureSampler(material.emissiveTexture.index)
     else:
       result.material.emissive = newImage(1, 1)
       result.material.emissive.fill(rgbx(255, 255, 255, 255))
@@ -290,9 +294,9 @@ proc loadPrimitive(
 
     result.material.doubleSided = material.doubleSided
 
-  if primitiveDef.indices >= 0:
+  if primInfo.indices >= 0:
     let
-      accessor = accessors[primitiveDef.indices]
+      accessor = accessors[primInfo.indices]
       bufferView = bufferViews[accessor.bufferView]
       buffer = buffers[bufferView.buffer]
       start = bufferView.byteOffset + accessor.byteOffset
@@ -318,9 +322,9 @@ proc loadPrimitive(
         "Invalid index component type: " & $accessor.componentType.int
       )
 
-  if primitiveDef.attributes.position >= 0:
+  if primInfo.attributes.position >= 0:
     let
-      accessor = accessors[primitiveDef.attributes.position]
+      accessor = accessors[primInfo.attributes.position]
       bufferView = bufferViews[accessor.bufferView]
       buffer = buffers[bufferView.buffer]
       start = bufferView.byteOffset + accessor.byteOffset
@@ -368,9 +372,9 @@ proc loadPrimitive(
         "Invalid position component type: " & $accessor.componentType.int
       )
 
-  if primitiveDef.attributes.normal >= 0:
+  if primInfo.attributes.normal >= 0:
     let
-      accessor = accessors[primitiveDef.attributes.normal]
+      accessor = accessors[primInfo.attributes.normal]
       bufferView = bufferViews[accessor.bufferView]
       buffer = buffers[bufferView.buffer]
       start = bufferView.byteOffset + accessor.byteOffset
@@ -389,9 +393,9 @@ proc loadPrimitive(
           buffer.readFloat32(start + i * stride + 8)
         )
 
-  if primitiveDef.attributes.color0 >= 0:
+  if primInfo.attributes.color0 >= 0:
     let
-      accessor = accessors[primitiveDef.attributes.color0]
+      accessor = accessors[primInfo.attributes.color0]
       bufferView = bufferViews[accessor.bufferView]
       buffer = buffers[bufferView.buffer]
       start = bufferView.byteOffset + accessor.byteOffset
@@ -471,9 +475,9 @@ proc loadPrimitive(
         "Invalid color kind: " & $accessor.kind
       )
 
-  if primitiveDef.attributes.texcoord0 >= 0:
+  if primInfo.attributes.texcoord0 >= 0:
     let
-      accessor = accessors[primitiveDef.attributes.texcoord0]
+      accessor = accessors[primInfo.attributes.texcoord0]
       bufferView = bufferViews[accessor.bufferView]
       buffer = buffers[bufferView.buffer]
       start = bufferView.byteOffset + accessor.byteOffset
@@ -491,7 +495,8 @@ proc loadPrimitive(
           buffer.readFloat32(start + i * stride + 4)
         )
 
-  if primitiveDef.attributes.normal >= 0 and primitiveDef.attributes.texcoord0 >= 0:
+  if primInfo.attributes.normal >= 0 and
+    primInfo.attributes.texcoord0 >= 0:
     result.tangents.setLen(result.normals.len)
 
     template computeTangents(idx: untyped) =
@@ -540,7 +545,7 @@ proc loadPrimitive(
       computeTangents(result.indices32)
 
 type
-  LoadedModel = object
+  LoadResult = object
     root: Node
     scenes: seq[Scene]
     sceneId: int
@@ -549,7 +554,7 @@ proc loadModelJsonInternal(
   jsonRoot: JsonNode,
   modelDir: string,
   externalBuffers: seq[string]
-): LoadedModel =
+): LoadResult =
   ## Loads a 3D model from a parsed glTF json tree.
   if "extensionsRequired" in jsonRoot:
     for extension in jsonRoot["extensionsRequired"]:
@@ -1039,11 +1044,16 @@ proc loadModelJsonInternal(
 
           if "extensions" in target and
              "KHR_animation_pointer" in target["extensions"]:
-            let pointer = target["extensions"]["KHR_animation_pointer"]["pointer"].getStr()
+            let pointer =
+              target["extensions"]["KHR_animation_pointer"]["pointer"].getStr()
             if pointer.startsWith("/nodes/") and
                pointer.endsWith("/extensions/KHR_node_visibility/visible"):
               let suffix = "/extensions/KHR_node_visibility/visible"
-              let remainder = pointer.substr("/nodes/".len, pointer.len - suffix.len - 1)
+              let remainder =
+                pointer.substr(
+                  "/nodes/".len,
+                  pointer.len - suffix.len - 1
+                )
               try:
                 nodeIdx = parseInt(remainder)
                 path = AnimVisibility
@@ -1149,9 +1159,9 @@ proc loadModelJsonInternal(
     var n = nodes[nodeId]
     let meshId = nodeMeshes[nodeId]
     if meshId >= 0:
-      let meshDef = meshDefs[meshId]
-      let runtimeMesh = Mesh(name: meshDef.name)
-      for primitiveIndex in meshDef.primitives:
+      let meshInfo = meshDefs[meshId]
+      let runtimeMesh = Mesh(name: meshInfo.name)
+      for primitiveIndex in meshInfo.primitives:
         runtimeMesh.primitives.add(loadPrimitive(
           primitiveIndex,
           primitiveDefs,
@@ -1170,6 +1180,7 @@ proc loadModelJsonInternal(
 
     return n
 
+  # Keep one convenience tree for the selected scene.
   result.root = Node()
   result.root.visible = true
   result.root.name = "Root"
@@ -1191,7 +1202,11 @@ proc loadModelJsonInternal(
   result.root.currentClip = 0
   result.root.animTime = 0
   result.scenes = scenes
-  result.sceneId = if scenes.len > 0: max(0, min(sceneId, scenes.high)) else: 0
+  result.sceneId =
+    if scenes.len > 0:
+      max(0, min(sceneId, scenes.high))
+    else:
+      0
 
 proc loadModelJson*(
   jsonRoot: JsonNode,
