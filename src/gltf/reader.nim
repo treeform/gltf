@@ -793,36 +793,101 @@ proc loadModelJson*(
     if "mesh" in entry:
       meshId = entry["mesh"].getInt()
 
-    if "translation" in entry:
+    if "matrix" in entry and entry["matrix"].len >= 16:
+      let matrix = entry["matrix"]
+      let localMat = mat4(
+        matrix[0].getFloat().float32,
+        matrix[1].getFloat().float32,
+        matrix[2].getFloat().float32,
+        matrix[3].getFloat().float32,
+        matrix[4].getFloat().float32,
+        matrix[5].getFloat().float32,
+        matrix[6].getFloat().float32,
+        matrix[7].getFloat().float32,
+        matrix[8].getFloat().float32,
+        matrix[9].getFloat().float32,
+        matrix[10].getFloat().float32,
+        matrix[11].getFloat().float32,
+        matrix[12].getFloat().float32,
+        matrix[13].getFloat().float32,
+        matrix[14].getFloat().float32,
+        matrix[15].getFloat().float32
+      )
+
+      node.pos = localMat.pos
+      let
+        xAxis = localMat.left
+        yAxis = localMat.up
+        zAxis = localMat.forward
+      node.scale = vec3(length(xAxis), length(yAxis), length(zAxis))
+
+      let rotationMat = mat4(
+        (if node.scale.x != 0: xAxis.x / node.scale.x else: 1'f32),
+        (if node.scale.x != 0: xAxis.y / node.scale.x else: 0'f32),
+        (if node.scale.x != 0: xAxis.z / node.scale.x else: 0'f32),
+        0'f32,
+        (if node.scale.y != 0: yAxis.x / node.scale.y else: 0'f32),
+        (if node.scale.y != 0: yAxis.y / node.scale.y else: 1'f32),
+        (if node.scale.y != 0: yAxis.z / node.scale.y else: 0'f32),
+        0'f32,
+        (if node.scale.z != 0: zAxis.x / node.scale.z else: 0'f32),
+        (if node.scale.z != 0: zAxis.y / node.scale.z else: 0'f32),
+        (if node.scale.z != 0: zAxis.z / node.scale.z else: 1'f32),
+        0'f32,
+        0'f32,
+        0'f32,
+        0'f32,
+        1'f32
+      )
+      node.rot = rotationMat.transpose().quat()
+    elif "translation" in entry:
       let translation = entry["translation"]
       node.pos = vec3(
         translation[0].getFloat().float32,
         translation[1].getFloat().float32,
         translation[2].getFloat().float32
       )
+      if "rotation" in entry:
+        let rotation = entry["rotation"]
+        node.rot = quat(
+          rotation[0].getFloat().float32,
+          rotation[1].getFloat().float32,
+          rotation[2].getFloat().float32,
+          rotation[3].getFloat().float32
+        )
+      else:
+        node.rot = quat(0, 0, 0, 1)
+      if "scale" in entry and entry["scale"].len >= 3:
+        let scale = entry["scale"]
+        node.scale = vec3(
+          scale[0].getFloat().float32,
+          scale[1].getFloat().float32,
+          scale[2].getFloat().float32
+        )
+      else:
+        node.scale = vec3(1, 1, 1)
     else:
       node.pos = vec3(0, 0, 0)
+      if "rotation" in entry:
+        let rotation = entry["rotation"]
+        node.rot = quat(
+          rotation[0].getFloat().float32,
+          rotation[1].getFloat().float32,
+          rotation[2].getFloat().float32,
+          rotation[3].getFloat().float32
+        )
+      else:
+        node.rot = quat(0, 0, 0, 1)
 
-    if "rotation" in entry:
-      let rotation = entry["rotation"]
-      node.rot = quat(
-        rotation[0].getFloat().float32,
-        rotation[1].getFloat().float32,
-        rotation[2].getFloat().float32,
-        rotation[3].getFloat().float32
-      )
-    else:
-      node.rot = quat(0, 0, 0, 1)
-
-    if "scale" in entry and entry["scale"].len >= 3:
-      let scale = entry["scale"]
-      node.scale = vec3(
-        scale[0].getFloat().float32,
-        scale[1].getFloat().float32,
-        scale[2].getFloat().float32
-      )
-    else:
-      node.scale = vec3(1, 1, 1)
+      if "scale" in entry and entry["scale"].len >= 3:
+        let scale = entry["scale"]
+        node.scale = vec3(
+          scale[0].getFloat().float32,
+          scale[1].getFloat().float32,
+          scale[2].getFloat().float32
+        )
+      else:
+        node.scale = vec3(1, 1, 1)
 
     node.basePos = node.pos
     node.baseRot = node.rot
