@@ -86,6 +86,8 @@ proc sampleSpan(times: seq[float32], t: float32): (int, int, float32) =
     return (-1, -1, 0)
   if t <= times[0]:
     return (0, 0, 0)
+  if t >= times[^1]:
+    return (times.high, times.high, 0)
   for i in 0 ..< times.len - 1:
     let
       t0 = times[i]
@@ -191,7 +193,11 @@ proc applyClipAt*(clip: AnimationClip, time: float32) =
     return
   let t =
     if clip.duration > 0:
-      time mod clip.duration
+      let wrapped = time mod clip.duration
+      if wrapped == 0 and time > 0:
+        clip.duration
+      else:
+        wrapped
     else:
       time
   for ch in clip.channels:
