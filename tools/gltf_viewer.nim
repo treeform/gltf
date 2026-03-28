@@ -122,15 +122,6 @@ proc drawRgbControls(id, title: string, value: var Color) =
   scrubber(id & "_b", value.b, 0.0'f32, 1.0'f32, "B")
   value.a = 1.0
 
-proc colorToRgbx(value: Color): ColorRGBX =
-  ## Converts a float color into an 8-bit color.
-  rgbx(
-    clamp((value.r * 255).int, 0, 255).uint8,
-    clamp((value.g * 255).int, 0, 255).uint8,
-    clamp((value.b * 255).int, 0, 255).uint8,
-    255
-  )
-
 proc drawDirectionControls(id, title: string, value: var Vec3) =
   ## Draws three scrubbers for a direction vector.
   text(title)
@@ -270,14 +261,14 @@ proc discoverSkyboxes() =
 proc updateEnvironmentMap(force = false) =
   ## Reloads the environment map when the selection changes.
   if selectedSkybox == "Solid Color":
+    if force or lastSkybox != selectedSkybox:
+      loadDefaultEnvironmentMap()
     if force or
-       lastSkybox != selectedSkybox or
        backgroundColor.r != lastBackgroundColor.r or
        backgroundColor.g != lastBackgroundColor.g or
        backgroundColor.b != lastBackgroundColor.b:
-      loadDefaultEnvironmentMap(colorToRgbx(backgroundColor))
       lastBackgroundColor = backgroundColor
-      lastSkybox = selectedSkybox
+    lastSkybox = selectedSkybox
     return
 
   if force or lastSkybox != selectedSkybox:
@@ -568,7 +559,8 @@ window.onFrame = proc() =
   glEnable(GL_DEPTH_TEST)
   glDepthMask(GL_TRUE)
 
-  drawSkybox(cameraMat, proj, skyboxLod)
+  if selectedSkybox != "Solid Color":
+    drawSkybox(cameraMat, proj, skyboxLod)
 
   if model.hasModel():
     if useShadows and effectiveDebugView == dvLit:

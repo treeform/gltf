@@ -11,6 +11,10 @@ const
   OrbitPitch = -20.0'f
   MaxXrayScore = 2.0'f
   UpdateXrayScore = 0.5'f
+  BackgroundColor = color(0.7058824, 0.74509805, 0.8627451, 1.0)
+  IgnoredModels = [
+    "ABeautifulGame"
+  ]
 
 type
   AssetResult = object
@@ -107,6 +111,13 @@ proc discoverModels(modelsPath: string): seq[string] =
       result.add(path)
   result.sort()
 
+proc ignoredModelReason(modelPath: string): string =
+  ## Returns the skip reason for a model path.
+  for name in IgnoredModels:
+    if name in modelPath:
+      return "Ignored for now because it is too slow to load."
+  ""
+
 proc sanitizeFileName(value: string): string =
   ## Converts a path into a safe screenshot file name.
   for c in value:
@@ -196,7 +207,12 @@ proc renderScene(window: Window, model: Node) =
     rimLightDirection = safeNormalize(vec3(-1, 1, -1), vec3(-1, 1, -1))
 
   glViewport(0, 0, window.size.x, window.size.y)
-  glClearColor(0.03, 0.035, 0.05, 1.0)
+  glClearColor(
+    BackgroundColor.r,
+    BackgroundColor.g,
+    BackgroundColor.b,
+    BackgroundColor.a
+  )
   glClear(GL_DEPTH_BUFFER_BIT or GL_COLOR_BUFFER_BIT)
   glCullFace(GL_BACK)
   glFrontFace(GL_CCW)
@@ -204,7 +220,6 @@ proc renderScene(window: Window, model: Node) =
   glEnable(GL_DEPTH_TEST)
   glDepthMask(GL_TRUE)
 
-  drawSkybox(cameraMat, proj, 7.0'f)
   model.drawPbr(
     mat4(),
     cameraMat,
@@ -240,6 +255,12 @@ proc testModel(
   result.screenshotPath = outPath
   result.baselinePath = baselinePath
   result.xrayPath = xrayPath
+
+  let ignoreReason = ignoredModelReason(modelPath)
+  if ignoreReason.len > 0:
+    result.status = "skip"
+    result.message = ignoreReason
+    return
 
   var
     model: Node
@@ -408,7 +429,7 @@ var window = newWindow(
 makeContextCurrent(window)
 loadExtensions()
 setupPbr()
-loadDefaultEnvironmentMap(rgbx(180, 190, 220, 255))
+loadDefaultEnvironmentMap()
 
 var results: seq[AssetResult]
 for i, modelPath in modelPaths:

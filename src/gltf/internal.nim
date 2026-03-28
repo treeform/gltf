@@ -14,6 +14,7 @@ type
     byteOffset*, count*: int
     componentType*: GLenum
     kind*: AccessorKind
+    normalized*: bool
 
   Texture* = object
     source*: int
@@ -56,8 +57,15 @@ type
 
   PrimitiveAttributes* = object
     position*, normal*, color0*, texcoord0*: int
+    joints0*, weights0*: int
 
   PrimitiveInfo* = object
     attributes*: PrimitiveAttributes
     indices*, material*: int
     mode*: GLenum
+
+  SkinInfo* = object
+    name*: string
+    inverseBindMatrices*: int
+    skeleton*: int
+    joints*: seq[int]

@@ -3,6 +3,8 @@ import
   vmath, chroma, pixie, opengl,
   common
 
+proc trs*(node: Node): Mat4
+
 proc shallowCopy*(node: Node): Node =
   ## Creates a shallow copy of a node.
   result = Node()
@@ -23,6 +25,7 @@ proc shallowCopy*(node: Node): Node =
   result.animTime = node.animTime
 
   result.mesh = node.mesh
+  result.skin = node.skin
   result.camera = node.camera
   result.nodes = node.nodes
 
@@ -154,6 +157,22 @@ proc updateAnimation*(node: Node, dt: float32) =
   if node.animations.len > 0 and node.currentClip < node.animations.len:
     node.animTime += dt
     applyClipAt(node.animations[node.currentClip], node.animTime)
+
+proc updateTransforms*(
+  node: Node,
+  transform = mat4(),
+  applyTrs = true
+) =
+  ## Updates world transforms for a node tree.
+  if node == nil:
+    return
+  node.mat =
+    if applyTrs:
+      transform * node.trs
+    else:
+      transform
+  for child in node.nodes:
+    child.updateTransforms(node.mat)
 
 proc hasGeometry*(primitive: Primitive): bool =
   primitive != nil and primitive.points.len > 0
@@ -362,6 +381,36 @@ proc uploadToGpu*(primitive: Primitive) =
     glDisableVertexAttribArray(1)
     glVertexAttrib4f(1, 1.0, 1.0, 1.0, 1.0)
 
+  if primitive.jointIds.len > 0:
+    glGenBuffers(1, primitive.jointIdsId.addr)
+    glBindBuffer(GL_ARRAY_BUFFER, primitive.jointIdsId)
+    glBufferData(
+      GL_ARRAY_BUFFER,
+      primitive.jointIds.len * sizeof(JointIds),
+      primitive.jointIds[0].addr,
+      GL_STATIC_DRAW
+    )
+    glEnableVertexAttribArray(5)
+    glVertexAttribIPointer(5, 4, cGL_UNSIGNED_SHORT, 0, nil)
+  else:
+    glDisableVertexAttribArray(5)
+    glVertexAttribI4ui(5, 0, 0, 0, 0)
+
+  if primitive.jointWeights.len > 0:
+    glGenBuffers(1, primitive.jointWeightsId.addr)
+    glBindBuffer(GL_ARRAY_BUFFER, primitive.jointWeightsId)
+    glBufferData(
+      GL_ARRAY_BUFFER,
+      primitive.jointWeights.len * sizeof(Vec4),
+      primitive.jointWeights[0].addr,
+      GL_STATIC_DRAW
+    )
+    glEnableVertexAttribArray(6)
+    glVertexAttribPointer(6, 4, cGL_FLOAT, GL_FALSE, 0, nil)
+  else:
+    glDisableVertexAttribArray(6)
+    glVertexAttrib4f(6, 0.0, 0.0, 0.0, 0.0)
+
   uploadMaterialToGpu(primitive.material)
   primitive.uploaded = true
 
@@ -383,12 +432,18 @@ proc clearFromGpu*(primitive: Primitive) =
       glDeleteBuffers(1, primitive.tangentsId.addr)
     if primitive.colors.len > 0:
       glDeleteBuffers(1, primitive.colorsId.addr)
+    if primitive.jointIds.len > 0:
+      glDeleteBuffers(1, primitive.jointIdsId.addr)
+    if primitive.jointWeights.len > 0:
+      glDeleteBuffers(1, primitive.jointWeightsId.addr)
     primitive.vertexArrayId = 0
     primitive.pointsId = 0
     primitive.uvsId = 0
     primitive.normalsId = 0
     primitive.tangentsId = 0
     primitive.colorsId = 0
+    primitive.jointIdsId = 0
+    primitive.jointWeightsId = 0
     primitive.indicesId = 0
   clearMaterialFromGpu(primitive.material)
   primitive.uploaded = false
@@ -444,6 +499,24 @@ proc updateOnGpu*(primitive: Primitive) =
         GL_ARRAY_BUFFER,
         primitive.colors.len * sizeof(ColorRGBX),
         primitive.colors[0].addr,
+        GL_STATIC_DRAW
+      )
+
+    if primitive.jointIds.len > 0:
+      glBindBuffer(GL_ARRAY_BUFFER, primitive.jointIdsId)
+      glBufferData(
+        GL_ARRAY_BUFFER,
+        primitive.jointIds.len * sizeof(JointIds),
+        primitive.jointIds[0].addr,
+        GL_STATIC_DRAW
+      )
+
+    if primitive.jointWeights.len > 0:
+      glBindBuffer(GL_ARRAY_BUFFER, primitive.jointWeightsId)
+      glBufferData(
+        GL_ARRAY_BUFFER,
+        primitive.jointWeights.len * sizeof(Vec4),
+        primitive.jointWeights[0].addr,
         GL_STATIC_DRAW
       )
 
@@ -530,6 +603,20 @@ proc findTransform*(
     if findTransform(child, target, current, world):
       return true
   false
+
+proc skinMatrices*(root, node: Node): seq[Mat4] =
+  ## Computes joint matrices for a skinned node.
+  if root == nil or node == nil or node.skin == nil:
+    return
+  let inverseNode = node.mat.inverse
+  result.setLen(node.skin.joints.len)
+  for i, joint in node.skin.joints:
+    let inverseBind =
+      if i < node.skin.inverseBindMatrices.len:
+        node.skin.inverseBindMatrices[i]
+      else:
+        mat4()
+    result[i] = inverseNode * joint.mat * inverseBind
 
 proc toMat4(m: DMat4): Mat4 =
   ## Converts a double-precision matrix to float32.
@@ -623,11 +710,20 @@ proc draw*(
   transform, view, proj: Mat4,
   tint: Color,
   useTrs = true,
-  skipBlend = false
+  skipBlend = false,
+  root: Node = nil
 ) =
   ## Draws the node with a float32 transform.
   if not node.visible:
     return
+
+  let rootNode =
+    if root == nil:
+      node
+    else:
+      root
+  if root == nil:
+    rootNode.updateTransforms(transform, useTrs)
 
   node.mat =
     if useTrs:
@@ -662,12 +758,38 @@ proc draw*(
     cast[ptr float32](projArray.addr)
   )
 
+  let jointMatrices = rootNode.skinMatrices(node)
+  let useSkinning =
+    jointMatrices.len > 0 and
+    node.mesh != nil
+  let useSkinningUniform = glGetUniformLocation(shader, "useSkinning")
+  if useSkinningUniform >= 0:
+    glUniform1i(useSkinningUniform, useSkinning.ord.GLint)
+  if useSkinning:
+    let jointMatricesUniform = glGetUniformLocation(shader, "jointMatrices")
+    if jointMatricesUniform >= 0:
+      glUniformMatrix4fv(
+        jointMatricesUniform,
+        jointMatrices.len.GLsizei,
+        GL_FALSE,
+        cast[ptr float32](jointMatrices[0].addr)
+      )
+
   if node.mesh != nil:
     for primitive in node.mesh.primitives:
       primitive.drawPrimitive(shader, tint, skipBlend)
 
   for n in node.nodes:
-    n.draw(shader, node.mat, view, proj, tint, useTrs=true, skipBlend=skipBlend)
+    n.draw(
+      shader,
+      node.mat,
+      view,
+      proj,
+      tint,
+      useTrs=true,
+      skipBlend=skipBlend,
+      root=rootNode
+    )
 
 proc dumpTree*(node: Node, indent: string = "") =
   ## Prints the node tree for debugging.
