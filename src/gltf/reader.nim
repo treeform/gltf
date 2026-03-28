@@ -862,6 +862,14 @@ proc loadPrimitive(
       buffers
     )
 
+  if primInfo.attributes.texcoord1 >= 0:
+    result.uvs1 = readAccessorVec2(
+      primInfo.attributes.texcoord1,
+      accessors,
+      bufferViews,
+      buffers
+    )
+
   if primInfo.attributes.joints0 >= 0:
     result.jointIds = readAccessorJointIds(
       primInfo.attributes.joints0,
@@ -1327,6 +1335,10 @@ proc loadModelJsonInternal(
         prim.attributes.texcoord0 = attributes["TEXCOORD_0"].getInt()
       else:
         prim.attributes.texcoord0 = -1
+      if "TEXCOORD_1" in attributes:
+        prim.attributes.texcoord1 = attributes["TEXCOORD_1"].getInt()
+      else:
+        prim.attributes.texcoord1 = -1
       if "JOINTS_0" in attributes:
         prim.attributes.joints0 = attributes["JOINTS_0"].getInt()
       else:

@@ -6,6 +6,7 @@ in vec3 position;
 in vec4 color;
 in vec3 normal;
 in vec2 uv;
+in vec2 uv1;
 in mat3 TBN;
 in vec4 vPosLightSpace;
 
@@ -13,6 +14,7 @@ uniform mat4 model;
 
 uniform sampler2D baseColorTexture;
 uniform vec4 baseColorFactor;
+uniform int baseColorTexCoord;
 uniform vec2 baseColorUvOffset;
 uniform vec2 baseColorUvScale;
 uniform float baseColorUvRotation;
@@ -20,21 +22,25 @@ uniform sampler2D metallicRoughnessTexture;
 uniform float metallicFactor;
 uniform float roughnessFactor;
 uniform float transmissionFactor;
+uniform int metallicRoughnessTexCoord;
 uniform vec2 metallicRoughnessUvOffset;
 uniform vec2 metallicRoughnessUvScale;
 uniform float metallicRoughnessUvRotation;
 uniform sampler2D normalTexture;
 uniform float normalScale;
+uniform int normalTexCoord;
 uniform vec2 normalUvOffset;
 uniform vec2 normalUvScale;
 uniform float normalUvRotation;
 uniform sampler2D occlusionTexture;
 uniform float occlusionStrength;
+uniform int occlusionTexCoord;
 uniform vec2 occlusionUvOffset;
 uniform vec2 occlusionUvScale;
 uniform float occlusionUvRotation;
 uniform sampler2D emissiveTexture;
 uniform vec3 emissiveFactor;
+uniform int emissiveTexCoord;
 uniform vec2 emissiveUvOffset;
 uniform vec2 emissiveUvScale;
 uniform float emissiveUvRotation;
@@ -99,33 +105,40 @@ vec2 transformUv(vec2 uv, vec2 offset, vec2 scale, float rotation) {
   return rot * (uv * scale) + offset;
 }
 
+vec2 selectUv(int texCoord) {
+  if (texCoord == 1) {
+    return uv1;
+  }
+  return uv;
+}
+
 void main() {
   vec2 baseColorUv = transformUv(
-    uv,
+    selectUv(baseColorTexCoord),
     baseColorUvOffset,
     baseColorUvScale,
     baseColorUvRotation
   );
   vec2 metallicRoughnessUv = transformUv(
-    uv,
+    selectUv(metallicRoughnessTexCoord),
     metallicRoughnessUvOffset,
     metallicRoughnessUvScale,
     metallicRoughnessUvRotation
   );
   vec2 normalUv = transformUv(
-    uv,
+    selectUv(normalTexCoord),
     normalUvOffset,
     normalUvScale,
     normalUvRotation
   );
   vec2 occlusionUv = transformUv(
-    uv,
+    selectUv(occlusionTexCoord),
     occlusionUvOffset,
     occlusionUvScale,
     occlusionUvRotation
   );
   vec2 emissiveUv = transformUv(
-    uv,
+    selectUv(emissiveTexCoord),
     emissiveUvOffset,
     emissiveUvScale,
     emissiveUvRotation

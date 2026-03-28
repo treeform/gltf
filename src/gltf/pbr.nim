@@ -365,9 +365,14 @@ type
 proc setTextureTransformUniform(shader: GLuint, prefix: string, transform: TextureTransform) =
   ## Sets UV transform uniforms for a texture input.
   let
+    texCoordName = (prefix & "TexCoord").cstring
     offsetName = (prefix & "UvOffset").cstring
     scaleName = (prefix & "UvScale").cstring
     rotationName = (prefix & "UvRotation").cstring
+  glUniform1i(
+    glGetUniformLocation(shader, texCoordName),
+    transform.texCoord.GLint
+  )
   glUniform2f(
     glGetUniformLocation(shader, offsetName),
     transform.offset.x,

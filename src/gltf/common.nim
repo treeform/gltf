@@ -51,6 +51,7 @@ type
     points*: seq[Vec3]
     basePoints*: seq[Vec3]
     uvs*: seq[Vec2]
+    uvs1*: seq[Vec2]
     normals*: seq[Vec3]
     baseNormals*: seq[Vec3]
     tangents*: seq[Vec4]
@@ -68,6 +69,7 @@ type
     vertexArrayId*: GLuint
     pointsId*: GLuint
     uvsId*: GLuint
+    uvs1Id*: GLuint
     normalsId*: GLuint
     tangentsId*: GLuint
     colorsId*: GLuint

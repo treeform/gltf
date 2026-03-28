@@ -74,7 +74,7 @@ type
     targetNames*: seq[string]
 
   PrimitiveAttributes* = object
-    position*, normal*, color0*, texcoord0*: int
+    position*, normal*, color0*, texcoord0*, texcoord1*: int
     joints0*, weights0*: int
 
   MorphTargetInfo* = object
