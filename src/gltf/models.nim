@@ -9,6 +9,12 @@ type
     scale*: Vec2
     rotation*: float32
 
+  TextureSampler* = object
+    magFilter*: GLint
+    minFilter*: GLint
+    wrapS*: GLint
+    wrapT*: GLint
+
   AlphaMode* = enum
     OpaqueAlphaMode, MaskAlphaMode, BlendAlphaMode
 
@@ -31,26 +37,30 @@ type
     name*: string
     baseColor*: Image
     baseColorTransform*: TextureTransform
+    baseColorSampler*: TextureSampler
     baseColorFactor*: Color
     metallicRoughness*: Image
     metallicRoughnessTransform*: TextureTransform
+    metallicRoughnessSampler*: TextureSampler
     metallicFactor*: float32
     roughnessFactor*: float32
     normal*: Image
     normalTransform*: TextureTransform
+    normalSampler*: TextureSampler
     hasNormalTexture*: bool
     normalScale*: float32
     occlusion*: Image
     occlusionTransform*: TextureTransform
+    occlusionSampler*: TextureSampler
     occlusionStrength*: float32
     emissive*: Image
     emissiveTransform*: TextureTransform
+    emissiveSampler*: TextureSampler
     emissiveFactor*: Color
 
     alphaMode*: AlphaMode
     alphaCutoff*: float32
     doubleSided*: bool
-    clampToEdge*: bool
 
     # These are the OpenGL IDs.
     baseColorId*: GLuint
@@ -134,6 +144,48 @@ proc shallowCopy*(node: Node): Node =
   result.colorsId = node.colorsId
   result.indicesId = node.indicesId
 
+proc defaultTextureSampler*(): TextureSampler =
+  TextureSampler(
+    magFilter: GL_LINEAR,
+    minFilter: GL_LINEAR_MIPMAP_LINEAR,
+    wrapS: GL_REPEAT,
+    wrapT: GL_REPEAT
+  )
+
+proc wrapModeName(mode: GLint): string =
+  case mode
+  of GL_REPEAT:
+    "repeat"
+  of GL_CLAMP_TO_EDGE:
+    "clamp_to_edge"
+  of GL_MIRRORED_REPEAT:
+    "mirrored_repeat"
+  else:
+    $mode
+
+proc filterName(mode: GLint): string =
+  case mode
+  of GL_NEAREST:
+    "nearest"
+  of GL_LINEAR:
+    "linear"
+  of GL_NEAREST_MIPMAP_NEAREST:
+    "nearest_mipmap_nearest"
+  of GL_LINEAR_MIPMAP_NEAREST:
+    "linear_mipmap_nearest"
+  of GL_NEAREST_MIPMAP_LINEAR:
+    "nearest_mipmap_linear"
+  of GL_LINEAR_MIPMAP_LINEAR:
+    "linear_mipmap_linear"
+  else:
+    $mode
+
+proc `$`*(sampler: TextureSampler): string =
+  &"(magFilter: {filterName(sampler.magFilter)}, " &
+  &"minFilter: {filterName(sampler.minFilter)}, " &
+  &"wrapS: {wrapModeName(sampler.wrapS)}, " &
+  &"wrapT: {wrapModeName(sampler.wrapT)})"
+
 proc resetToBase*(node: Node) =
   ## Reset the node (and its children) to the original transform.
   if node == nil:
@@ -206,8 +258,7 @@ proc updateAnimation*(node: Node, dt: float32) =
 proc uploadTextureToGpu(
   textureId: var GLuint,
   image: Image,
-  wrapS = GL_REPEAT,
-  wrapT = GL_REPEAT
+  sampler = defaultTextureSampler()
 ) =
   ## Uploads a texture to the GPU.
   glGenTextures(1, textureId.addr)
@@ -241,14 +292,10 @@ proc uploadTextureToGpu(
       GL_UNSIGNED_BYTE,
       image.data[0].addr
     )
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-  glTexParameteri(
-    GL_TEXTURE_2D,
-    GL_TEXTURE_MIN_FILTER,
-    GL_LINEAR_MIPMAP_LINEAR
-  )
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapS.GLint)
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrapT.GLint)
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, sampler.magFilter)
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, sampler.minFilter)
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, sampler.wrapS)
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, sampler.wrapT)
   glGenerateMipmap(GL_TEXTURE_2D)
 
 proc uploadToGpu*(node: Node) =
@@ -341,100 +388,40 @@ proc uploadToGpu*(node: Node) =
     glVertexAttrib4f(1, 1.0, 1.0, 1.0, 1.0)
 
   if node.material != nil:
-
-    var wrapS = GL_REPEAT
-    var wrapT = GL_REPEAT
-    if node.material.clampToEdge:
-      wrapS = GL_CLAMP_TO_EDGE
-      wrapT = GL_CLAMP_TO_EDGE
-
     if node.material.baseColor != nil:
       uploadTextureToGpu(
         node.material.baseColorId,
         node.material.baseColor,
-        wrapS,
-        wrapT
+        node.material.baseColorSampler
       )
 
     if node.material.metallicRoughness != nil:
-      glGenTextures(1, node.material.metallicRoughnessId.addr)
-      glBindTexture(GL_TEXTURE_2D, node.material.metallicRoughnessId)
-      glTexImage2D(
-        GL_TEXTURE_2D,
-        0,
-        GL_RGBA.GLint,
-        node.material.metallicRoughness.width.GLint,
-        node.material.metallicRoughness.height.GLint,
-        0,
-        GL_RGBA,
-        GL_UNSIGNED_BYTE,
-        node.material.metallicRoughness.data[0].addr
+      uploadTextureToGpu(
+        node.material.metallicRoughnessId,
+        node.material.metallicRoughness,
+        node.material.metallicRoughnessSampler
       )
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR)
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapS)
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrapT)
-      glGenerateMipmap(GL_TEXTURE_2D)
 
     if node.material.normal != nil:
-      glGenTextures(1, node.material.normalId.addr)
-      glBindTexture(GL_TEXTURE_2D, node.material.normalId)
-      glTexImage2D(
-        GL_TEXTURE_2D,
-        0,
-        GL_RGBA.GLint,
-        node.material.normal.width.GLint,
-        node.material.normal.height.GLint,
-        0,
-        GL_RGBA,
-        GL_UNSIGNED_BYTE,
-        node.material.normal.data[0].addr
+      uploadTextureToGpu(
+        node.material.normalId,
+        node.material.normal,
+        node.material.normalSampler
       )
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR)
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapS)
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrapT)
-      glGenerateMipmap(GL_TEXTURE_2D)
 
     if node.material.occlusion != nil:
-      glGenTextures(1, node.material.occlusionId.addr)
-      glBindTexture(GL_TEXTURE_2D, node.material.occlusionId)
-      glTexImage2D(
-        GL_TEXTURE_2D,
-        0,
-        GL_RGBA.GLint,
-        node.material.occlusion.width.GLint,
-        node.material.occlusion.height.GLint,
-        0,
-        GL_RGBA,
-        GL_UNSIGNED_BYTE,
-        node.material.occlusion.data[0].addr
+      uploadTextureToGpu(
+        node.material.occlusionId,
+        node.material.occlusion,
+        node.material.occlusionSampler
       )
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR)
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapS)
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrapT)
-      glGenerateMipmap(GL_TEXTURE_2D)
 
     if node.material.emissive != nil:
-      glGenTextures(1, node.material.emissiveId.addr)
-      glBindTexture(GL_TEXTURE_2D, node.material.emissiveId)
-      glTexImage2D(
-        GL_TEXTURE_2D,
-        0,
-        GL_RGBA.GLint,
-        node.material.emissive.width.GLint,
-        node.material.emissive.height.GLint,
-        0,
-        GL_RGBA,
-        GL_UNSIGNED_BYTE,
-        node.material.emissive.data[0].addr
+      uploadTextureToGpu(
+        node.material.emissiveId,
+        node.material.emissive,
+        node.material.emissiveSampler
       )
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR)
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapS)
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrapT)
-      glGenerateMipmap(GL_TEXTURE_2D)
 
   node.uploaded = true
 
@@ -646,6 +633,11 @@ proc draw*(
     if sampleTexUniform >= 0:
       glUniform1i(sampleTexUniform, 0)
 
+  if node.material != nil and node.material.doubleSided:
+    glDisable(GL_CULL_FACE)
+  else:
+    glEnable(GL_CULL_FACE)
+
   let colorTintUniform = glGetUniformLocation(shader, "tint")
   glUniform4f(colorTintUniform, tint.r, tint.g, tint.b, tint.a)
 
@@ -687,18 +679,23 @@ proc dumpTree*(node: Node, indent: string = "") =
     if node.material.baseColor != nil:
       echo &"{indent}    baseColor: {node.material.baseColor}"
       echo &"{indent}    baseColorFactor: {node.material.baseColorFactor}"
+      echo &"{indent}    baseColorSampler: {node.material.baseColorSampler}"
     if node.material.metallicRoughness != nil:
       echo &"{indent}    metallicRoughness: {node.material.metallicRoughness}"
+      echo &"{indent}    metallicRoughnessSampler: {node.material.metallicRoughnessSampler}"
     echo &"{indent}    metallicFactor: {node.material.metallicFactor}"
     echo &"{indent}    roughnessFactor: {node.material.roughnessFactor}"
     if node.material.normal != nil:
       echo &"{indent}    normal: {node.material.normal}"
+      echo &"{indent}    normalSampler: {node.material.normalSampler}"
       echo &"{indent}    normalScale: {node.material.normalScale}"
     if node.material.occlusion != nil:
       echo &"{indent}    occlusion: {node.material.occlusion}"
+      echo &"{indent}    occlusionSampler: {node.material.occlusionSampler}"
       echo &"{indent}    occlusionStrength: {node.material.occlusionStrength}"
     if node.material.emissive != nil:
       echo &"{indent}    emissive: {node.material.emissive}"
+      echo &"{indent}    emissiveSampler: {node.material.emissiveSampler}"
       echo &"{indent}    emissiveFactor: {node.material.emissiveFactor}"
     # Print the alpha mode.
     if node.material.alphaMode == MaskAlphaMode:
