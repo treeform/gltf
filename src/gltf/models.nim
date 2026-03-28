@@ -71,6 +71,26 @@ proc `$`*(sampler: TextureSampler): string =
   &"wrapS: {wrapModeName(sampler.wrapS)}, " &
   &"wrapT: {wrapModeName(sampler.wrapT)})"
 
+proc primitiveModeName*(mode: GLenum): string =
+  ## Returns a readable primitive mode label.
+  case mode
+  of GL_POINTS:
+    "POINTS"
+  of GL_LINES:
+    "LINES"
+  of GL_LINE_LOOP:
+    "LINE_LOOP"
+  of GL_LINE_STRIP:
+    "LINE_STRIP"
+  of GL_TRIANGLES:
+    "TRIANGLES"
+  of GL_TRIANGLE_STRIP:
+    "TRIANGLE_STRIP"
+  of GL_TRIANGLE_FAN:
+    "TRIANGLE_FAN"
+  else:
+    $mode.int
+
 proc resetToBase*(node: Node) =
   ## Reset the node (and its children) to the original transform.
   if node == nil:
@@ -685,10 +705,13 @@ proc drawPrimitive(
   let colorTintUniform = glGetUniformLocation(shader, "tint")
   glUniform4f(colorTintUniform, tint.r, tint.g, tint.b, tint.a)
 
+  if primitive.mode == GL_POINTS:
+    glPointSize(1.0)
+
   if primitive.indices32.len > 0:
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, primitive.indicesId)
     glDrawElements(
-      GL_TRIANGLES,
+      primitive.mode,
       primitive.indices32.len.GLint,
       GL_UNSIGNED_INT,
       nil
@@ -696,13 +719,13 @@ proc drawPrimitive(
   elif primitive.indices16.len > 0:
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, primitive.indicesId)
     glDrawElements(
-      GL_TRIANGLES,
+      primitive.mode,
       primitive.indices16.len.GLint,
       GL_UNSIGNED_SHORT,
       nil
     )
   else:
-    glDrawArrays(GL_TRIANGLES, 0, primitive.points.len.cint)
+    glDrawArrays(primitive.mode, 0, primitive.points.len.cint)
 
 proc draw*(
   node: Node,
@@ -855,6 +878,7 @@ proc dumpTree*(node: Node, indent: string = "") =
         echo &"{prefix} indices (16bit): {primitive.indices16.len}"
       if primitive.indices32.len > 0:
         echo &"{prefix} indices (32bit): {primitive.indices32.len}"
+      echo &"{prefix} mode: {primitiveModeName(primitive.mode)}"
 
   for n in node.nodes:
     n.dumpTree(indent & "  ")
