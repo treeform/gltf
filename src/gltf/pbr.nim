@@ -36,6 +36,9 @@ proc setupPbr*() =
   ## Sets up the PBR rendering system.
   ## * Create Environment Map and Framebuffer.
 
+  # Reduce visible seams when sampling blurred cubemap mip levels.
+  glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS)
+
   glGenTextures(1, addr environmentMapId)
   glBindTexture(GL_TEXTURE_CUBE_MAP, environmentMapId)
 
