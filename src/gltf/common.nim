@@ -19,6 +19,27 @@ type
   AlphaMode* = enum
     OpaqueAlphaMode, MaskAlphaMode, BlendAlphaMode
 
+  CameraKind* = enum
+    ckPerspective, ckOrthographic
+
+  PerspectiveCamera* = object
+    yfov*: float32
+    aspectRatio*: float32
+    znear*: float32
+    zfar*: float32
+
+  OrthographicCamera* = object
+    xmag*: float32
+    ymag*: float32
+    znear*: float32
+    zfar*: float32
+
+  Camera* = ref object
+    name*: string
+    kind*: CameraKind
+    perspective*: PerspectiveCamera
+    orthographic*: OrthographicCamera
+
   Primitive* = ref object
     points*: seq[Vec3]
     uvs*: seq[Vec2]
@@ -61,6 +82,7 @@ type
     animTime*: float32
 
     mesh*: Mesh
+    camera*: Camera
     nodes*: seq[Node]
 
   Scene* = ref object
@@ -136,5 +158,6 @@ type
     root*: Node
     scenes*: seq[Scene]
     scene*: int
+    cameras*: seq[Camera]
     unsupportedUsedExtensions*: seq[string]
 

@@ -1,5 +1,5 @@
 import
-  std/[algorithm, os, strformat, strutils, times],
+  std/[algorithm, math, os, strformat, strutils, times],
   opengl, windy, chroma, silky, silky/atlas, jsony, pixie,
   pixie/fileformats/png, vmath,
   ../src/gltf/[models, pbr, reader]
@@ -8,6 +8,7 @@ const
   AtlasPng = staticRead("dist/atlas.png")
   VerticalFov = 45'f32
   FitPadding = 1.25'f32
+  FreeCameraName = "Free Camera"
 
 let
   debugViewOptions = @[
@@ -46,6 +47,9 @@ var
   useShadows = true
   lightFollowCamera = true
   debugViewName = "Lit"
+  cameraOptions = @[FreeCameraName]
+  cameraNodes: seq[Node]
+  selectedCamera = FreeCameraName
   skyboxOptions: seq[string]
   skyboxPatterns: seq[(string, string)]
   selectedSkybox = ""
@@ -164,6 +168,75 @@ proc defaultSkybox(): string =
     return skyboxOptions[0]
   "Solid Color"
 
+proc defaultCamera(): string =
+  ## Picks the free camera by default.
+  if cameraOptions.len > 0:
+    return cameraOptions[0]
+  FreeCameraName
+
+proc selectedCameraNode(): Node =
+  ## Returns the selected glTF camera node.
+  for i, name in cameraOptions:
+    if name == selectedCamera and i > 0 and i - 1 < cameraNodes.len:
+      return cameraNodes[i - 1]
+  nil
+
+proc cameraName(node: Node, index: int): string =
+  ## Builds a readable camera label for the UI.
+  if node.name.len > 0:
+    return node.name
+  if node.camera != nil and node.camera.name.len > 0:
+    return node.camera.name
+  "Camera " & $(index + 1)
+
+proc discoverCameras() =
+  ## Builds the camera dropdown from nodes that own cameras.
+  cameraOptions = @[FreeCameraName]
+  cameraNodes.setLen(0)
+  if model == nil:
+    return
+  for node in model.walkNodes():
+    if node.camera == nil:
+      continue
+    let baseName = cameraName(node, cameraNodes.len)
+    var
+      name = baseName
+      suffix = 2
+    while name in cameraOptions:
+      name = baseName & " " & $suffix
+      inc suffix
+    cameraNodes.add(node)
+    cameraOptions.add(name)
+
+proc cameraProjection(camera: Camera, aspectRatio: float32): Mat4 =
+  ## Builds a projection matrix for a glTF camera.
+  case camera.kind
+  of ckPerspective:
+    let
+      yfov =
+        camera.perspective.yfov * 180.0'f32 / PI.float32
+      camAspect =
+        if camera.perspective.aspectRatio > 0:
+          camera.perspective.aspectRatio
+        else:
+          aspectRatio
+      znear = max(0.001'f32, camera.perspective.znear)
+      zfar =
+        if camera.perspective.zfar > znear:
+          camera.perspective.zfar
+        else:
+          2000.0'f32
+    perspective(yfov, camAspect, znear, zfar)
+  of ckOrthographic:
+    ortho(
+      -camera.orthographic.xmag,
+      camera.orthographic.xmag,
+      -camera.orthographic.ymag,
+      camera.orthographic.ymag,
+      camera.orthographic.znear,
+      camera.orthographic.zfar
+    )
+
 proc discoverSkyboxes() =
   ## Scans the skybox folder for cubemap patterns.
   skyboxOptions = @[]
@@ -262,6 +335,9 @@ proc reloadFile(): bool =
     echo "Bounds: ", modelBounds
     echo "Bounding sphere: ", boundingSphere
     echo "Model file path: ", gltfFile.path
+    discoverCameras()
+    if selectedCamera notin cameraOptions:
+      selectedCamera = defaultCamera()
     camCenter = modelBounds.center
     camDolly = fitCameraDolly(modelBounds, aspectRatio)
     return true
@@ -272,6 +348,9 @@ proc reloadFile(): bool =
     gltfFile = nil
     model = Node()
     modelBounds = Bounds()
+    cameraOptions = @[FreeCameraName]
+    cameraNodes.setLen(0)
+    selectedCamera = FreeCameraName
     return false
 
 proc loadAssets() =
@@ -337,6 +416,8 @@ proc drawOverlay(
     checkBox("Lighting", useLighting)
     checkBox("Shadows", useShadows)
     checkBox("Light follow camera", lightFollowCamera)
+    text("Camera")
+    dropDown(selectedCamera, cameraOptions)
     text("Debug View")
     dropDown(debugViewName, debugViewOptions)
     text("Skybox")
@@ -378,6 +459,7 @@ proc drawOverlay(
 
     text("")
     text("View")
+    text(&"Active camera: {selectedCamera}")
     text(&"Camera dolly: {camDolly:>7.2f}")
     text(&"Camera center: {camCenter}")
     text(&"Bounds radius: {modelBounds.radius:>7.4f}")
@@ -389,8 +471,17 @@ window.onFrame = proc() =
   let dt = (nowTime - lastTime).float32
   lastTime = nowTime
 
-  if window.buttonDown[MouseMiddle] or
-     (window.buttonDown[MouseLeft] and window.buttonDown[KeyLeftSuper]):
+  if not loaded:
+    loaded = true
+    loadAssets()
+
+  let activeCameraNode = selectedCameraNode()
+  let useFreeCamera = activeCameraNode == nil
+
+  if useFreeCamera and (
+    window.buttonDown[MouseMiddle] or
+    (window.buttonDown[MouseLeft] and window.buttonDown[KeyLeftSuper])
+  ):
     let rot = 300.0'f32
     if window.buttonDown[MouseRight]:
       camRotation = rotateZ(window.mouseDelta.x.float32 / rot) * camRotation
@@ -398,27 +489,48 @@ window.onFrame = proc() =
       camRotation = rotateY(-window.mouseDelta.x.float32 / rot) * camRotation
       camRotation = rotateX(-window.mouseDelta.y.float32 / rot) * camRotation
 
-  let zoomAmount = 0.20'f32
-  if window.scrollDelta.y > 0:
-    camDolly *= 1 - zoomAmount
-  if window.scrollDelta.y < 0:
-    camDolly *= 1 + zoomAmount
-
-  let cameraMat =
-    translate(vec3(0, 0, -camDolly)) *
-    camRotation *
-    translate(-camCenter)
-  let cameraPosition = vec3(cameraMat.inverse.pos)
-
-  if not loaded:
-    loaded = true
-    loadAssets()
+  if useFreeCamera:
+    let zoomAmount = 0.20'f32
+    if window.scrollDelta.y > 0:
+      camDolly *= 1 - zoomAmount
+    if window.scrollDelta.y < 0:
+      camDolly *= 1 + zoomAmount
 
   if window.buttonPressed[Key1]:
     showControls = not showControls
 
   if window.buttonPressed[Key3]:
     lightFollowCamera = not lightFollowCamera
+
+  aspectRatio = window.size.x.float32 / window.size.y.float32
+  updateEnvironmentMap()
+
+  if model != nil:
+    model.updateAnimation(dt)
+
+  var
+    cameraMat: Mat4
+    cameraPosition: Vec3
+  if useFreeCamera:
+    proj = perspective(VerticalFov, aspectRatio, 0.001, 2000)
+    cameraMat =
+      translate(vec3(0, 0, -camDolly)) *
+      camRotation *
+      translate(-camCenter)
+    cameraPosition = vec3(cameraMat.inverse.pos)
+  else:
+    var world = mat4()
+    if findTransform(model, activeCameraNode, mat4(), world):
+      cameraMat = world.inverse
+      cameraPosition = vec3(world.pos)
+      proj = cameraProjection(activeCameraNode.camera, aspectRatio)
+    else:
+      proj = perspective(VerticalFov, aspectRatio, 0.001, 2000)
+      cameraMat =
+        translate(vec3(0, 0, -camDolly)) *
+        camRotation *
+        translate(-camCenter)
+      cameraPosition = vec3(cameraMat.inverse.pos)
 
   let
     viewDir = safeNormalize(camCenter - cameraPosition, vec3(0, 0, 1))
@@ -441,14 +553,6 @@ window.onFrame = proc() =
         selectedDebugView
       else:
         dvUnlit
-
-  aspectRatio = window.size.x.float32 / window.size.y.float32
-  proj = perspective(VerticalFov, aspectRatio, 0.001, 2000)
-
-  updateEnvironmentMap()
-
-  if model != nil:
-    model.updateAnimation(dt)
 
   glClearColor(
     backgroundColor.r,
