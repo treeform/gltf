@@ -317,10 +317,7 @@ proc renderPbrNode(
 
   let currentTransform =
     if applyTrs:
-      transform *
-      translate(node.pos) *
-      node.rot.mat4() *
-      scale(node.scale)
+      transform * node.trs
     else:
       transform
   node.mat = currentTransform

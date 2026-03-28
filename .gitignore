@@ -22,3 +22,4 @@ build/
 dist/
 coverage/
 docs/htmldocs/
+tests/tmp/
