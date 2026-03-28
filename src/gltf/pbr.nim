@@ -770,12 +770,12 @@ proc getShadowMatrices(node: Node, transform: Mat4, lightDir: Vec3): (Mat4, Mat4
     lightAngles = toAngles(lightPos, center)
     lightView = inverse(translate(lightPos) * fromAngles(lightAngles))
     lightProj = ortho(
-    -orthoSize,
-    orthoSize,
-    -orthoSize,
-    orthoSize,
-    nearPlane,
-    farPlane
+      -orthoSize,
+      orthoSize,
+      -orthoSize,
+      orthoSize,
+      nearPlane,
+      farPlane
     )
   return (lightView, lightProj, lightProj * lightView, lightPos)
 
