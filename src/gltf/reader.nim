@@ -122,11 +122,30 @@ proc loadPrimitive(
   buffers: seq[string],
   images: seq[Image],
   textures: seq[Texture],
+  samplers: seq[Sampler],
   materials: seq[InnerMaterial]
 ) =
   ## Loads a primitive into a node.
+  proc getTextureSampler(textureIndex: int): TextureSampler =
+    result = defaultTextureSampler()
+    if textureIndex < 0 or textureIndex >= textures.len:
+      return
+    let samplerIndex = textures[textureIndex].sampler
+    if samplerIndex < 0 or samplerIndex >= samplers.len:
+      return
+    let sampler = samplers[samplerIndex]
+    result.magFilter = sampler.magFilter
+    result.minFilter = sampler.minFilter
+    result.wrapS = sampler.wrapS
+    result.wrapT = sampler.wrapT
+
   let primitive = primitives[primitiveIndex]
   n.material = Material()
+  n.material.baseColorSampler = defaultTextureSampler()
+  n.material.metallicRoughnessSampler = defaultTextureSampler()
+  n.material.normalSampler = defaultTextureSampler()
+  n.material.occlusionSampler = defaultTextureSampler()
+  n.material.emissiveSampler = defaultTextureSampler()
   if primitive.material >= 0:
     let material = materials[primitive.material]
 
@@ -134,6 +153,7 @@ proc loadPrimitive(
     if pbr.baseColorTexture.index >= 0:
       n.material.baseColor =
         images[textures[pbr.baseColorTexture.index].source]
+      n.material.baseColorSampler = getTextureSampler(pbr.baseColorTexture.index)
     else:
       n.material.baseColor = newImage(1, 1)
       n.material.baseColor.fill(rgbx(255, 255, 255, 255))
@@ -148,6 +168,8 @@ proc loadPrimitive(
     if pbr.metallicRoughnessTexture.index >= 0:
       n.material.metallicRoughness =
         images[textures[pbr.metallicRoughnessTexture.index].source]
+      n.material.metallicRoughnessSampler =
+        getTextureSampler(pbr.metallicRoughnessTexture.index)
     else:
       n.material.metallicRoughness = newImage(1, 1)
       n.material.metallicRoughness.fill(rgbx(255, 255, 255, 255))
@@ -162,6 +184,7 @@ proc loadPrimitive(
 
     if material.normalTexture.index >= 0:
       n.material.normal = images[textures[material.normalTexture.index].source]
+      n.material.normalSampler = getTextureSampler(material.normalTexture.index)
       n.material.hasNormalTexture = true
       n.material.normalScale = material.normalTexture.scale
     else:
@@ -179,6 +202,8 @@ proc loadPrimitive(
     if material.occlusionTexture.index >= 0:
       n.material.occlusion =
         images[textures[material.occlusionTexture.index].source]
+      n.material.occlusionSampler =
+        getTextureSampler(material.occlusionTexture.index)
     else:
       n.material.occlusion = newImage(1, 1)
       n.material.occlusion.fill(rgbx(255, 255, 255, 255))
@@ -193,6 +218,7 @@ proc loadPrimitive(
     if material.emissiveTexture.index >= 0:
       n.material.emissive =
         images[textures[material.emissiveTexture.index].source]
+      n.material.emissiveSampler = getTextureSampler(material.emissiveTexture.index)
     else:
       n.material.emissive = newImage(1, 1)
       n.material.emissive.fill(rgbx(255, 255, 255, 255))
@@ -1038,6 +1064,7 @@ proc loadModelJson*(
           buffers,
           images,
           textures,
+          samplers,
           materials
         )
       else:
@@ -1062,6 +1089,7 @@ proc loadModelJson*(
             buffers,
             images,
             textures,
+            samplers,
             materials
           )
           n.nodes.add(child)

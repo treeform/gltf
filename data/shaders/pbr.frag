@@ -150,17 +150,18 @@ void main() {
     occlusionStrength;
   vec3 emissiveValue = texture(emissiveTexture, emissiveUv).rgb * emissiveFactor;
 
-  // Triangle normal fallback for missing normal maps and debug views.
-  vec3 triangleNormal = normalize(cross(dFdx(position), dFdy(position)));
-  if (!gl_FrontFacing) {
-    triangleNormal = -triangleNormal;
-  }
+  // Fall back to a geometric normal when a mesh normal is missing.
+  vec3 geometricNormal = normalize(cross(dFdx(position), dFdy(position)));
+  vec3 meshNormal = length(normal) > 0.0 ? normalize(normal) : geometricNormal;
 
   // Normal mapping
   vec3 normalValue = texture(normalTexture, normalUv).rgb;
   normalValue = normalize(normalValue * 2.0 - 1.0) * normalScale;
   vec3 mappedNormal = normalize(TBN * normalValue);
-  vec3 computedNormal = useNormalTexture ? mappedNormal : triangleNormal;
+  vec3 computedNormal = useNormalTexture ? mappedNormal : meshNormal;
+  if (!gl_FrontFacing) {
+    computedNormal = -computedNormal;
+  }
 
   // Calculate lighting
   vec3 sunDir = normalize(-sunLightDirection);
