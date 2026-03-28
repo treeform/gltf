@@ -5,6 +5,78 @@ import
 
 export common
 
+proc readFloat32(data: string, offset: int): float32 =
+  ## Reads a float32 from a byte string.
+  cast[ptr float32](data[offset].unsafeAddr)[]
+
+proc readAccessorFloats(
+  accessorIdx: int,
+  accessors: seq[Accessor],
+  bufferViews: seq[BufferView],
+  buffers: seq[string]
+): seq[float32] =
+  ## Reads scalar accessor data as float32 values.
+  let
+    accessor = accessors[accessorIdx]
+    view = bufferViews[accessor.bufferView]
+    buffer = buffers[view.buffer]
+    start = view.byteOffset + accessor.byteOffset
+    stride = if view.byteStride > 0: view.byteStride else: 4
+  result.setLen(accessor.count)
+  for i in 0 ..< accessor.count:
+    let off = start + i * stride
+    result[i] = readFloat32(buffer, off)
+
+proc readAccessorVec3(
+  accessorIdx: int,
+  accessors: seq[Accessor],
+  bufferViews: seq[BufferView],
+  buffers: seq[string]
+): seq[Vec3] =
+  ## Reads vec3 accessor data.
+  let
+    accessor = accessors[accessorIdx]
+    view = bufferViews[accessor.bufferView]
+    buffer = buffers[view.buffer]
+    start = view.byteOffset + accessor.byteOffset
+    stride = if view.byteStride > 0: view.byteStride else: 12
+  result.setLen(accessor.count)
+  for i in 0 ..< accessor.count:
+    let off = start + i * stride
+    result[i] = vec3(
+      readFloat32(buffer, off),
+      readFloat32(buffer, off + 4),
+      readFloat32(buffer, off + 8)
+    )
+
+proc readAccessorQuat(
+  accessorIdx: int,
+  accessors: seq[Accessor],
+  bufferViews: seq[BufferView],
+  buffers: seq[string]
+): seq[Quat] =
+  ## Reads quaternion accessor data.
+  let
+    accessor = accessors[accessorIdx]
+    view = bufferViews[accessor.bufferView]
+    buffer = buffers[view.buffer]
+    start = view.byteOffset + accessor.byteOffset
+    stride = if view.byteStride > 0: view.byteStride else: 16
+  result.setLen(accessor.count)
+  for i in 0 ..< accessor.count:
+    let off = start + i * stride
+    result[i] = quat(
+      readFloat32(buffer, off),
+      readFloat32(buffer, off + 4),
+      readFloat32(buffer, off + 8),
+      readFloat32(buffer, off + 12)
+    ).normalize()
+
+proc assertRaise(test: bool, msg: string) =
+  ## Raises an exception when a glTF invariant is not met.
+  if not test:
+    raise newException(Exception, msg)
+
 proc loadPrimitive(
   n: Node,
   mesh: Mesh,
@@ -847,7 +919,7 @@ proc loadModelJson*(
     for childId in nodeChildren[nodeId]:
       n.nodes.add(processNode(childId))
 
-    n
+    return n
 
   result = Node()
   result.visible = true

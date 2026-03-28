@@ -1,9 +1,88 @@
 import
   std/[json, tables],
-  flatty/binny, opengl, vmath,
+  flatty/binny, opengl, pixie, pixie/fileformats/png, vmath,
   common, models
 
 export common
+
+proc pad4(data: var string) =
+  ## Pads a string to a 4-byte boundary.
+  while data.len mod 4 != 0:
+    data.add(char(0))
+
+proc writeUint32Le(s: var string, v: uint32) =
+  ## Writes a little-endian uint32 value.
+  s.add(char(v and 0xFF))
+  s.add(char((v shr 8) and 0xFF))
+  s.add(char((v shr 16) and 0xFF))
+  s.add(char((v shr 24) and 0xFF))
+
+proc writeUint16AtLe(s: var string, offset: int, v: uint16) =
+  ## Writes a little-endian uint16 at an offset.
+  s[offset] = char(v and 0xFF)
+  s[offset + 1] = char((v shr 8) and 0xFF)
+
+proc writeUint32AtLe(s: var string, offset: int, v: uint32) =
+  ## Writes a little-endian uint32 at an offset.
+  s[offset + 0] = char(v and 0xFF)
+  s[offset + 1] = char((v shr 8) and 0xFF)
+  s[offset + 2] = char((v shr 16) and 0xFF)
+  s[offset + 3] = char((v shr 24) and 0xFF)
+
+proc addView(
+  data: var string,
+  payload: string,
+  stride = 0
+): BufferView =
+  ## Appends payload bytes and returns a buffer view.
+  let offset = data.len
+  data.add(payload)
+  pad4(data)
+  BufferView(
+    buffer: 0,
+    byteOffset: offset,
+    byteLength: payload.len,
+    byteStride: stride
+  )
+
+proc addAccessor(
+  accessors: var seq[Accessor],
+  bufferViews: var seq[BufferView],
+  data: var string,
+  payload: string,
+  kind: AccessorKind,
+  component: GLenum,
+  count: int,
+  stride = 0
+): int =
+  ## Adds an accessor and its backing buffer view.
+  bufferViews.add(addView(data, payload, stride))
+  let
+    viewIdx = bufferViews.len - 1
+    accessor = Accessor(
+      bufferView: viewIdx,
+      byteOffset: 0,
+      count: count,
+      componentType: component,
+      kind: kind
+    )
+  accessors.add(accessor)
+  accessors.len - 1
+
+proc writeImagePng(
+  images: var seq[JsonNode],
+  bufferViews: var seq[BufferView],
+  data: var string,
+  img: Image
+) =
+  ## Encodes and appends an image as PNG data.
+  let pngData = img.encodePng()
+  bufferViews.add(addView(data, pngData))
+  let viewIdx = bufferViews.len - 1
+  var node = newJObject()
+  node["bufferView"] = newJInt(viewIdx)
+  node["mimeType"] = newJString("image/png")
+  images.add(node)
 
 proc writeGLB*(root: Node, path: string) =
   ## Writes a node hierarchy to a binary glTF file.
@@ -28,6 +107,7 @@ proc writeGLB*(root: Node, path: string) =
   var materialIds = initTable[pointer, int]()
 
   proc materialIndex(mat: Material): int =
+    ## Returns the output material index for a material.
     if mat == nil:
       return -1
     let key = cast[pointer](mat)
@@ -74,6 +154,7 @@ proc writeGLB*(root: Node, path: string) =
     idx
 
   proc addMeshForNode(n: Node): int =
+    ## Adds mesh data for a node and returns its index.
     if n.points.len == 0:
       return -1
 
@@ -198,6 +279,7 @@ proc writeGLB*(root: Node, path: string) =
     meshes.len - 1
 
   proc walk(n: Node): int =
+    ## Walks the node tree and returns the node index.
     var nodeObj = newJObject()
     nodeObj["name"] = newJString(n.name)
     nodeObj["translation"] = %*[n.pos.x, n.pos.y, n.pos.z]

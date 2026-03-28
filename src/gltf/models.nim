@@ -41,7 +41,7 @@ type
     doubleSided*: bool
     clampToEdge*: bool
 
-    # OpenGL Ids.
+    # These are the OpenGL IDs.
     baseColorId*: GLuint
     metallicRoughnessId*: GLuint
     normalId*: GLuint
@@ -75,7 +75,7 @@ type
 
     nodes*: seq[Node]
 
-    # OpenGL Ids.
+    # These are the OpenGL IDs.
     uploaded*: bool
     vertexArrayId*: GLuint
     pointsId*: GLuint
@@ -85,12 +85,8 @@ type
     colorsId*: GLuint
     indicesId*: GLuint
 
-
 proc shallowCopy*(node: Node): Node =
-  ## Create a shallow copy of a node.
-  ## Does not copy mesh, textures, etc.
-  ## This is useful to create instances of a node.
-
+  ## Creates a shallow copy of a node.
   result = Node()
   result.name = node.name
   result.visible = node.visible
@@ -138,6 +134,7 @@ proc resetToBase*(node: Node) =
     n.resetToBase()
 
 proc sampleVec3(times: seq[float32], values: seq[Vec3], t: float32): Vec3 =
+  ## Samples a vec3 animation track at a time.
   if values.len == 0 or times.len == 0:
     return vec3(0, 0, 0)
   if t <= times[0]:
@@ -151,6 +148,7 @@ proc sampleVec3(times: seq[float32], values: seq[Vec3], t: float32): Vec3 =
   return values[^1]
 
 proc sampleQuat(times: seq[float32], values: seq[Quat], t: float32): Quat =
+  ## Samples a quaternion animation track at a time.
   if values.len == 0 or times.len == 0:
     return quat(0, 0, 0, 1)
   if t <= times[0]:
@@ -167,6 +165,7 @@ proc sampleQuat(times: seq[float32], values: seq[Quat], t: float32): Quat =
   return values[^1]
 
 proc applyClipAt*(clip: AnimationClip, time: float32) =
+  ## Applies an animation clip at a time.
   if clip.channels.len == 0:
     return
   let t =
@@ -199,7 +198,7 @@ proc uploadTextureToGpu(
   wrapS = GL_REPEAT,
   wrapT = GL_REPEAT
 ) =
-  ## Upload a texture to the GPU.
+  ## Uploads a texture to the GPU.
   glGenTextures(1, textureId.addr)
   glBindTexture(GL_TEXTURE_2D, textureId)
   if image.isOpaque():
@@ -232,7 +231,11 @@ proc uploadTextureToGpu(
       image.data[0].addr
     )
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR)
+  glTexParameteri(
+    GL_TEXTURE_2D,
+    GL_TEXTURE_MIN_FILTER,
+    GL_LINEAR_MIPMAP_LINEAR
+  )
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapS.GLint)
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrapT.GLint)
   glGenerateMipmap(GL_TEXTURE_2D)
@@ -535,6 +538,7 @@ proc trs*(node: Node): Mat4 =
   translate(node.pos) * node.rot.mat4() * scale(node.scale)
 
 proc toMat4(m: DMat4): Mat4 =
+  ## Converts a double-precision matrix to float32.
   gmat4(
     m[0, 0].float32, m[0, 1].float32, m[0, 2].float32, m[0, 3].float32,
     m[1, 0].float32, m[1, 1].float32, m[1, 2].float32, m[1, 3].float32,
@@ -550,17 +554,18 @@ proc draw*(
   useTrs = true,
   skipBlend = false
 ) =
+  ## Draws the node with a float32 transform.
   if not node.visible:
     return
 
   node.mat = transform * node.trs
 
-  if skipBlend and node.material != nil and node.material.alphaMode == BlendAlphaMode:
+  if skipBlend and
+    node.material != nil and
+    node.material.alphaMode == BlendAlphaMode:
     for n in node.nodes:
       n.draw(shader, node.mat, view, proj, tint, useTrs=true, skipBlend=skipBlend)
     return
-
-
   let
     modelUniform = glGetUniformLocation(shader, "model")
     viewUniform = glGetUniformLocation(shader, "view")
@@ -570,9 +575,24 @@ proc draw*(
     modelArray = node.mat
     viewArray = view
     projArray = proj
-  glUniformMatrix4fv(modelUniform, 1, GL_FALSE, cast[ptr float32](modelArray.addr))
-  glUniformMatrix4fv(viewUniform, 1, GL_FALSE, cast[ptr float32](viewArray.addr))
-  glUniformMatrix4fv(projUniform, 1, GL_FALSE, cast[ptr float32](projArray.addr))
+  glUniformMatrix4fv(
+    modelUniform,
+    1,
+    GL_FALSE,
+    cast[ptr float32](modelArray.addr)
+  )
+  glUniformMatrix4fv(
+    viewUniform,
+    1,
+    GL_FALSE,
+    cast[ptr float32](viewArray.addr)
+  )
+  glUniformMatrix4fv(
+    projUniform,
+    1,
+    GL_FALSE,
+    cast[ptr float32](projArray.addr)
+  )
 
   if not node.uploaded:
     node.uploadToGpu()
@@ -637,15 +657,16 @@ proc draw*(
     n.draw(shader, node.mat, view, proj, tint, useTrs=true, skipBlend=skipBlend)
 
 proc dumpTree*(node: Node, indent: string = "") =
+  ## Prints the node tree for debugging.
   echo &"{indent}{node.name}"
 
-  # TRS
+  # Print the transform values.
   echo &"{indent}  pos: {node.pos}"
   let euler = node.rot.mat4().toAngles().toDegrees()
   echo &"{indent}  rot: {node.rot} ({euler})"
   echo &"{indent}  scale: {node.scale}"
 
-  # Material
+  # Print the material values.
   if node.material != nil:
     echo &"{indent}  material: {node.material.name}"
     if node.material.baseColor != nil:
@@ -664,7 +685,7 @@ proc dumpTree*(node: Node, indent: string = "") =
     if node.material.emissive != nil:
       echo &"{indent}    emissive: {node.material.emissive}"
       echo &"{indent}    emissiveFactor: {node.material.emissiveFactor}"
-    # Alpha mode.
+    # Print the alpha mode.
     if node.material.alphaMode == MaskAlphaMode:
       echo &"{indent}    alphaMode: Mask"
       echo &"{indent}    alphaCutoff: {node.material.alphaCutoff}"
@@ -674,7 +695,7 @@ proc dumpTree*(node: Node, indent: string = "") =
       echo &"{indent}    alphaMode: Opaque"
     echo &"{indent}    doubleSided: {node.material.doubleSided}"
 
-  # Mesh
+  # Print the mesh values.
   if node.points.len > 0:
     echo &"{indent}  points: {node.points.len}"
   if node.uvs.len > 0:
