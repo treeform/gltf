@@ -19,7 +19,7 @@ type
     OpaqueAlphaMode, MaskAlphaMode, BlendAlphaMode
 
   AnimPath* = enum
-    AnimTranslation, AnimRotation, AnimScale
+    AnimTranslation, AnimRotation, AnimScale, AnimVisibility
 
   AnimationChannel* = object
     target*: Node
@@ -27,6 +27,7 @@ type
     times*: seq[float32]
     valuesVec3*: seq[Vec3]
     valuesQuat*: seq[Quat]
+    valuesFloat*: seq[float32]
 
   AnimationClip* = object
     name*: string
@@ -78,6 +79,7 @@ type
     scale*: Vec3
     mat*: Mat4
 
+    baseVisible*: bool
     basePos*: Vec3
     baseRot*: Quat
     baseScale*: Vec3
@@ -117,6 +119,7 @@ proc shallowCopy*(node: Node): Node =
   result.scale = node.scale
   result.mat = node.mat
 
+  result.baseVisible = node.baseVisible
   result.basePos = node.basePos
   result.baseRot = node.baseRot
   result.baseScale = node.baseScale
@@ -191,11 +194,26 @@ proc resetToBase*(node: Node) =
   ## Reset the node (and its children) to the original transform.
   if node == nil:
     return
+  node.visible = node.baseVisible
   node.pos = node.basePos
   node.rot = node.baseRot
   node.scale = node.baseScale
   for n in node.nodes:
     n.resetToBase()
+
+proc sampleFloat(times: seq[float32], values: seq[float32], t: float32): float32 =
+  ## Samples a scalar animation track at a time.
+  if values.len == 0 or times.len == 0:
+    return 0
+  if t <= times[0]:
+    return values[0]
+  for i in 0 ..< times.len - 1:
+    let t0 = times[i]
+    let t1 = times[i + 1]
+    if t <= t1:
+      let u = (t - t0) / (t1 - t0)
+      return values[i] * (1 - u) + values[i + 1] * u
+  return values[^1]
 
 proc sampleVec3(times: seq[float32], values: seq[Vec3], t: float32): Vec3 =
   ## Samples a vec3 animation track at a time.
@@ -246,6 +264,9 @@ proc applyClipAt*(clip: AnimationClip, time: float32) =
     of AnimRotation:
       if ch.valuesQuat.len > 0:
         ch.target.rot = sampleQuat(ch.times, ch.valuesQuat, t)
+    of AnimVisibility:
+      if ch.valuesFloat.len > 0:
+        ch.target.visible = sampleFloat(ch.times, ch.valuesFloat, t) >= 0.5
 
 proc updateAnimation*(node: Node, dt: float32) =
   ## Advance and apply the current animation clip.
