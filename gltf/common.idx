@@ -13,24 +13,26 @@ nim	PerspectiveCamera	gltf/common.html#PerspectiveCamera	object PerspectiveCamer
 nim	OrthographicCamera	gltf/common.html#OrthographicCamera	object OrthographicCamera		31
 nim	Camera	gltf/common.html#Camera	type Camera		37
 nim	JointIds	gltf/common.html#JointIds	type JointIds		43
-nim	Primitive	gltf/common.html#Primitive	type Primitive		45
-nim	Mesh	gltf/common.html#Mesh	type Mesh		69
-nim	Node	gltf/common.html#Node	type Node		73
-nim	Scene	gltf/common.html#Scene	type Scene		95
-nim	Skin	gltf/common.html#Skin	type Skin		99
-nim	AnimTranslation	gltf/common.html#AnimTranslation	AnimPath.AnimTranslation		105
-nim	AnimRotation	gltf/common.html#AnimRotation	AnimPath.AnimRotation		105
-nim	AnimScale	gltf/common.html#AnimScale	AnimPath.AnimScale		105
-nim	AnimVisibility	gltf/common.html#AnimVisibility	AnimPath.AnimVisibility		105
-nim	AnimPath	gltf/common.html#AnimPath	enum AnimPath		105
-nim	aiStep	gltf/common.html#aiStep	AnimInterpolation.aiStep		108
-nim	aiLinear	gltf/common.html#aiLinear	AnimInterpolation.aiLinear		108
-nim	aiCubicSpline	gltf/common.html#aiCubicSpline	AnimInterpolation.aiCubicSpline		108
-nim	AnimInterpolation	gltf/common.html#AnimInterpolation	enum AnimInterpolation		108
-nim	AnimationChannel	gltf/common.html#AnimationChannel	object AnimationChannel		111
-nim	AnimationClip	gltf/common.html#AnimationClip	object AnimationClip		126
-nim	Material	gltf/common.html#Material	type Material		131
-nim	AABounds	gltf/common.html#AABounds	object AABounds		167
-nim	Bounds	gltf/common.html#Bounds	object Bounds		170
-nim	BoundingSphere	gltf/common.html#BoundingSphere	object BoundingSphere		175
-nim	GltfFile	gltf/common.html#GltfFile	type GltfFile		179
+nim	MorphTarget	gltf/common.html#MorphTarget	type MorphTarget		45
+nim	Primitive	gltf/common.html#Primitive	type Primitive		50
+nim	Mesh	gltf/common.html#Mesh	type Mesh		78
+nim	Node	gltf/common.html#Node	type Node		83
+nim	Scene	gltf/common.html#Scene	type Scene		107
+nim	Skin	gltf/common.html#Skin	type Skin		111
+nim	AnimTranslation	gltf/common.html#AnimTranslation	AnimPath.AnimTranslation		117
+nim	AnimRotation	gltf/common.html#AnimRotation	AnimPath.AnimRotation		117
+nim	AnimScale	gltf/common.html#AnimScale	AnimPath.AnimScale		117
+nim	AnimVisibility	gltf/common.html#AnimVisibility	AnimPath.AnimVisibility		117
+nim	AnimWeights	gltf/common.html#AnimWeights	AnimPath.AnimWeights		117
+nim	AnimPath	gltf/common.html#AnimPath	enum AnimPath		117
+nim	aiStep	gltf/common.html#aiStep	AnimInterpolation.aiStep		120
+nim	aiLinear	gltf/common.html#aiLinear	AnimInterpolation.aiLinear		120
+nim	aiCubicSpline	gltf/common.html#aiCubicSpline	AnimInterpolation.aiCubicSpline		120
+nim	AnimInterpolation	gltf/common.html#AnimInterpolation	enum AnimInterpolation		120
+nim	AnimationChannel	gltf/common.html#AnimationChannel	object AnimationChannel		123
+nim	AnimationClip	gltf/common.html#AnimationClip	object AnimationClip		141
+nim	Material	gltf/common.html#Material	type Material		146
+nim	AABounds	gltf/common.html#AABounds	object AABounds		182
+nim	Bounds	gltf/common.html#Bounds	object Bounds		185
+nim	BoundingSphere	gltf/common.html#BoundingSphere	object BoundingSphere		190
+nim	GltfFile	gltf/common.html#GltfFile	type GltfFile		194

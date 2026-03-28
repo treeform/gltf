@@ -18,6 +18,7 @@ nim	MaterialTexture	gltf/internal.html#MaterialTexture	object MaterialTexture		4
 nim	PbrMetallicRoughness	gltf/internal.html#PbrMetallicRoughness	object PbrMetallicRoughness		51
 nim	MaterialInfo	gltf/internal.html#MaterialInfo	object MaterialInfo		58
 nim	MeshInfo	gltf/internal.html#MeshInfo	object MeshInfo		70
-nim	PrimitiveAttributes	gltf/internal.html#PrimitiveAttributes	object PrimitiveAttributes		74
-nim	PrimitiveInfo	gltf/internal.html#PrimitiveInfo	object PrimitiveInfo		78
-nim	SkinInfo	gltf/internal.html#SkinInfo	object SkinInfo		83
+nim	PrimitiveAttributes	gltf/internal.html#PrimitiveAttributes	object PrimitiveAttributes		76
+nim	MorphTargetInfo	gltf/internal.html#MorphTargetInfo	object MorphTargetInfo		80
+nim	PrimitiveInfo	gltf/internal.html#PrimitiveInfo	object PrimitiveInfo		83
+nim	SkinInfo	gltf/internal.html#SkinInfo	object SkinInfo		89
