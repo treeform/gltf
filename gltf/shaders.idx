@@ -1,0 +1,2 @@
+nimTitle	shaders	gltf/shaders.html	module gltf/shaders		0
+nim	compileShaderFiles	gltf/shaders.html#compileShaderFiles,string,string	proc compileShaderFiles(vertShaderSrc: string; fragShaderSrc: string): GLuint		17

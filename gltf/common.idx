@@ -1,0 +1,21 @@
+nimTitle	common	gltf/common.html	module gltf/common		0
+nim	GltfError	gltf/common.html#GltfError	object GltfError		6
+nim	BufferView	gltf/common.html#BufferView	object BufferView		8
+nim	atSCALAR	gltf/common.html#atSCALAR	AccessorKind.atSCALAR		12
+nim	atVEC2	gltf/common.html#atVEC2	AccessorKind.atVEC2		12
+nim	atVEC3	gltf/common.html#atVEC3	AccessorKind.atVEC3		12
+nim	atVEC4	gltf/common.html#atVEC4	AccessorKind.atVEC4		12
+nim	atMAT2	gltf/common.html#atMAT2	AccessorKind.atMAT2		12
+nim	atMAT3	gltf/common.html#atMAT3	AccessorKind.atMAT3		12
+nim	atMAT4	gltf/common.html#atMAT4	AccessorKind.atMAT4		12
+nim	AccessorKind	gltf/common.html#AccessorKind	enum AccessorKind		12
+nim	Accessor	gltf/common.html#Accessor	object Accessor		15
+nim	Texture	gltf/common.html#Texture	object Texture		21
+nim	Sampler	gltf/common.html#Sampler	object Sampler		25
+nim	MaterialTexture	gltf/common.html#MaterialTexture	object MaterialTexture		28
+nim	PbrMetallicRoughness	gltf/common.html#PbrMetallicRoughness	object PbrMetallicRoughness		37
+nim	InnerMaterial	gltf/common.html#InnerMaterial	object InnerMaterial		44
+nim	Mesh	gltf/common.html#Mesh	object Mesh		55
+nim	PrimitiveAttributes	gltf/common.html#PrimitiveAttributes	object PrimitiveAttributes		59
+nim	Primitive	gltf/common.html#Primitive	object Primitive		62
+nim	GltfFile	gltf/common.html#GltfFile	type GltfFile		67

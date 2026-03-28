@@ -1,0 +1,2 @@
+nimTitle	writer	gltf/writer.html	module gltf/writer		0
+nim	writeGLB	gltf/writer.html#writeGLB,Node,string	proc writeGLB(root: Node; path: string)		87
