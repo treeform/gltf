@@ -11,15 +11,15 @@ nim	shadowMapFbo	gltf/pbr.html#shadowMapFbo	var shadowMapFbo		28
 nim	shadowMapTex	gltf/pbr.html#shadowMapTex	var shadowMapTex		29
 nim	shadowDepthShader	gltf/pbr.html#shadowDepthShader	var shadowDepthShader		30
 nim	setupPbr	gltf/pbr.html#setupPbr	proc setupPbr()		35
-nim	loadEnvironmentMap	gltf/pbr.html#loadEnvironmentMap,string	proc loadEnvironmentMap(cubeMapPath: string)		211
-nim	loadDefaultEnvironmentMap	gltf/pbr.html#loadDefaultEnvironmentMap	proc loadDefaultEnvironmentMap(color = rgbx(180, 190, 220, 255))		215
-nim	drawSkybox	gltf/pbr.html#drawSkybox,Mat4,Mat4,float32	proc drawSkybox(view, proj: Mat4; lod: float32 = 0.0)		221
-nim	dvLit	gltf/pbr.html#dvLit	DebugView.dvLit		260
-nim	dvUnlit	gltf/pbr.html#dvUnlit	DebugView.dvUnlit		260
-nim	dvNormals	gltf/pbr.html#dvNormals	DebugView.dvNormals		260
-nim	dvAoBake	gltf/pbr.html#dvAoBake	DebugView.dvAoBake		260
-nim	dvMetallic	gltf/pbr.html#dvMetallic	DebugView.dvMetallic		260
-nim	dvSpecular	gltf/pbr.html#dvSpecular	DebugView.dvSpecular		260
-nim	DebugView	gltf/pbr.html#DebugView	enum DebugView		260
-nim	drawPbr	gltf/pbr.html#drawPbr,Node,Mat4,Mat4,Mat4,Color	proc drawPbr(node: Node; transform, view, proj: Mat4; tint: Color; useTrs = true;\n        ambientLightColor = color(0.1, 0.1, 0.1, 1);\n        sunLightDirection = vec3(1, 4, 2); sunLightColor = color(1, 1, 1, 1);\n        rimLightDirection = vec3(-1, 1, -1); rimLightColor = color(0, 0, 0, 0);\n        debugView = dvLit; cameraPosition = vec3(0, 0, 10))		565
-nim	drawPbrWithShadow	gltf/pbr.html#drawPbrWithShadow,Node,Mat4,Mat4,Mat4,Color	proc drawPbrWithShadow(node: Node; transform, view, proj: Mat4; tint: Color;\n                  sunLightDirection = vec3(1, 4, 2); useTrs = true;\n                  ambientLightColor = color(0.1, 0.1, 0.1, 1);\n                  sunLightColor = color(1, 1, 1, 1);\n                  rimLightDirection = vec3(-1, 1, -1);\n                  rimLightColor = color(0, 0, 0, 0); debugView = dvLit;\n                  cameraPosition = vec3(0, 0, 10))		661
+nim	loadEnvironmentMap	gltf/pbr.html#loadEnvironmentMap,string	proc loadEnvironmentMap(cubeMapPath: string)		214
+nim	loadDefaultEnvironmentMap	gltf/pbr.html#loadDefaultEnvironmentMap	proc loadDefaultEnvironmentMap(color = rgbx(180, 190, 220, 255))		218
+nim	drawSkybox	gltf/pbr.html#drawSkybox,Mat4,Mat4,float32	proc drawSkybox(view, proj: Mat4; lod: float32 = 0.0)		224
+nim	dvLit	gltf/pbr.html#dvLit	DebugView.dvLit		263
+nim	dvUnlit	gltf/pbr.html#dvUnlit	DebugView.dvUnlit		263
+nim	dvNormals	gltf/pbr.html#dvNormals	DebugView.dvNormals		263
+nim	dvAoBake	gltf/pbr.html#dvAoBake	DebugView.dvAoBake		263
+nim	dvMetallic	gltf/pbr.html#dvMetallic	DebugView.dvMetallic		263
+nim	dvSpecular	gltf/pbr.html#dvSpecular	DebugView.dvSpecular		263
+nim	DebugView	gltf/pbr.html#DebugView	enum DebugView		263
+nim	drawPbr	gltf/pbr.html#drawPbr,Node,Mat4,Mat4,Mat4,Color	proc drawPbr(node: Node; transform, view, proj: Mat4; tint: Color; useTrs = true;\n        ambientLightColor = color(0.1, 0.1, 0.1, 1);\n        sunLightDirection = vec3(1, 4, 2); sunLightColor = color(1, 1, 1, 1);\n        rimLightDirection = vec3(-1, 1, -1); rimLightColor = color(0, 0, 0, 0);\n        debugView = dvLit; cameraPosition = vec3(0, 0, 10))		568
+nim	drawPbrWithShadow	gltf/pbr.html#drawPbrWithShadow,Node,Mat4,Mat4,Mat4,Color	proc drawPbrWithShadow(node: Node; transform, view, proj: Mat4; tint: Color;\n                  sunLightDirection = vec3(1, 4, 2); useTrs = true;\n                  ambientLightColor = color(0.1, 0.1, 0.1, 1);\n                  sunLightColor = color(1, 1, 1, 1);\n                  rimLightDirection = vec3(-1, 1, -1);\n                  rimLightColor = color(0, 0, 0, 0); debugView = dvLit;\n                  cameraPosition = vec3(0, 0, 10))		664
