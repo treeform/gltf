@@ -25,7 +25,7 @@
   <div class="document" id="documentId">
     <div class="container">
       <h1 class="title">Index</h1>
-      Modules: <a href="gltf.html">gltf</a>, <a href="gltf/common.html">gltf/common</a>, <a href="gltf/internal.html">gltf/internal</a>, <a href="gltf/models.html">gltf/models</a>, <a href="gltf/pbr.html">gltf/pbr</a>, <a href="gltf/reader.html">gltf/reader</a>, <a href="gltf/shaders.html">gltf/shaders</a>, <a href="gltf/writer.html">gltf/writer</a>.<br/><p /><h2>API symbols</h2>
+      Modules: <a href="gltf.html">gltf</a>, <a href="gltf/animations.html">gltf/animations</a>, <a href="gltf/common.html">gltf/common</a>, <a href="gltf/internal.html">gltf/internal</a>, <a href="gltf/models.html">gltf/models</a>, <a href="gltf/pbr.html">gltf/pbr</a>, <a href="gltf/reader.html">gltf/reader</a>, <a href="gltf/shaders.html">gltf/shaders</a>, <a href="gltf/writer.html">gltf/writer</a>.<br/><p /><h2>API symbols</h2>
 <dl><dt><a name="%60%24%60" href="#%60%24%60"><span>`$`:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="models: proc `$`(sampler: TextureSampler): string" href="gltf/models.html#%24%2CTextureSampler">models: proc `$`(sampler: TextureSampler): string</a></li>
@@ -46,6 +46,18 @@
 <li><a class="reference external"
           data-doc-search-tag="internal: enum AccessorKind" href="gltf/internal.html#AccessorKind">internal: enum AccessorKind</a></li>
           </ul></dd>
+<dt><a name="aiCubicSpline" href="#aiCubicSpline"><span>aiCubicSpline:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: AnimInterpolation.aiCubicSpline" href="gltf/common.html#aiCubicSpline">common: AnimInterpolation.aiCubicSpline</a></li>
+          </ul></dd>
+<dt><a name="aiLinear" href="#aiLinear"><span>aiLinear:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: AnimInterpolation.aiLinear" href="gltf/common.html#aiLinear">common: AnimInterpolation.aiLinear</a></li>
+          </ul></dd>
+<dt><a name="aiStep" href="#aiStep"><span>aiStep:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: AnimInterpolation.aiStep" href="gltf/common.html#aiStep">common: AnimInterpolation.aiStep</a></li>
+          </ul></dd>
 <dt><a name="AlphaMode" href="#AlphaMode"><span>AlphaMode:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="common: enum AlphaMode" href="gltf/common.html#AlphaMode">common: enum AlphaMode</a></li>
@@ -57,6 +69,10 @@
 <dt><a name="AnimationClip" href="#AnimationClip"><span>AnimationClip:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="common: object AnimationClip" href="gltf/common.html#AnimationClip">common: object AnimationClip</a></li>
+          </ul></dd>
+<dt><a name="AnimInterpolation" href="#AnimInterpolation"><span>AnimInterpolation:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: enum AnimInterpolation" href="gltf/common.html#AnimInterpolation">common: enum AnimInterpolation</a></li>
           </ul></dd>
 <dt><a name="AnimPath" href="#AnimPath"><span>AnimPath:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -80,7 +96,7 @@
           </ul></dd>
 <dt><a name="applyClipAt" href="#applyClipAt"><span>applyClipAt:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="models: proc applyClipAt(clip: AnimationClip; time: float32)" href="gltf/models.html#applyClipAt%2CAnimationClip%2Cfloat32">models: proc applyClipAt(clip: AnimationClip; time: float32)</a></li>
+          data-doc-search-tag="animations: proc applyClipAt(clip: AnimationClip; time: float32)" href="gltf/animations.html#applyClipAt%2CAnimationClip%2Cfloat32">animations: proc applyClipAt(clip: AnimationClip; time: float32)</a></li>
           </ul></dd>
 <dt><a name="atMAT2" href="#atMAT2"><span>atMAT2:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -416,7 +432,7 @@
           </ul></dd>
 <dt><a name="resetToBase" href="#resetToBase"><span>resetToBase:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="models: proc resetToBase(node: Node)" href="gltf/models.html#resetToBase%2CNode">models: proc resetToBase(node: Node)</a></li>
+          data-doc-search-tag="animations: proc resetToBase(node: Node)" href="gltf/animations.html#resetToBase%2CNode">animations: proc resetToBase(node: Node)</a></li>
           </ul></dd>
 <dt><a name="Sampler" href="#Sampler"><span>Sampler:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -504,7 +520,7 @@
           </ul></dd>
 <dt><a name="updateAnimation" href="#updateAnimation"><span>updateAnimation:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="models: proc updateAnimation(node: Node; dt: float32)" href="gltf/models.html#updateAnimation%2CNode%2Cfloat32">models: proc updateAnimation(node: Node; dt: float32)</a></li>
+          data-doc-search-tag="animations: proc updateAnimation(node: Node; dt: float32)" href="gltf/animations.html#updateAnimation%2CNode%2Cfloat32">animations: proc updateAnimation(node: Node; dt: float32)</a></li>
           </ul></dd>
 <dt><a name="updateOnGpu" href="#updateOnGpu"><span>updateOnGpu:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -538,7 +554,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-03-28 18:22:16 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-03-28 18:46:44 UTC</small>
       </div>
     </div>
   </div>

@@ -62,14 +62,23 @@
 <li><a class="reference" href="#AnimationChannel" title="AnimationChannel = object
   target*: Node
   path*: AnimPath
+  interpolation*: AnimInterpolation
   times*: seq[float32]
   valuesVec3*: seq[Vec3]
+  inTangentsVec3*: seq[Vec3]
+  outTangentsVec3*: seq[Vec3]
   valuesQuat*: seq[Quat]
-  valuesFloat*: seq[float32]">AnimationChannel</a></li>
+  inTangentsQuat*: seq[Quat]
+  outTangentsQuat*: seq[Quat]
+  valuesFloat*: seq[float32]
+  inTangentsFloat*: seq[float32]
+  outTangentsFloat*: seq[float32]">AnimationChannel</a></li>
 <li><a class="reference" href="#AnimationClip" title="AnimationClip = object
   name*: string
   duration*: float32
   channels*: seq[AnimationChannel]">AnimationClip</a></li>
+<li><a class="reference" href="#AnimInterpolation" title="AnimInterpolation = enum
+  aiStep, aiLinear, aiCubicSpline">AnimInterpolation</a></li>
 <li><a class="reference" href="#AnimPath" title="AnimPath = enum
   AnimTranslation, AnimRotation, AnimScale, AnimVisibility">AnimPath</a></li>
 <li><a class="reference" href="#BoundingSphere" title="BoundingSphere = object
@@ -144,7 +153,7 @@
   baseRot*: Quat
   baseScale*: Vec3
   animations*: seq[AnimationClip]
-  currentClip*: int
+  activeClips*: seq[int]
   animTime*: float32
   mesh*: Mesh
   skin*: Skin
@@ -224,8 +233,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L157" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L157" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L167" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L167" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -244,15 +253,22 @@
   <dt><pre><a href="common.html#AnimationChannel"><span class="Identifier">AnimationChannel</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
   <span class="Identifier">target</span><span class="Operator">*</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a>
   <span class="Identifier">path</span><span class="Operator">*</span><span class="Other">:</span> <a href="common.html#AnimPath"><span class="Identifier">AnimPath</span></a>
+  <span class="Identifier">interpolation</span><span class="Operator">*</span><span class="Other">:</span> <a href="common.html#AnimInterpolation"><span class="Identifier">AnimInterpolation</span></a>
   <span class="Identifier">times</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">float32</span><span class="Other">]</span>
   <span class="Identifier">valuesVec3</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">Vec3</span><span class="Other">]</span>
+  <span class="Identifier">inTangentsVec3</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">Vec3</span><span class="Other">]</span>
+  <span class="Identifier">outTangentsVec3</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">Vec3</span><span class="Other">]</span>
   <span class="Identifier">valuesQuat</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">Quat</span><span class="Other">]</span>
-  <span class="Identifier">valuesFloat</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">float32</span><span class="Other">]</span></pre></dt>
+  <span class="Identifier">inTangentsQuat</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">Quat</span><span class="Other">]</span>
+  <span class="Identifier">outTangentsQuat</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">Quat</span><span class="Other">]</span>
+  <span class="Identifier">valuesFloat</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">float32</span><span class="Other">]</span>
+  <span class="Identifier">inTangentsFloat</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">float32</span><span class="Other">]</span>
+  <span class="Identifier">outTangentsFloat</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">float32</span><span class="Other">]</span></pre></dt>
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L108" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L108" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L111" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L111" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -264,8 +280,19 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L116" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L116" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L126" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L126" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="AnimInterpolation">
+  <dt><pre><a href="common.html#AnimInterpolation"><span class="Identifier">AnimInterpolation</span></a> <span class="Other">=</span> <span class="Keyword">enum</span>
+  <span class="Identifier">aiStep</span><span class="Other">,</span> <span class="Identifier">aiLinear</span><span class="Other">,</span> <span class="Identifier">aiCubicSpline</span></pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L108" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L108" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -287,8 +314,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L165" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L165" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L175" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L175" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -300,8 +327,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L160" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L160" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L170" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L170" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -352,8 +379,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L169" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L169" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L179" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L179" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -404,8 +431,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L121" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L121" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L131" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L131" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -434,7 +461,7 @@
   <span class="Identifier">baseRot</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Quat</span>
   <span class="Identifier">baseScale</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec3</span>
   <span class="Identifier">animations</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="common.html#AnimationClip"><span class="Identifier">AnimationClip</span></a><span class="Other">]</span>
-  <span class="Identifier">currentClip</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
+  <span class="Identifier">activeClips</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">int</span><span class="Other">]</span>
   <span class="Identifier">animTime</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
   <span class="Identifier">mesh</span><span class="Operator">*</span><span class="Other">:</span> <a href="common.html#Mesh"><span class="Identifier">Mesh</span></a>
   <span class="Identifier">skin</span><span class="Operator">*</span><span class="Other">:</span> <a href="common.html#Skin"><span class="Identifier">Skin</span></a>
@@ -571,7 +598,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-03-28 18:22:14 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-03-28 18:46:42 UTC</small>
       </div>
     </div>
   </div>
