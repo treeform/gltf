@@ -61,6 +61,7 @@ type
     alphaMode*: AlphaMode
     alphaCutoff*: float32
     doubleSided*: bool
+    transmissionFactor*: float32
 
     # These are the OpenGL IDs.
     baseColorId*: GLuint
@@ -705,6 +706,7 @@ proc dumpTree*(node: Node, indent: string = "") =
       echo &"{indent}    alphaMode: Blend"
     else:
       echo &"{indent}    alphaMode: Opaque"
+    echo &"{indent}    transmissionFactor: {node.material.transmissionFactor}"
     echo &"{indent}    doubleSided: {node.material.doubleSided}"
 
   # Print the mesh values.
