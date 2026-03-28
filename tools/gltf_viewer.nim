@@ -25,7 +25,7 @@ if params.len == 0 or not fileExists(params[0]):
 
 var window = newWindow(
   "glTF Viewer",
-  ivec2(1000, 1000),
+  ivec2(1200, 700),
   msaa = msaa8x
 )
 makeContextCurrent(window)
@@ -46,9 +46,9 @@ var
   useShadows = true
   lightFollowCamera = true
   debugViewName = "Lit"
-  skyboxOptions = @["Solid Color"]
+  skyboxOptions: seq[string]
   skyboxPatterns: seq[(string, string)]
-  selectedSkybox = "Solid Color"
+  selectedSkybox = ""
   lastSkybox = ""
   skyboxLod: float32 = 7.0
   modelPath = params[0]
@@ -155,6 +155,15 @@ proc selectedSkyboxPattern(): string =
       return pattern
   ""
 
+proc defaultSkybox(): string =
+  ## Picks the first real skybox and falls back to solid color.
+  for name in skyboxOptions:
+    if name != "Solid Color":
+      return name
+  if skyboxOptions.len > 0:
+    return skyboxOptions[0]
+  "Solid Color"
+
 proc discoverSkyboxes() =
   ## Scans the skybox folder for cubemap patterns.
   skyboxOptions = @[]
@@ -183,7 +192,7 @@ proc discoverSkyboxes() =
       skyboxOptions.add(name)
 
   skyboxOptions.sort()
-  skyboxOptions.insert("Solid Color", 0)
+  skyboxOptions.add("Solid Color")
 
 proc updateEnvironmentMap(force = false) =
   ## Reloads the environment map when the selection changes.
@@ -270,7 +279,7 @@ proc loadAssets() =
   setupPbr()
   discoverSkyboxes()
   if selectedSkybox notin skyboxOptions:
-    selectedSkybox = "Solid Color"
+    selectedSkybox = defaultSkybox()
   updateEnvironmentMap(force = true)
   discard reloadFile()
 
