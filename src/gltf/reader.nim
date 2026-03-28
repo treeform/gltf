@@ -154,6 +154,72 @@ proc readTextureTransform(entry: JsonNode, texInfo: var MaterialTexture) =
     if "texCoord" in transform:
       texInfo.texCoord = transform["texCoord"].getInt()
 
+proc defaultRuntimeMaterial(): Material =
+  ## Returns the glTF default material for runtime rendering.
+  result = Material()
+  result.baseColorSampler = defaultTextureSampler()
+  result.metallicRoughnessSampler = defaultTextureSampler()
+  result.normalSampler = defaultTextureSampler()
+  result.occlusionSampler = defaultTextureSampler()
+  result.emissiveSampler = defaultTextureSampler()
+
+  result.baseColor = newImage(1, 1)
+  result.baseColor.fill(rgbx(255, 255, 255, 255))
+  result.baseColorFactor = color(1, 1, 1, 1)
+  result.baseColorTransform = TextureTransform(
+    texCoord: 0,
+    offset: vec2(0, 0),
+    scale: vec2(1, 1),
+    rotation: 0
+  )
+
+  result.metallicRoughness = newImage(1, 1)
+  result.metallicRoughness.fill(rgbx(255, 255, 255, 255))
+  result.metallicFactor = 1.0
+  result.roughnessFactor = 1.0
+  result.metallicRoughnessTransform = TextureTransform(
+    texCoord: 0,
+    offset: vec2(0, 0),
+    scale: vec2(1, 1),
+    rotation: 0
+  )
+
+  result.normal = newImage(1, 1)
+  result.normal.fill(rgbx(128, 128, 255, 255))
+  result.hasNormalTexture = false
+  result.normalScale = 1.0
+  result.normalTransform = TextureTransform(
+    texCoord: 0,
+    offset: vec2(0, 0),
+    scale: vec2(1, 1),
+    rotation: 0
+  )
+
+  result.occlusion = newImage(1, 1)
+  result.occlusion.fill(rgbx(255, 255, 255, 255))
+  result.occlusionStrength = 1.0
+  result.occlusionTransform = TextureTransform(
+    texCoord: 0,
+    offset: vec2(0, 0),
+    scale: vec2(1, 1),
+    rotation: 0
+  )
+
+  result.emissive = newImage(1, 1)
+  result.emissive.fill(rgbx(255, 255, 255, 255))
+  result.emissiveFactor = color(0, 0, 0, 1)
+  result.emissiveTransform = TextureTransform(
+    texCoord: 0,
+    offset: vec2(0, 0),
+    scale: vec2(1, 1),
+    rotation: 0
+  )
+
+  result.alphaMode = OpaqueAlphaMode
+  result.alphaCutoff = -1.0
+  result.doubleSided = false
+  result.transmissionFactor = 0.0
+
 proc loadPrimitive(
   primitiveIndex: int,
   primitiveDefs: seq[PrimitiveInfo],
@@ -181,12 +247,7 @@ proc loadPrimitive(
 
   let primInfo = primitiveDefs[primitiveIndex]
   result = Primitive(mode: primInfo.mode)
-  result.material = Material()
-  result.material.baseColorSampler = defaultTextureSampler()
-  result.material.metallicRoughnessSampler = defaultTextureSampler()
-  result.material.normalSampler = defaultTextureSampler()
-  result.material.occlusionSampler = defaultTextureSampler()
-  result.material.emissiveSampler = defaultTextureSampler()
+  result.material = defaultRuntimeMaterial()
   if primInfo.material >= 0:
     let material = materials[primInfo.material]
 
