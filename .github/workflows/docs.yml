@@ -20,6 +20,7 @@ jobs:
       - run: nimby install gltf/gltf.nimble
         working-directory: ${{ github.workspace }}/..
       - run: nim doc --index:on --project --git.url:https://github.com/${{ github.repository }} --git.commit:master --out:${{ env.deploy-dir }} ${{ env.nim-src }}
+      - run: cp ${{ env.deploy-dir }}/theindex.html ${{ env.deploy-dir }}/index.html
       - uses: peaceiris/actions-gh-pages@v4
         if: github.event_name == 'push'
         with:
