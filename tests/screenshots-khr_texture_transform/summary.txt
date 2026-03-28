@@ -1,0 +1,1 @@
+ok		C:\p\glTF-Sample-Assets\Models\SheenChair\glTF\SheenChair.gltf	C:\p\gltf\tests\screenshots-khr_texture_transform\SheenChair.gltf.png	Rendered and captured successfully.

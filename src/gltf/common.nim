@@ -1,5 +1,5 @@
 import
-  chroma, opengl,
+  chroma, opengl, vmath,
   models
 
 type
@@ -28,6 +28,9 @@ type
   MaterialTexture* = object
     index*: int
     texCoord*: int
+    offset*: Vec2
+    uvScale*: Vec2
+    rotation*: float32
     scale*: float32
     strength*: float32
 

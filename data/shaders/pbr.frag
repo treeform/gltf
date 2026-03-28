@@ -13,15 +13,30 @@ uniform mat4 model;
 
 uniform sampler2D baseColorTexture;
 uniform vec4 baseColorFactor;
+uniform vec2 baseColorUvOffset;
+uniform vec2 baseColorUvScale;
+uniform float baseColorUvRotation;
 uniform sampler2D metallicRoughnessTexture;
 uniform float metallicFactor;
 uniform float roughnessFactor;
+uniform vec2 metallicRoughnessUvOffset;
+uniform vec2 metallicRoughnessUvScale;
+uniform float metallicRoughnessUvRotation;
 uniform sampler2D normalTexture;
 uniform float normalScale;
+uniform vec2 normalUvOffset;
+uniform vec2 normalUvScale;
+uniform float normalUvRotation;
 uniform sampler2D occlusionTexture;
 uniform float occlusionStrength;
+uniform vec2 occlusionUvOffset;
+uniform vec2 occlusionUvScale;
+uniform float occlusionUvRotation;
 uniform sampler2D emissiveTexture;
 uniform vec3 emissiveFactor;
+uniform vec2 emissiveUvOffset;
+uniform vec2 emissiveUvScale;
+uniform float emissiveUvRotation;
 uniform samplerCube environmentMap;
 uniform sampler2DShadow shadowMap;
 
@@ -76,8 +91,46 @@ float sampleShadow(vec4 posLightSpace, vec3 normal, vec3 lightDir) {
   return 1.0 - litAvg;
 }
 
+vec2 transformUv(vec2 uv, vec2 offset, vec2 scale, float rotation) {
+  float c = cos(rotation);
+  float s = sin(rotation);
+  mat2 rot = mat2(c, -s, s, c);
+  return rot * (uv * scale) + offset;
+}
+
 void main() {
-  fragColor.rgba = texture(baseColorTexture, uv).rgba;
+  vec2 baseColorUv = transformUv(
+    uv,
+    baseColorUvOffset,
+    baseColorUvScale,
+    baseColorUvRotation
+  );
+  vec2 metallicRoughnessUv = transformUv(
+    uv,
+    metallicRoughnessUvOffset,
+    metallicRoughnessUvScale,
+    metallicRoughnessUvRotation
+  );
+  vec2 normalUv = transformUv(
+    uv,
+    normalUvOffset,
+    normalUvScale,
+    normalUvRotation
+  );
+  vec2 occlusionUv = transformUv(
+    uv,
+    occlusionUvOffset,
+    occlusionUvScale,
+    occlusionUvRotation
+  );
+  vec2 emissiveUv = transformUv(
+    uv,
+    emissiveUvOffset,
+    emissiveUvScale,
+    emissiveUvRotation
+  );
+
+  fragColor.rgba = texture(baseColorTexture, baseColorUv).rgba;
   fragColor *= baseColorFactor;
   fragColor *= color;
   if (fragColor.a < alphaCutoff) {
@@ -86,10 +139,16 @@ void main() {
 
   // PBR parameters
   vec3 albedo = fragColor.rgb;
-  float roughness = texture(metallicRoughnessTexture, uv).g * roughnessFactor;
-  float metallic = texture(metallicRoughnessTexture, uv).b * metallicFactor;
-  float ambientOcclusion = texture(occlusionTexture, uv).g * occlusionStrength;
-  vec3 emissiveValue = texture(emissiveTexture, uv).rgb * emissiveFactor;
+  float roughness =
+    texture(metallicRoughnessTexture, metallicRoughnessUv).g *
+    roughnessFactor;
+  float metallic =
+    texture(metallicRoughnessTexture, metallicRoughnessUv).b *
+    metallicFactor;
+  float ambientOcclusion =
+    texture(occlusionTexture, occlusionUv).g *
+    occlusionStrength;
+  vec3 emissiveValue = texture(emissiveTexture, emissiveUv).rgb * emissiveFactor;
 
   // Triangle normal fallback for missing normal maps and debug views.
   vec3 triangleNormal = normalize(cross(dFdx(position), dFdy(position)));
@@ -98,7 +157,7 @@ void main() {
   }
 
   // Normal mapping
-  vec3 normalValue = texture(normalTexture, uv).rgb;
+  vec3 normalValue = texture(normalTexture, normalUv).rgb;
   normalValue = normalize(normalValue * 2.0 - 1.0) * normalScale;
   vec3 mappedNormal = normalize(TBN * normalValue);
   vec3 computedNormal = useNormalTexture ? mappedNormal : triangleNormal;

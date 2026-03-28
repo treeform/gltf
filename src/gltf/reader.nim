@@ -77,6 +77,41 @@ proc assertRaise(test: bool, msg: string) =
   if not test:
     raise newException(GltfError, msg)
 
+proc defaultMaterialTexture(): MaterialTexture =
+  ## Returns a material texture with default transform values.
+  MaterialTexture(
+    index: -1,
+    texCoord: 0,
+    offset: vec2(0, 0),
+    uvScale: vec2(1, 1),
+    rotation: 0,
+    scale: 1,
+    strength: 1
+  )
+
+proc readTextureTransform(entry: JsonNode, materialTexture: var MaterialTexture) =
+  ## Reads core and KHR_texture_transform texture info.
+  if "texCoord" in entry:
+    materialTexture.texCoord = entry["texCoord"].getInt()
+
+  if "extensions" in entry and
+    "KHR_texture_transform" in entry["extensions"]:
+    let transform = entry["extensions"]["KHR_texture_transform"]
+    if "offset" in transform:
+      materialTexture.offset = vec2(
+        transform["offset"][0].getFloat().float32,
+        transform["offset"][1].getFloat().float32
+      )
+    if "scale" in transform:
+      materialTexture.uvScale = vec2(
+        transform["scale"][0].getFloat().float32,
+        transform["scale"][1].getFloat().float32
+      )
+    if "rotation" in transform:
+      materialTexture.rotation = transform["rotation"].getFloat().float32
+    if "texCoord" in transform:
+      materialTexture.texCoord = transform["texCoord"].getInt()
+
 proc loadPrimitive(
   n: Node,
   mesh: Mesh,
@@ -102,6 +137,12 @@ proc loadPrimitive(
     else:
       n.material.baseColor = newImage(1, 1)
       n.material.baseColor.fill(rgbx(255, 255, 255, 255))
+    n.material.baseColorTransform = TextureTransform(
+      texCoord: pbr.baseColorTexture.texCoord,
+      offset: pbr.baseColorTexture.offset,
+      scale: pbr.baseColorTexture.uvScale,
+      rotation: pbr.baseColorTexture.rotation
+    )
     n.material.baseColorFactor = pbr.baseColorFactor
 
     if pbr.metallicRoughnessTexture.index >= 0:
@@ -110,6 +151,12 @@ proc loadPrimitive(
     else:
       n.material.metallicRoughness = newImage(1, 1)
       n.material.metallicRoughness.fill(rgbx(255, 255, 255, 255))
+    n.material.metallicRoughnessTransform = TextureTransform(
+      texCoord: pbr.metallicRoughnessTexture.texCoord,
+      offset: pbr.metallicRoughnessTexture.offset,
+      scale: pbr.metallicRoughnessTexture.uvScale,
+      rotation: pbr.metallicRoughnessTexture.rotation
+    )
     n.material.metallicFactor = pbr.metallicFactor
     n.material.roughnessFactor = pbr.roughnessFactor
 
@@ -122,6 +169,12 @@ proc loadPrimitive(
       n.material.normal.fill(rgbx(128, 128, 255, 255))
       n.material.hasNormalTexture = false
       n.material.normalScale = 1.0
+    n.material.normalTransform = TextureTransform(
+      texCoord: material.normalTexture.texCoord,
+      offset: material.normalTexture.offset,
+      scale: material.normalTexture.uvScale,
+      rotation: material.normalTexture.rotation
+    )
 
     if material.occlusionTexture.index >= 0:
       n.material.occlusion =
@@ -129,6 +182,12 @@ proc loadPrimitive(
     else:
       n.material.occlusion = newImage(1, 1)
       n.material.occlusion.fill(rgbx(255, 255, 255, 255))
+    n.material.occlusionTransform = TextureTransform(
+      texCoord: material.occlusionTexture.texCoord,
+      offset: material.occlusionTexture.offset,
+      scale: material.occlusionTexture.uvScale,
+      rotation: material.occlusionTexture.rotation
+    )
     n.material.occlusionStrength = material.occlusionTexture.strength
 
     if material.emissiveTexture.index >= 0:
@@ -137,6 +196,12 @@ proc loadPrimitive(
     else:
       n.material.emissive = newImage(1, 1)
       n.material.emissive.fill(rgbx(255, 255, 255, 255))
+    n.material.emissiveTransform = TextureTransform(
+      texCoord: material.emissiveTexture.texCoord,
+      offset: material.emissiveTexture.offset,
+      scale: material.emissiveTexture.uvScale,
+      rotation: material.emissiveTexture.rotation
+    )
     n.material.emissiveFactor = material.emissiveFactor
 
     case material.alphaMode
@@ -412,6 +477,8 @@ proc loadModelJson*(
   if "extensionsRequired" in jsonRoot:
     for extension in jsonRoot["extensionsRequired"]:
       case extension.getStr()
+      of "KHR_texture_transform":
+        discard
       else:
         raise newException(
           GltfError,
@@ -545,6 +612,12 @@ proc loadModelJson*(
   if "materials" in jsonRoot:
     for entry in jsonRoot["materials"]:
       var material = InnerMaterial()
+      material.pbrMetallicRoughness.baseColorTexture = defaultMaterialTexture()
+      material.pbrMetallicRoughness.metallicRoughnessTexture =
+        defaultMaterialTexture()
+      material.normalTexture = defaultMaterialTexture()
+      material.occlusionTexture = defaultMaterialTexture()
+      material.emissiveTexture = defaultMaterialTexture()
       if "name" in entry:
         material.name = entry["name"].getStr()
 
@@ -554,6 +627,10 @@ proc loadModelJson*(
           let baseColorTexture = pbrMetallicRoughness["baseColorTexture"]
           material.pbrMetallicRoughness.baseColorTexture.index =
             baseColorTexture["index"].getInt()
+          readTextureTransform(
+            baseColorTexture,
+            material.pbrMetallicRoughness.baseColorTexture
+          )
         else:
           material.pbrMetallicRoughness.baseColorTexture.index = -1
 
@@ -572,6 +649,10 @@ proc loadModelJson*(
             pbrMetallicRoughness["metallicRoughnessTexture"]
           material.pbrMetallicRoughness.metallicRoughnessTexture.index =
             metallicRoughnessTexture["index"].getInt()
+          readTextureTransform(
+            metallicRoughnessTexture,
+            material.pbrMetallicRoughness.metallicRoughnessTexture
+          )
         else:
           material.pbrMetallicRoughness.metallicRoughnessTexture.index = -1
 
@@ -596,6 +677,7 @@ proc loadModelJson*(
       if "normalTexture" in entry:
         let normalTexture = entry["normalTexture"]
         material.normalTexture.index = normalTexture["index"].getInt()
+        readTextureTransform(normalTexture, material.normalTexture)
         if "scale" in normalTexture:
           material.normalTexture.scale =
             normalTexture["scale"].getFloat().float32
@@ -608,6 +690,7 @@ proc loadModelJson*(
       if "occlusionTexture" in entry:
         let occlusionTexture = entry["occlusionTexture"]
         material.occlusionTexture.index = occlusionTexture["index"].getInt()
+        readTextureTransform(occlusionTexture, material.occlusionTexture)
         if "strength" in occlusionTexture:
           material.occlusionTexture.strength =
             occlusionTexture["strength"].getFloat().float32
@@ -620,6 +703,7 @@ proc loadModelJson*(
       if "emissiveTexture" in entry:
         let emissiveTexture = entry["emissiveTexture"]
         material.emissiveTexture.index = emissiveTexture["index"].getInt()
+        readTextureTransform(emissiveTexture, material.emissiveTexture)
       else:
         material.emissiveTexture.index = -1
 

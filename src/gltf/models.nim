@@ -3,6 +3,12 @@ import
   vmath, chroma, pixie, opengl
 
 type
+  TextureTransform* = object
+    texCoord*: int
+    offset*: Vec2
+    scale*: Vec2
+    rotation*: float32
+
   AlphaMode* = enum
     OpaqueAlphaMode, MaskAlphaMode, BlendAlphaMode
 
@@ -24,16 +30,21 @@ type
   Material* = ref object
     name*: string
     baseColor*: Image
+    baseColorTransform*: TextureTransform
     baseColorFactor*: Color
     metallicRoughness*: Image
+    metallicRoughnessTransform*: TextureTransform
     metallicFactor*: float32
     roughnessFactor*: float32
     normal*: Image
+    normalTransform*: TextureTransform
     hasNormalTexture*: bool
     normalScale*: float32
     occlusion*: Image
+    occlusionTransform*: TextureTransform
     occlusionStrength*: float32
     emissive*: Image
+    emissiveTransform*: TextureTransform
     emissiveFactor*: Color
 
     alphaMode*: AlphaMode

@@ -269,6 +269,27 @@ type
     node: Node
     transform: Mat4
 
+proc setTextureTransformUniform(shader: GLuint, prefix: string, transform: TextureTransform) =
+  ## Sets UV transform uniforms for a texture input.
+  let
+    offsetName = (prefix & "UvOffset").cstring
+    scaleName = (prefix & "UvScale").cstring
+    rotationName = (prefix & "UvRotation").cstring
+  glUniform2f(
+    glGetUniformLocation(shader, offsetName),
+    transform.offset.x,
+    transform.offset.y
+  )
+  glUniform2f(
+    glGetUniformLocation(shader, scaleName),
+    transform.scale.x,
+    transform.scale.y
+  )
+  glUniform1f(
+    glGetUniformLocation(shader, rotationName),
+    transform.rotation
+  )
+
 proc renderPbrNode(
   node: Node,
   transform, view, proj: Mat4,
@@ -390,6 +411,11 @@ proc renderPbrNode(
       node.material.baseColorFactor.b,
       node.material.baseColorFactor.a
     )
+    setTextureTransformUniform(
+      pbrShader,
+      "baseColor",
+      node.material.baseColorTransform
+    )
 
     glActiveTexture(GL_TEXTURE1)
     glUniform1i(glGetUniformLocation(pbrShader, "metallicRoughnessTexture"), 1)
@@ -403,6 +429,11 @@ proc renderPbrNode(
       glGetUniformLocation(pbrShader, "roughnessFactor"),
       node.material.roughnessFactor
     )
+    setTextureTransformUniform(
+      pbrShader,
+      "metallicRoughness",
+      node.material.metallicRoughnessTransform
+    )
 
     glActiveTexture(GL_TEXTURE2)
     glUniform1i(glGetUniformLocation(pbrShader, "normalTexture"), 2)
@@ -411,6 +442,11 @@ proc renderPbrNode(
     glUniform1f(
       glGetUniformLocation(pbrShader, "normalScale"),
       node.material.normalScale
+    )
+    setTextureTransformUniform(
+      pbrShader,
+      "normal",
+      node.material.normalTransform
     )
     glUniform1i(
       glGetUniformLocation(pbrShader, "useNormalTexture"),
@@ -425,6 +461,11 @@ proc renderPbrNode(
       glGetUniformLocation(pbrShader, "occlusionStrength"),
       node.material.occlusionStrength
     )
+    setTextureTransformUniform(
+      pbrShader,
+      "occlusion",
+      node.material.occlusionTransform
+    )
 
     glActiveTexture(GL_TEXTURE4)
     glUniform1i(glGetUniformLocation(pbrShader, "emissiveTexture"), 4)
@@ -435,6 +476,11 @@ proc renderPbrNode(
       node.material.emissiveFactor.r,
       node.material.emissiveFactor.g,
       node.material.emissiveFactor.b,
+    )
+    setTextureTransformUniform(
+      pbrShader,
+      "emissive",
+      node.material.emissiveTransform
     )
 
     glActiveTexture(GL_TEXTURE5)
