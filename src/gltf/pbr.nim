@@ -621,13 +621,13 @@ proc getShadowMatrices(node: Node, transform: Mat4, lightDir: Vec3): (Mat4, Mat4
   ## Compute light view/projection for the node tree.
   let bounds = getAABounds(node, transform)
   let center = bounds.center
-  let radius = bounds.radius()
+  let radius = bounds.radius().float32
   let dir = normalize(lightDir)
-  let lightPos = center - dir * (radius * 2)
-  let nearPlane = max(0.1, radius * 0.1)
-  let farPlane = radius * 4
-  let orthoSize = radius * 1.5
-  let lightView = lookAt(lightPos, center, vec3(0, 1, 0)).mat4
+  let lightPos = center - dir * (radius * 2'f32)
+  let nearPlane = max(0.1'f32, radius * 0.1'f32)
+  let farPlane = radius * 4'f32
+  let orthoSize = radius * 1.5'f32
+  let lightView = lookAt(lightPos, center, vec3(0, 1, 0))
   let lightProj = ortho(
     -orthoSize,
     orthoSize,
@@ -635,7 +635,7 @@ proc getShadowMatrices(node: Node, transform: Mat4, lightDir: Vec3): (Mat4, Mat4
     orthoSize,
     nearPlane,
     farPlane
-  ).mat4
+  )
   return (lightView, lightProj, lightProj * lightView, lightPos)
 
 proc drawPbrWithShadow*(
