@@ -2,8 +2,8 @@
 
 import
   std/[strutils, algorithm],
-  opengl, windy, pixie,
-  models, shaders, vmath
+  opengl, windy, pixie, vmath,
+  models, shaders
 
 const
   envMapSize* = 512 # Size of the environment map.
@@ -39,7 +39,7 @@ proc setupPbr*() =
   glGenTextures(1, addr environmentMapId)
   glBindTexture(GL_TEXTURE_CUBE_MAP, environmentMapId)
 
-  for i in 0..<6:
+  for i in 0 ..< 6:
     glTexImage2D(
       (GL_TEXTURE_CUBE_MAP_POSITIVE_X.int + i).GLenum,
       0,
@@ -124,7 +124,7 @@ proc setupPbr*() =
   glReadBuffer(GL_NONE)
   glBindFramebuffer(GL_FRAMEBUFFER, 0)
 
-  # Full-screen triangle data
+  # Full-screen triangle data.
   var skyboxVertices = [
     -1.0f32, -1.0f32,
      3.0f32, -1.0f32,
@@ -144,7 +144,7 @@ proc setupPbr*() =
   glBindVertexArray(0)
 
 proc loadCubeTexture(path: string): GLuint =
-  ## Creates a cube texture and returns its openGL id
+  ## Creates a cube texture and returns its OpenGL ID.
 
   var textureId: GLuint
   glGenTextures(1, addr(textureId))
@@ -167,14 +167,14 @@ proc loadCubeTexture(path: string): GLuint =
       image.data[0].addr
     )
 
-  # Set texture parameters for the cube map
+  # Set texture parameters for the cube map.
   glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
   glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR)
   glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
   glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
   glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE)
 
-  # Generate mipmaps for the cube map
+  # Generate mipmaps for the cube map.
   glGenerateMipmap(GL_TEXTURE_CUBE_MAP)
 
   return textureId
@@ -209,6 +209,7 @@ proc createSolidCubeTexture(color: ColorRGBX): GLuint =
   textureId
 
 proc loadEnvironmentMap*(cubeMapPath: string) =
+  ## Loads an environment map from a cube texture path.
   environmentMapId = loadCubeTexture(cubeMapPath)
 
 proc loadDefaultEnvironmentMap*(color = rgbx(180, 190, 220, 255)) =
@@ -221,18 +222,29 @@ proc drawSkybox*(view, proj: Mat4, lod: float32 = 0.0) =
   ## Draws the skybox using a full-screen quad.
   glUseProgram(skyboxShader)
 
-  var invProj = proj.inverse
-  var invView = view.inverse
+  var
+    invProj = proj.inverse
+    invView = view.inverse
 
-  glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "invProj"), 1, GL_FALSE, cast[ptr float32](invProj.addr))
-  glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "invView"), 1, GL_FALSE, cast[ptr float32](invView.addr))
+  glUniformMatrix4fv(
+    glGetUniformLocation(skyboxShader, "invProj"),
+    1,
+    GL_FALSE,
+    cast[ptr float32](invProj.addr)
+  )
+  glUniformMatrix4fv(
+    glGetUniformLocation(skyboxShader, "invView"),
+    1,
+    GL_FALSE,
+    cast[ptr float32](invView.addr)
+  )
 
   glActiveTexture(GL_TEXTURE0)
   glBindTexture(GL_TEXTURE_CUBE_MAP, environmentMapId)
   glUniform1i(glGetUniformLocation(skyboxShader, "environmentMap"), 0)
   glUniform1f(glGetUniformLocation(skyboxShader, "lod"), lod)
 
-  # Draw a single triangle that covers the whole screen
+  # Draw a single triangle that covers the whole screen.
   glDisable(GL_CULL_FACE)
   glDisable(GL_DEPTH_TEST)
   glDepthMask(GL_FALSE)
@@ -276,6 +288,7 @@ proc renderPbrNode(
   drawChildren = true,
   applyTrs = true
 ) =
+  ## Renders a node with the PBR shader.
   if not node.visible:
     return
 
@@ -302,10 +315,30 @@ proc renderPbrNode(
     viewArray = view
     projArray = proj
     lightSpaceArray = lightSpace
-  glUniformMatrix4fv(modelUniform, 1, GL_FALSE, cast[ptr float32](modelArray.addr))
-  glUniformMatrix4fv(viewUniform, 1, GL_FALSE, cast[ptr float32](viewArray.addr))
-  glUniformMatrix4fv(projUniform, 1, GL_FALSE, cast[ptr float32](projArray.addr))
-  glUniformMatrix4fv(lightSpaceUniform, 1, GL_FALSE, cast[ptr float32](lightSpaceArray.addr))
+  glUniformMatrix4fv(
+    modelUniform,
+    1,
+    GL_FALSE,
+    cast[ptr float32](modelArray.addr)
+  )
+  glUniformMatrix4fv(
+    viewUniform,
+    1,
+    GL_FALSE,
+    cast[ptr float32](viewArray.addr)
+  )
+  glUniformMatrix4fv(
+    projUniform,
+    1,
+    GL_FALSE,
+    cast[ptr float32](projArray.addr)
+  )
+  glUniformMatrix4fv(
+    lightSpaceUniform,
+    1,
+    GL_FALSE,
+    cast[ptr float32](lightSpaceArray.addr)
+  )
 
   if not node.uploaded:
     node.uploadToGpu()
@@ -413,7 +446,7 @@ proc renderPbrNode(
       glUniform1i(glGetUniformLocation(pbrShader, "shadowMap"), 6)
       glBindTexture(GL_TEXTURE_2D, shadowTex)
 
-    # Setup alpha mode.
+    # Set up alpha mode.
     var cutoff = node.material.alphaCutoff
     case node.material.alphaMode
     of MaskAlphaMode:
@@ -434,13 +467,13 @@ proc renderPbrNode(
       cutoff
     )
 
-    # Setup double sided.
+    # Set up double sided rendering.
     if node.material.doubleSided:
       glDisable(GL_CULL_FACE)
     else:
       glEnable(GL_CULL_FACE)
 
-    # Add lights
+    # Add lights.
     glUniform4f(
       glGetUniformLocation(pbrShader, "ambientLightColor"),
       ambientLightColor.r,
@@ -479,7 +512,7 @@ proc renderPbrNode(
       debugView.int.GLint
     )
 
-    # Add camera
+    # Add the camera position.
     glUniform3f(
       glGetUniformLocation(pbrShader, "cameraPosition"),
       cameraPosition.x, cameraPosition.y, cameraPosition.z
@@ -558,6 +591,7 @@ proc drawPbr*(
   debugView = dvLit,
   cameraPosition = vec3(0, 0, 10)
 ) =
+  ## Draws a node tree with PBR shading.
   if not node.visible:
     return
 
@@ -587,10 +621,11 @@ proc drawPbr*(
     glDepthMask(GL_FALSE)
     var sorted = blended
     sorted.sort(proc(a, b: BlendEntry): int =
-      let pa = (a.transform * vec4(0, 0, 0, 1)).xyz
-      let pb = (b.transform * vec4(0, 0, 0, 1)).xyz
-      let da = (cameraPosition - pa).lengthSq
-      let db = (cameraPosition - pb).lengthSq
+      let
+        pa = (a.transform * vec4(0, 0, 0, 1)).xyz
+        pb = (b.transform * vec4(0, 0, 0, 1)).xyz
+        da = (cameraPosition - pa).lengthSq
+        db = (cameraPosition - pb).lengthSq
       if da > db: -1 elif da < db: 1 else: 0
     )
     for entry in sorted:
@@ -619,23 +654,24 @@ proc drawPbr*(
 
 proc getShadowMatrices(node: Node, transform: Mat4, lightDir: Vec3): (Mat4, Mat4, Mat4, Vec3) =
   ## Compute light view/projection for the node tree.
-  let bounds = getAABounds(node, transform)
-  let center = bounds.center
-  let radius = bounds.radius().float32
-  let dir = normalize(lightDir)
-  let lightPos = center - dir * (radius * 2'f32)
-  let nearPlane = max(0.1'f32, radius * 0.1'f32)
-  let farPlane = radius * 4'f32
-  let orthoSize = radius * 1.5'f32
-  let lightView = lookAt(lightPos, center, vec3(0, 1, 0))
-  let lightProj = ortho(
+  let
+    bounds = getAABounds(node, transform)
+    center = bounds.center
+    radius = bounds.radius().float32
+    dir = normalize(lightDir)
+    lightPos = center - dir * (radius * 2.0'f)
+    nearPlane = max(0.1'f, radius * 0.1'f)
+    farPlane = radius * 4.0'f
+    orthoSize = radius * 1.5'f
+    lightView = lookAt(lightPos, center, vec3(0, 1, 0))
+    lightProj = ortho(
     -orthoSize,
     orthoSize,
     -orthoSize,
     orthoSize,
     nearPlane,
     farPlane
-  )
+    )
   return (lightView, lightProj, lightProj * lightView, lightPos)
 
 proc drawPbrWithShadow*(
@@ -651,6 +687,7 @@ proc drawPbrWithShadow*(
   debugView = dvLit,
   cameraPosition = vec3(0, 0, 10)
 ) =
+  ## Draws a node tree with PBR shading and shadows.
   if not node.visible:
     return
 

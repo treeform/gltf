@@ -16,10 +16,11 @@ proc compileShaderFiles*(vertShaderSrc: string, fragShaderSrc: string): GLuint =
   ## Compiles the shader files and links them into a program, returning that id.
   var vertShader, fragShader: GLuint
 
-  # Compile the shaders
+  # Compile the shaders.
   block shaders:
-    var vertShaderArray = allocCStringArray([vertShaderSrc])
-    var fragShaderArray = allocCStringArray([fragShaderSrc])
+    var
+      vertShaderArray = allocCStringArray([vertShaderSrc])
+      fragShaderArray = allocCStringArray([fragShaderSrc])
 
     defer:
       dealloc(vertShaderArray)
@@ -49,7 +50,7 @@ proc compileShaderFiles*(vertShaderSrc: string, fragShaderSrc: string): GLuint =
       echo getErrorLog(fragShader, glGetShaderiv, glGetShaderInfoLog)
       raise newException(ValueError, "Fragment shader compilation failed")
 
-  # Attach shaders to a GL program
+  # Attach shaders to a GL program.
   var program = glCreateProgram()
   glAttachShader(program, vertShader)
   glAttachShader(program, fragShader)
