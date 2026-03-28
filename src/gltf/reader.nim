@@ -7,7 +7,9 @@ export common
 
 const SupportedExtensions = [
   "KHR_texture_transform",
-  "KHR_materials_transmission"
+  "KHR_materials_transmission",
+  "KHR_node_visibility",
+  "KHR_animation_pointer"
 ]
 
 proc unsupportedUsedExtensions(jsonRoot: JsonNode): seq[string] =
@@ -35,11 +37,37 @@ proc readAccessorFloats(
     view = bufferViews[accessor.bufferView]
     buffer = buffers[view.buffer]
     start = view.byteOffset + accessor.byteOffset
-    stride = if view.byteStride > 0: view.byteStride else: 4
+    elemSize =
+      case accessor.componentType
+      of cGL_FLOAT:
+        4
+      of GL_UNSIGNED_BYTE:
+        1
+      of cGL_UNSIGNED_SHORT:
+        2
+      of GL_UNSIGNED_INT:
+        4
+      else:
+        0
+    stride = if view.byteStride > 0: view.byteStride else: elemSize
+  if accessor.kind != atSCALAR:
+    raise newException(GltfError, "Unsupported scalar accessor kind")
+  if elemSize == 0:
+    raise newException(GltfError, "Unsupported scalar accessor component type")
   result.setLen(accessor.count)
   for i in 0 ..< accessor.count:
     let off = start + i * stride
-    result[i] = readFloat32(buffer, off)
+    case accessor.componentType
+    of cGL_FLOAT:
+      result[i] = readFloat32(buffer, off)
+    of GL_UNSIGNED_BYTE:
+      result[i] = buffer.readUint8(off).float32
+    of cGL_UNSIGNED_SHORT:
+      result[i] = buffer.readUint16(off).float32
+    of GL_UNSIGNED_INT:
+      result[i] = buffer.readUint32(off).float32
+    else:
+      discard
 
 proc readAccessorVec3(
   accessorIdx: int,
@@ -521,7 +549,7 @@ proc loadModelJson*(
   if "extensionsRequired" in jsonRoot:
     for extension in jsonRoot["extensionsRequired"]:
       case extension.getStr()
-      of "KHR_texture_transform":
+      of "KHR_texture_transform", "KHR_node_visibility":
         discard
       else:
         raise newException(
@@ -841,6 +869,12 @@ proc loadModelJson*(
     else:
       node.name = "node_" & $nodes.len
     node.visible = true
+    if "extensions" in entry:
+      let extensions = entry["extensions"]
+      if "KHR_node_visibility" in extensions:
+        let visibility = extensions["KHR_node_visibility"]
+        if "visible" in visibility:
+          node.visible = visibility["visible"].getBool()
 
     var meshId = -1
     if "mesh" in entry:
@@ -942,6 +976,7 @@ proc loadModelJson*(
       else:
         node.scale = vec3(1, 1, 1)
 
+    node.baseVisible = node.visible
     node.basePos = node.pos
     node.baseRot = node.rot
     node.baseScale = node.scale
@@ -992,27 +1027,45 @@ proc loadModelJson*(
           if not ("target" in ch):
             continue
           let target = ch["target"]
-          if not ("node" in target) or not ("path" in target):
-            continue
-          let nodeIdx = target["node"].getInt()
+          var
+            nodeIdx = -1
+            path: AnimPath
+            isPath = true
+
+          if "extensions" in target and
+             "KHR_animation_pointer" in target["extensions"]:
+            let pointer = target["extensions"]["KHR_animation_pointer"]["pointer"].getStr()
+            if pointer.startsWith("/nodes/") and
+               pointer.endsWith("/extensions/KHR_node_visibility/visible"):
+              let suffix = "/extensions/KHR_node_visibility/visible"
+              let remainder = pointer.substr("/nodes/".len, pointer.len - suffix.len - 1)
+              try:
+                nodeIdx = parseInt(remainder)
+                path = AnimVisibility
+              except ValueError:
+                isPath = false
+            else:
+              isPath = false
+          else:
+            if not ("node" in target) or not ("path" in target):
+              continue
+            nodeIdx = target["node"].getInt()
+            let pathStr = target["path"].getStr()
+            case pathStr
+            of "translation":
+              path = AnimTranslation
+            of "rotation":
+              path = AnimRotation
+            of "scale":
+              path = AnimScale
+            else:
+              isPath = false
+
           if nodeIdx < 0 or nodeIdx >= nodes.len:
             continue
-          let pathStr = target["path"].getStr()
-
-          var path: AnimPath
-          var isPath = true
-          case pathStr
-          of "translation":
-            path = AnimTranslation
-          of "rotation":
-            path = AnimRotation
-          of "scale":
-            path = AnimScale
-          else:
-            isPath = false
 
           if not isPath:
-            echo &"[gltf] skipping animation path {pathStr}"
+            echo "[gltf] skipping unsupported animation target"
             continue
 
           let times =
@@ -1048,11 +1101,20 @@ proc loadModelJson*(
                 bufferViews,
                 buffers
               )
+          of AnimVisibility:
+            channel.valuesFloat =
+              readAccessorFloats(
+                sampler.output,
+                accessors,
+                bufferViews,
+                buffers
+              )
 
           if channel.times.len == 0:
             continue
           if channel.times.len != channel.valuesVec3.len and
-             channel.times.len != channel.valuesQuat.len:
+             channel.times.len != channel.valuesQuat.len and
+             channel.times.len != channel.valuesFloat.len:
             echo "[gltf] animation sampler length mismatch"
             continue
 
@@ -1102,6 +1164,7 @@ proc loadModelJson*(
           child.pos = vec3(0, 0, 0)
           child.rot = quat(0, 0, 0, 1)
           child.scale = vec3(1, 1, 1)
+          child.baseVisible = child.visible
           child.basePos = child.pos
           child.baseRot = child.rot
           child.baseScale = child.scale
@@ -1132,6 +1195,7 @@ proc loadModelJson*(
   result.pos = vec3(0, 0, 0)
   result.rot = quat(0, 0, 0, 1)
   result.scale = vec3(1, 1, 1)
+  result.baseVisible = result.visible
   result.basePos = result.pos
   result.baseRot = result.rot
   result.baseScale = result.scale

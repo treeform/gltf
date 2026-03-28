@@ -59,3 +59,81 @@ let matrixNode = model["MatrixNode"]
 doAssert matrixNode != nil
 doAssert matrixNode.pos == vec3(1.5, 2.5, 3.5)
 doAssert matrixNode.trs ~= expectedMatrix
+
+echo "Testing KHR_node_visibility."
+let visibilityBuffer =
+  "\0\0\0\0" &
+  "\0\0\x80\x3f" &
+  "\x01\x00"
+let visibilityModel = loadModelJson(
+  %*{
+    "asset": {"version": "2.0"},
+    "extensionsRequired": ["KHR_node_visibility"],
+    "extensionsUsed": ["KHR_node_visibility", "KHR_animation_pointer"],
+    "buffers": [
+      {
+        "byteLength": 10
+      }
+    ],
+    "bufferViews": [
+      {"buffer": 0, "byteOffset": 0, "byteLength": 8},
+      {"buffer": 0, "byteOffset": 8, "byteLength": 2}
+    ],
+    "accessors": [
+      {"bufferView": 0, "componentType": 5126, "count": 2, "type": "SCALAR"},
+      {"bufferView": 1, "componentType": 5121, "count": 2, "type": "SCALAR"}
+    ],
+    "images": [],
+    "textures": [],
+    "samplers": [],
+    "materials": [],
+    "meshes": [],
+    "nodes": [
+      {"name": "RootVisibility", "children": [1, 2]},
+      {
+        "name": "InvisibleNode",
+        "extensions": {"KHR_node_visibility": {"visible": false}}
+      },
+      {
+        "name": "AnimatedNode",
+        "extensions": {"KHR_node_visibility": {"visible": true}}
+      }
+    ],
+    "animations": [
+      {
+        "channels": [
+          {
+            "sampler": 0,
+            "target": {
+              "extensions": {
+                "KHR_animation_pointer": {
+                  "pointer": "/nodes/2/extensions/KHR_node_visibility/visible"
+                }
+              }
+            }
+          }
+        ],
+        "samplers": [
+          {"input": 0, "output": 1, "interpolation": "STEP"}
+        ]
+      }
+    ],
+    "scenes": [{"nodes": [0]}],
+    "scene": 0
+  },
+  ".",
+  @[visibilityBuffer]
+)
+var invisibleNode, animatedNode: Node
+for node in visibilityModel.walkNodes():
+  if node.name == "InvisibleNode":
+    invisibleNode = node
+  elif node.name == "AnimatedNode":
+    animatedNode = node
+doAssert invisibleNode != nil
+doAssert animatedNode != nil
+doAssert invisibleNode.visible == false
+doAssert animatedNode.visible == true
+applyClipAt(visibilityModel.animations[0], 0.75)
+doAssert invisibleNode.visible == false
+doAssert animatedNode.visible == false
