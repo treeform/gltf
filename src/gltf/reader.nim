@@ -25,6 +25,35 @@ proc readFloat32(data: string, offset: int): float32 =
   ## Reads a float32 from a byte string.
   cast[ptr float32](data[offset].unsafeAddr)[]
 
+proc readSparseIndices(
+  accessor: Accessor,
+  bufferViews: seq[BufferView],
+  buffers: seq[string]
+): seq[int] =
+  ## Reads the sparse index list for an accessor.
+  if not accessor.sparse.used or accessor.sparse.count == 0:
+    return
+  let
+    view = bufferViews[accessor.sparse.indices.bufferView]
+    buffer = buffers[view.buffer]
+    start = view.byteOffset + accessor.sparse.indices.byteOffset
+  result.setLen(accessor.sparse.count)
+  case accessor.sparse.indices.componentType
+  of GL_UNSIGNED_BYTE:
+    for i in 0 ..< result.len:
+      result[i] = buffer.readUint8(start + i).int
+  of cGL_UNSIGNED_SHORT:
+    for i in 0 ..< result.len:
+      result[i] = buffer.readUint16(start + i * 2).int
+  of GL_UNSIGNED_INT:
+    for i in 0 ..< result.len:
+      result[i] = buffer.readUint32(start + i * 4).int
+  else:
+    raise newException(
+      GltfError,
+      "Unsupported sparse index component type"
+    )
+
 proc readAccessorFloats(
   accessorIdx: int,
   accessors: seq[Accessor],
@@ -68,6 +97,26 @@ proc readAccessorFloats(
       result[i] = buffer.readUint32(off).float32
     else:
       discard
+  if accessor.sparse.used:
+    let
+      indices = readSparseIndices(accessor, bufferViews, buffers)
+      sparseView = bufferViews[accessor.sparse.values.bufferView]
+      sparseBuffer = buffers[sparseView.buffer]
+      sparseStart = sparseView.byteOffset + accessor.sparse.values.byteOffset
+      sparseStride = elemSize
+    for i, dstIndex in indices:
+      let off = sparseStart + i * sparseStride
+      case accessor.componentType
+      of cGL_FLOAT:
+        result[dstIndex] = readFloat32(sparseBuffer, off)
+      of GL_UNSIGNED_BYTE:
+        result[dstIndex] = sparseBuffer.readUint8(off).float32
+      of cGL_UNSIGNED_SHORT:
+        result[dstIndex] = sparseBuffer.readUint16(off).float32
+      of GL_UNSIGNED_INT:
+        result[dstIndex] = sparseBuffer.readUint32(off).float32
+      else:
+        discard
 
 proc readAccessorVec3(
   accessorIdx: int,
@@ -90,6 +139,19 @@ proc readAccessorVec3(
       readFloat32(buffer, off + 4),
       readFloat32(buffer, off + 8)
     )
+  if accessor.sparse.used:
+    let
+      indices = readSparseIndices(accessor, bufferViews, buffers)
+      sparseView = bufferViews[accessor.sparse.values.bufferView]
+      sparseBuffer = buffers[sparseView.buffer]
+      sparseStart = sparseView.byteOffset + accessor.sparse.values.byteOffset
+    for i, dstIndex in indices:
+      let off = sparseStart + i * 12
+      result[dstIndex] = vec3(
+        readFloat32(sparseBuffer, off),
+        readFloat32(sparseBuffer, off + 4),
+        readFloat32(sparseBuffer, off + 8)
+      )
 
 proc readAccessorQuat(
   accessorIdx: int,
@@ -113,11 +175,61 @@ proc readAccessorQuat(
       readFloat32(buffer, off + 8),
       readFloat32(buffer, off + 12)
     ).normalize()
+  if accessor.sparse.used:
+    let
+      indices = readSparseIndices(accessor, bufferViews, buffers)
+      sparseView = bufferViews[accessor.sparse.values.bufferView]
+      sparseBuffer = buffers[sparseView.buffer]
+      sparseStart = sparseView.byteOffset + accessor.sparse.values.byteOffset
+    for i, dstIndex in indices:
+      let off = sparseStart + i * 16
+      result[dstIndex] = quat(
+        readFloat32(sparseBuffer, off),
+        readFloat32(sparseBuffer, off + 4),
+        readFloat32(sparseBuffer, off + 8),
+        readFloat32(sparseBuffer, off + 12)
+      ).normalize()
 
 proc assertRaise(test: bool, msg: string) =
   ## Raises an exception when a glTF invariant is not met.
   if not test:
     raise newException(GltfError, msg)
+
+proc readAccessorVec2(
+  accessorIdx: int,
+  accessors: seq[Accessor],
+  bufferViews: seq[BufferView],
+  buffers: seq[string]
+): seq[Vec2] =
+  ## Reads vec2 accessor data.
+  let
+    accessor = accessors[accessorIdx]
+    view = bufferViews[accessor.bufferView]
+    buffer = buffers[view.buffer]
+    start = view.byteOffset + accessor.byteOffset
+    stride = if view.byteStride > 0: view.byteStride else: 8
+  assertRaise accessor.kind == atVEC2, "Unsupported vec2 accessor kind"
+  assertRaise accessor.componentType == cGL_FLOAT,
+    "Unsupported vec2 component type"
+  result.setLen(accessor.count)
+  for i in 0 ..< accessor.count:
+    let off = start + i * stride
+    result[i] = vec2(
+      readFloat32(buffer, off),
+      readFloat32(buffer, off + 4)
+    )
+  if accessor.sparse.used:
+    let
+      indices = readSparseIndices(accessor, bufferViews, buffers)
+      sparseView = bufferViews[accessor.sparse.values.bufferView]
+      sparseBuffer = buffers[sparseView.buffer]
+      sparseStart = sparseView.byteOffset + accessor.sparse.values.byteOffset
+    for i, dstIndex in indices:
+      let off = sparseStart + i * 8
+      result[dstIndex] = vec2(
+        readFloat32(sparseBuffer, off),
+        readFloat32(sparseBuffer, off + 4)
+      )
 
 proc readAccessorMat4(
   accessorIdx: int,
@@ -536,25 +648,19 @@ proc loadPrimitive(
       )
 
   if primInfo.attributes.position >= 0:
-    let
-      accessor = accessors[primInfo.attributes.position]
-      bufferView = bufferViews[accessor.bufferView]
-      buffer = buffers[bufferView.buffer]
-      start = bufferView.byteOffset + accessor.byteOffset
+    let accessor = accessors[primInfo.attributes.position]
     if accessor.componentType == cGL_FLOAT:
-      assertRaise accessor.kind == atVEC3, "Unsupported position kind"
-      result.points.setLen(accessor.count)
-      if bufferView.byteStride == 0 or bufferView.byteStride == 12:
-        copyMem(result.points[0].addr, buffer[start].addr, accessor.count * 12)
-      else:
-        let stride = bufferView.byteStride
-        for i in 0 ..< accessor.count:
-          result.points[i] = vec3(
-            buffer.readFloat32(start + i * stride),
-            buffer.readFloat32(start + i * stride + 4),
-            buffer.readFloat32(start + i * stride + 8)
-          )
+      result.points = readAccessorVec3(
+        primInfo.attributes.position,
+        accessors,
+        bufferViews,
+        buffers
+      )
     elif accessor.componentType == GL_UNSIGNED_SHORT:
+      let
+        bufferView = bufferViews[accessor.bufferView]
+        buffer = buffers[bufferView.buffer]
+        start = bufferView.byteOffset + accessor.byteOffset
       assertRaise accessor.kind == atVEC3, "Unsupported position kind"
       result.points.setLen(accessor.count)
       var stride = bufferView.byteStride
@@ -567,6 +673,10 @@ proc loadPrimitive(
           float32 buffer.readUint16(start + i * stride + 4)
         )
     elif accessor.componentType == GL_UNSIGNED_INT:
+      let
+        bufferView = bufferViews[accessor.bufferView]
+        buffer = buffers[bufferView.buffer]
+        start = bufferView.byteOffset + accessor.byteOffset
       assertRaise accessor.kind == atVEC3, "Unsupported position kind"
       assertRaise bufferView.byteStride == 0, "Unsupported position byteStride"
       result.points.setLen(accessor.count)
@@ -586,25 +696,12 @@ proc loadPrimitive(
       )
 
   if primInfo.attributes.normal >= 0:
-    let
-      accessor = accessors[primInfo.attributes.normal]
-      bufferView = bufferViews[accessor.bufferView]
-      buffer = buffers[bufferView.buffer]
-      start = bufferView.byteOffset + accessor.byteOffset
-    assertRaise accessor.componentType == cGL_FLOAT,
-      "Unsupported normal componentType"
-    assertRaise accessor.kind == atVEC3, "Unsupported normal kind"
-    result.normals.setLen(accessor.count)
-    if bufferView.byteStride == 0 or bufferView.byteStride == 12:
-      copyMem(result.normals[0].addr, buffer[start].addr, accessor.count * 12)
-    else:
-      let stride = bufferView.byteStride
-      for i in 0 ..< accessor.count:
-        result.normals[i] = vec3(
-          buffer.readFloat32(start + i * stride),
-          buffer.readFloat32(start + i * stride + 4),
-          buffer.readFloat32(start + i * stride + 8)
-        )
+    result.normals = readAccessorVec3(
+      primInfo.attributes.normal,
+      accessors,
+      bufferViews,
+      buffers
+    )
 
   if primInfo.attributes.color0 >= 0:
     let
@@ -689,24 +786,12 @@ proc loadPrimitive(
       )
 
   if primInfo.attributes.texcoord0 >= 0:
-    let
-      accessor = accessors[primInfo.attributes.texcoord0]
-      bufferView = bufferViews[accessor.bufferView]
-      buffer = buffers[bufferView.buffer]
-      start = bufferView.byteOffset + accessor.byteOffset
-    assertRaise accessor.componentType == cGL_FLOAT,
-      "Unsupported texcoord componentType"
-    assertRaise accessor.kind == atVEC2, "Unsupported texcoord kind"
-    result.uvs.setLen(accessor.count)
-    if bufferView.byteStride == 0 or bufferView.byteStride == 8:
-      copyMem(result.uvs[0].addr, buffer[start].addr, accessor.count * 8)
-    else:
-      let stride = bufferView.byteStride
-      for i in 0 ..< accessor.count:
-        result.uvs[i] = vec2(
-          buffer.readFloat32(start + i * stride),
-          buffer.readFloat32(start + i * stride + 4)
-        )
+    result.uvs = readAccessorVec2(
+      primInfo.attributes.texcoord0,
+      accessors,
+      bufferViews,
+      buffers
+    )
 
   if primInfo.attributes.joints0 >= 0:
     result.jointIds = readAccessorJointIds(
@@ -840,6 +925,20 @@ proc loadModelJsonInternal(
     accessor.count = entry["count"].getInt()
     accessor.componentType = entry["componentType"].getInt().GLenum
     accessor.normalized = entry{"normalized"}.getBool()
+    if "sparse" in entry:
+      let sparse = entry["sparse"]
+      accessor.sparse.used = true
+      accessor.sparse.count = sparse["count"].getInt()
+      accessor.sparse.indices.bufferView =
+        sparse["indices"]["bufferView"].getInt()
+      accessor.sparse.indices.byteOffset =
+        sparse["indices"]{"byteOffset"}.getInt()
+      accessor.sparse.indices.componentType =
+        sparse["indices"]["componentType"].getInt().GLenum
+      accessor.sparse.values.bufferView =
+        sparse["values"]["bufferView"].getInt()
+      accessor.sparse.values.byteOffset =
+        sparse["values"]{"byteOffset"}.getInt()
     let accessorKind = entry["type"].getStr()
     case accessorKind
     of "SCALAR":

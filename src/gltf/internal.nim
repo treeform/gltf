@@ -6,6 +6,21 @@ type
     buffer*: int
     byteOffset*, byteLength*, byteStride*: int
 
+  SparseIndices* = object
+    bufferView*: int
+    byteOffset*: int
+    componentType*: GLenum
+
+  SparseValues* = object
+    bufferView*: int
+    byteOffset*: int
+
+  SparseInfo* = object
+    count*: int
+    indices*: SparseIndices
+    values*: SparseValues
+    used*: bool
+
   AccessorKind* = enum
     atSCALAR, atVEC2, atVEC3, atVEC4, atMAT2, atMAT3, atMAT4
 
@@ -15,6 +30,7 @@ type
     componentType*: GLenum
     kind*: AccessorKind
     normalized*: bool
+    sparse*: SparseInfo
 
   Texture* = object
     source*: int
