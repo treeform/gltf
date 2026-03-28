@@ -1,7 +1,8 @@
 import
   std/[base64, json, os, strformat, strutils],
   chroma, flatty/binny, opengl, pixie, vmath, webby,
-  common, internal, models
+  common, internal, models,
+  "../../../fluffy/src/fluffy/measure"
 
 export common
 
@@ -59,7 +60,7 @@ proc readAccessorFloats(
   accessors: seq[Accessor],
   bufferViews: seq[BufferView],
   buffers: seq[string]
-): seq[float32] =
+): seq[float32] {.measure.} =
   ## Reads scalar accessor data as float32 values.
   let
     accessor = accessors[accessorIdx]
@@ -123,7 +124,7 @@ proc readAccessorVec3(
   accessors: seq[Accessor],
   bufferViews: seq[BufferView],
   buffers: seq[string]
-): seq[Vec3] =
+): seq[Vec3] {.measure.} =
   ## Reads vec3 accessor data.
   let
     accessor = accessors[accessorIdx]
@@ -158,7 +159,7 @@ proc readAccessorQuat(
   accessors: seq[Accessor],
   bufferViews: seq[BufferView],
   buffers: seq[string]
-): seq[Quat] =
+): seq[Quat] {.measure.} =
   ## Reads quaternion accessor data.
   let
     accessor = accessors[accessorIdx]
@@ -195,6 +196,14 @@ proc assertRaise(test: bool, msg: string) =
   if not test:
     raise newException(GltfError, msg)
 
+proc decodeImageMeasured(data: string): Image {.measure.} =
+  ## Wrapper for profiling image decode hot spots.
+  decodeImage(data)
+
+proc readImageMeasured(file: string): Image {.measure.} =
+  ## Wrapper for profiling external image file loads.
+  readImage(file)
+
 proc readWeightFrames(
   accessorIdx: int,
   accessors: seq[Accessor],
@@ -226,7 +235,7 @@ proc readAccessorVec2(
   accessors: seq[Accessor],
   bufferViews: seq[BufferView],
   buffers: seq[string]
-): seq[Vec2] =
+): seq[Vec2] {.measure.} =
   ## Reads vec2 accessor data.
   let
     accessor = accessors[accessorIdx]
@@ -262,7 +271,7 @@ proc readAccessorVec4(
   accessors: seq[Accessor],
   bufferViews: seq[BufferView],
   buffers: seq[string]
-): seq[Vec4] =
+): seq[Vec4] {.measure.} =
   ## Reads vec4 accessor data.
   let
     accessor = accessors[accessorIdx]
@@ -302,7 +311,7 @@ proc readAccessorMat4(
   accessors: seq[Accessor],
   bufferViews: seq[BufferView],
   buffers: seq[string]
-): seq[Mat4] =
+): seq[Mat4] {.measure.} =
   ## Reads mat4 accessor data.
   let
     accessor = accessors[accessorIdx]
@@ -603,7 +612,7 @@ proc loadPrimitive(
   textures: seq[Texture],
   samplers: seq[Sampler],
   materials: seq[MaterialInfo]
-): Primitive =
+): Primitive {.measure.} =
   ## Loads one glTF primitive into a runtime primitive.
   proc getTextureSampler(textureIndex: int): TextureSampler =
     result = defaultTextureSampler()
@@ -1025,7 +1034,7 @@ proc loadModelJsonInternal(
   jsonRoot: JsonNode,
   modelDir: string,
   externalBuffers: seq[string]
-): LoadResult =
+): LoadResult {.measure.} =
   ## Loads a 3D model from a parsed glTF json tree.
   if "extensionsRequired" in jsonRoot:
     for extension in jsonRoot["extensionsRequired"]:
@@ -1136,11 +1145,11 @@ proc loadModelJsonInternal(
         let uri = entry["uri"].getStr().decodeUriComponent()
         if uri.startsWith("data:image/png") or
            uri.startsWith("data:image/jpeg"):
-          image = decodeImage(decode(uri.split(',')[1]))
+          image = decodeImageMeasured(decode(uri.split(',')[1]))
         elif uri.endsWith(".png") or
              uri.endsWith(".jpg") or
              uri.endsWith(".jpeg"):
-          image = readImage(joinPath(modelDir, uri))
+          image = readImageMeasured(joinPath(modelDir, uri))
         else:
           raise newException(GltfError, &"Unsupported file extension {uri}")
       elif "bufferView" in entry:
@@ -1149,7 +1158,7 @@ proc loadModelJsonInternal(
           bv = bufferViews[bufferViewIndex]
           ib = buffers[bv.buffer]
           imageData = ib[bv.byteOffset ..< bv.byteOffset + bv.byteLength]
-        image = decodeImage(imageData)
+        image = decodeImageMeasured(imageData)
       else:
         raise newException(GltfError, "Unsupported image type")
       images.add(image)
@@ -1946,7 +1955,7 @@ proc loadModel*(file: string): Node =
   else:
     loadModelJsonFile(file)
 
-proc readGltfJsonFile*(file: string): GltfFile =
+proc readGltfJsonFile*(file: string): GltfFile {.measure.} =
   ## Reads a glTF json file into a glTF file wrapper.
   let
     jsonRoot = parseJson(readFile(file))
@@ -1962,7 +1971,7 @@ proc readGltfJsonFile*(file: string): GltfFile =
     unsupportedUsedExtensions: unsupportedUsedExtensions(jsonRoot)
   )
 
-proc readGltfBinaryFile*(file: string): GltfFile =
+proc readGltfBinaryFile*(file: string): GltfFile {.measure.} =
   ## Reads a binary glTF file into a glTF file wrapper.
   let
     modelDir = splitPath(file)[0]
@@ -2003,7 +2012,7 @@ proc readGltfBinaryFile*(file: string): GltfFile =
     unsupportedUsedExtensions: unsupportedUsedExtensions(jsonRoot)
   )
 
-proc readGltfFile*(file: string): GltfFile =
+proc readGltfFile*(file: string): GltfFile {.measure.} =
   ## Reads a glTF file into a glTF file wrapper.
   if file.endsWith(".glb"):
     readGltfBinaryFile(file)
