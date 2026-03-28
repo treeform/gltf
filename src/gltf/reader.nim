@@ -119,6 +119,158 @@ proc assertRaise(test: bool, msg: string) =
   if not test:
     raise newException(GltfError, msg)
 
+proc readAccessorMat4(
+  accessorIdx: int,
+  accessors: seq[Accessor],
+  bufferViews: seq[BufferView],
+  buffers: seq[string]
+): seq[Mat4] =
+  ## Reads mat4 accessor data.
+  let
+    accessor = accessors[accessorIdx]
+    view = bufferViews[accessor.bufferView]
+    buffer = buffers[view.buffer]
+    start = view.byteOffset + accessor.byteOffset
+    stride = if view.byteStride > 0: view.byteStride else: 64
+  assertRaise accessor.kind == atMAT4, "Unsupported mat4 accessor kind"
+  assertRaise accessor.componentType == cGL_FLOAT,
+    "Unsupported mat4 component type"
+  result.setLen(accessor.count)
+  for i in 0 ..< accessor.count:
+    let off = start + i * stride
+    result[i] = mat4(
+      readFloat32(buffer, off + 0),
+      readFloat32(buffer, off + 4),
+      readFloat32(buffer, off + 8),
+      readFloat32(buffer, off + 12),
+      readFloat32(buffer, off + 16),
+      readFloat32(buffer, off + 20),
+      readFloat32(buffer, off + 24),
+      readFloat32(buffer, off + 28),
+      readFloat32(buffer, off + 32),
+      readFloat32(buffer, off + 36),
+      readFloat32(buffer, off + 40),
+      readFloat32(buffer, off + 44),
+      readFloat32(buffer, off + 48),
+      readFloat32(buffer, off + 52),
+      readFloat32(buffer, off + 56),
+      readFloat32(buffer, off + 60)
+    )
+
+proc readAccessorJointIds(
+  accessorIdx: int,
+  accessors: seq[Accessor],
+  bufferViews: seq[BufferView],
+  buffers: seq[string]
+): seq[JointIds] =
+  ## Reads JOINTS_0 accessor data.
+  let
+    accessor = accessors[accessorIdx]
+    view = bufferViews[accessor.bufferView]
+    buffer = buffers[view.buffer]
+    start = view.byteOffset + accessor.byteOffset
+    elemSize =
+      case accessor.componentType
+      of GL_UNSIGNED_BYTE:
+        4
+      of cGL_UNSIGNED_SHORT:
+        8
+      else:
+        0
+    stride = if view.byteStride > 0: view.byteStride else: elemSize
+  assertRaise accessor.kind == atVEC4, "Unsupported JOINTS_0 kind"
+  assertRaise elemSize > 0, "Unsupported JOINTS_0 component type"
+  result.setLen(accessor.count)
+  for i in 0 ..< accessor.count:
+    let off = start + i * stride
+    case accessor.componentType
+    of GL_UNSIGNED_BYTE:
+      result[i] = [
+        buffer.readUint8(off + 0).uint16,
+        buffer.readUint8(off + 1).uint16,
+        buffer.readUint8(off + 2).uint16,
+        buffer.readUint8(off + 3).uint16
+      ]
+    of cGL_UNSIGNED_SHORT:
+      result[i] = [
+        buffer.readUint16(off + 0),
+        buffer.readUint16(off + 2),
+        buffer.readUint16(off + 4),
+        buffer.readUint16(off + 6)
+      ]
+    else:
+      discard
+
+proc normalizedValue(
+  accessor: Accessor,
+  value: uint32
+): float32 =
+  ## Converts an accessor component into a normalized float.
+  if not accessor.normalized:
+    return value.float32
+  case accessor.componentType
+  of GL_UNSIGNED_BYTE:
+    value.float32 / 255.0'f32
+  of cGL_UNSIGNED_SHORT:
+    value.float32 / 65535.0'f32
+  of GL_UNSIGNED_INT:
+    value.float32 / 4294967295.0'f32
+  else:
+    value.float32
+
+proc readAccessorWeights(
+  accessorIdx: int,
+  accessors: seq[Accessor],
+  bufferViews: seq[BufferView],
+  buffers: seq[string]
+): seq[Vec4] =
+  ## Reads WEIGHTS_0 accessor data.
+  let
+    accessor = accessors[accessorIdx]
+    view = bufferViews[accessor.bufferView]
+    buffer = buffers[view.buffer]
+    start = view.byteOffset + accessor.byteOffset
+    elemSize =
+      case accessor.componentType
+      of cGL_FLOAT:
+        16
+      of GL_UNSIGNED_BYTE:
+        4
+      of cGL_UNSIGNED_SHORT:
+        8
+      else:
+        0
+    stride = if view.byteStride > 0: view.byteStride else: elemSize
+  assertRaise accessor.kind == atVEC4, "Unsupported WEIGHTS_0 kind"
+  assertRaise elemSize > 0, "Unsupported WEIGHTS_0 component type"
+  result.setLen(accessor.count)
+  for i in 0 ..< accessor.count:
+    let off = start + i * stride
+    case accessor.componentType
+    of cGL_FLOAT:
+      result[i] = vec4(
+        readFloat32(buffer, off + 0),
+        readFloat32(buffer, off + 4),
+        readFloat32(buffer, off + 8),
+        readFloat32(buffer, off + 12)
+      )
+    of GL_UNSIGNED_BYTE:
+      result[i] = vec4(
+        normalizedValue(accessor, buffer.readUint8(off + 0)),
+        normalizedValue(accessor, buffer.readUint8(off + 1)),
+        normalizedValue(accessor, buffer.readUint8(off + 2)),
+        normalizedValue(accessor, buffer.readUint8(off + 3))
+      )
+    of cGL_UNSIGNED_SHORT:
+      result[i] = vec4(
+        normalizedValue(accessor, buffer.readUint16(off + 0)),
+        normalizedValue(accessor, buffer.readUint16(off + 2)),
+        normalizedValue(accessor, buffer.readUint16(off + 4)),
+        normalizedValue(accessor, buffer.readUint16(off + 6))
+      )
+    else:
+      discard
+
 proc defaultMaterialTexture(): MaterialTexture =
   ## Returns a material texture with default transform values.
   MaterialTexture(
@@ -556,6 +708,22 @@ proc loadPrimitive(
           buffer.readFloat32(start + i * stride + 4)
         )
 
+  if primInfo.attributes.joints0 >= 0:
+    result.jointIds = readAccessorJointIds(
+      primInfo.attributes.joints0,
+      accessors,
+      bufferViews,
+      buffers
+    )
+
+  if primInfo.attributes.weights0 >= 0:
+    result.jointWeights = readAccessorWeights(
+      primInfo.attributes.weights0,
+      accessors,
+      bufferViews,
+      buffers
+    )
+
   if primInfo.attributes.normal >= 0 and
     primInfo.attributes.texcoord0 >= 0:
     result.tangents.setLen(result.normals.len)
@@ -611,6 +779,7 @@ type
     scenes: seq[Scene]
     sceneId: int
     cameras: seq[Camera]
+    skins: seq[Skin]
 
 proc loadModelJsonInternal(
   jsonRoot: JsonNode,
@@ -670,6 +839,7 @@ proc loadModelJsonInternal(
       accessor.byteOffset = entry{"byteOffset"}.getInt()
     accessor.count = entry["count"].getInt()
     accessor.componentType = entry["componentType"].getInt().GLenum
+    accessor.normalized = entry{"normalized"}.getBool()
     let accessorKind = entry["type"].getStr()
     case accessorKind
     of "SCALAR":
@@ -954,6 +1124,14 @@ proc loadModelJsonInternal(
         prim.attributes.texcoord0 = attributes["TEXCOORD_0"].getInt()
       else:
         prim.attributes.texcoord0 = -1
+      if "JOINTS_0" in attributes:
+        prim.attributes.joints0 = attributes["JOINTS_0"].getInt()
+      else:
+        prim.attributes.joints0 = -1
+      if "WEIGHTS_0" in attributes:
+        prim.attributes.weights0 = attributes["WEIGHTS_0"].getInt()
+      else:
+        prim.attributes.weights0 = -1
       if "indices" in primitive:
         prim.indices = primitive["indices"].getInt()
       else:
@@ -970,9 +1148,29 @@ proc loadModelJsonInternal(
       mesh.primitives.add(primitiveDefs.len - 1)
     meshDefs.add(mesh)
 
+  var skinInfos: seq[SkinInfo]
+  if "skins" in jsonRoot:
+    for entry in jsonRoot["skins"]:
+      var skin = SkinInfo()
+      if "name" in entry:
+        skin.name = entry["name"].getStr()
+      if "inverseBindMatrices" in entry:
+        skin.inverseBindMatrices =
+          entry["inverseBindMatrices"].getInt()
+      else:
+        skin.inverseBindMatrices = -1
+      if "skeleton" in entry:
+        skin.skeleton = entry["skeleton"].getInt()
+      else:
+        skin.skeleton = -1
+      for joint in entry["joints"]:
+        skin.joints.add(joint.getInt())
+      skinInfos.add(skin)
+
   var
     nodes: seq[Node]
     nodeMeshes: seq[int]
+    nodeSkins: seq[int]
     nodeCameras: seq[int]
     nodeChildren: seq[seq[int]]
   for entry in jsonRoot["nodes"]:
@@ -992,6 +1190,13 @@ proc loadModelJsonInternal(
     var meshId = -1
     if "mesh" in entry:
       meshId = entry["mesh"].getInt()
+    var skinId = -1
+    if "skin" in entry:
+      skinId = entry["skin"].getInt()
+      assertRaise(
+        skinId >= 0 and skinId < skinInfos.len,
+        &"Invalid skin index {skinId}"
+      )
     var cameraId = -1
     if "camera" in entry:
       cameraId = entry["camera"].getInt()
@@ -1108,8 +1313,38 @@ proc loadModelJsonInternal(
 
     nodes.add(node)
     nodeMeshes.add(meshId)
+    nodeSkins.add(skinId)
     nodeCameras.add(cameraId)
     nodeChildren.add(children)
+
+  var skins: seq[Skin]
+  for skinInfo in skinInfos:
+    var skin = Skin()
+    skin.name = skinInfo.name
+    if skinInfo.inverseBindMatrices >= 0:
+      skin.inverseBindMatrices = readAccessorMat4(
+        skinInfo.inverseBindMatrices,
+        accessors,
+        bufferViews,
+        buffers
+      )
+    for jointId in skinInfo.joints:
+      assertRaise(
+        jointId >= 0 and jointId < nodes.len,
+        &"Invalid skin joint index {jointId}"
+      )
+      skin.joints.add(nodes[jointId])
+    if skin.inverseBindMatrices.len == 0:
+      skin.inverseBindMatrices.setLen(skin.joints.len)
+      for i in 0 ..< skin.inverseBindMatrices.len:
+        skin.inverseBindMatrices[i] = mat4()
+    if skinInfo.skeleton >= 0:
+      assertRaise(
+        skinInfo.skeleton >= 0 and skinInfo.skeleton < nodes.len,
+        &"Invalid skin skeleton index {skinInfo.skeleton}"
+      )
+      skin.skeleton = nodes[skinInfo.skeleton]
+    skins.add(skin)
 
   var clips: seq[AnimationClip]
   if "animations" in jsonRoot:
@@ -1269,6 +1504,7 @@ proc loadModelJsonInternal(
   proc processNode(nodeId: int): Node =
     var n = nodes[nodeId]
     let meshId = nodeMeshes[nodeId]
+    let skinId = nodeSkins[nodeId]
     let cameraId = nodeCameras[nodeId]
     if meshId >= 0:
       let meshInfo = meshDefs[meshId]
@@ -1286,6 +1522,8 @@ proc loadModelJsonInternal(
           materials
         ))
       n.mesh = runtimeMesh
+    if skinId >= 0:
+      n.skin = skins[skinId]
     if cameraId >= 0:
       n.camera = cameras[cameraId]
 
@@ -1317,6 +1555,7 @@ proc loadModelJsonInternal(
   result.root.animTime = 0
   result.scenes = scenes
   result.cameras = cameras
+  result.skins = skins
   result.sceneId =
     if scenes.len > 0:
       max(0, min(sceneId, scenes.high))
@@ -1388,6 +1627,7 @@ proc readGltfJsonFile*(file: string): GltfFile =
     scenes: loaded.scenes,
     scene: loaded.sceneId,
     cameras: loaded.cameras,
+    skins: loaded.skins,
     unsupportedUsedExtensions: unsupportedUsedExtensions(jsonRoot)
   )
 
@@ -1428,6 +1668,7 @@ proc readGltfBinaryFile*(file: string): GltfFile =
     scenes: loaded.scenes,
     scene: loaded.sceneId,
     cameras: loaded.cameras,
+    skins: loaded.skins,
     unsupportedUsedExtensions: unsupportedUsedExtensions(jsonRoot)
   )
 

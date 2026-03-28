@@ -399,7 +399,8 @@ proc renderPbrPrimitive(
   shadowTex: GLuint,
   deferBlend: bool,
   blended: var seq[BlendEntry],
-  owner: Node
+  owner: Node,
+  root: Node
 ) =
   if primitive == nil:
     return
@@ -428,6 +429,20 @@ proc renderPbrPrimitive(
   glUniformMatrix4fv(viewUniform, 1, GL_FALSE, cast[ptr float32](viewArray.addr))
   glUniformMatrix4fv(projUniform, 1, GL_FALSE, cast[ptr float32](projArray.addr))
   glUniformMatrix4fv(lightSpaceUniform, 1, GL_FALSE, cast[ptr float32](lightSpaceArray.addr))
+
+  let jointMatrices = root.skinMatrices(owner)
+  let useSkinning = jointMatrices.len > 0
+  glUniform1i(
+    glGetUniformLocation(pbrShader, "useSkinning"),
+    useSkinning.ord.GLint
+  )
+  if useSkinning:
+    glUniformMatrix4fv(
+      glGetUniformLocation(pbrShader, "jointMatrices"),
+      jointMatrices.len.GLsizei,
+      GL_FALSE,
+      cast[ptr float32](jointMatrices[0].addr)
+    )
 
   if not primitive.uploaded:
     primitive.uploadToGpu()
@@ -596,11 +611,18 @@ proc renderPbrNode(
   deferBlend: bool,
   blended: var seq[BlendEntry],
   drawChildren = true,
-  applyTrs = true
+  applyTrs = true,
+  root: Node = nil
 ) =
   ## Renders a node with the PBR shader.
   if not node.visible:
     return
+
+  let rootNode =
+    if root == nil:
+      node
+    else:
+      root
 
   node.mat =
     if applyTrs:
@@ -628,7 +650,8 @@ proc renderPbrNode(
         shadowTex,
         deferBlend,
         blended,
-        node
+        node,
+        rootNode
       )
 
   if drawChildren:
@@ -651,7 +674,8 @@ proc renderPbrNode(
         deferBlend,
         blended,
         drawChildren=true,
-        applyTrs=true
+        applyTrs=true,
+        root=rootNode
       )
 
 proc drawPbr*(
@@ -670,6 +694,8 @@ proc drawPbr*(
   ## Draws a node tree with PBR shading.
   if not node.visible:
     return
+
+  node.updateTransforms(transform, useTrs)
 
   var blended: seq[BlendEntry]
 
@@ -690,7 +716,8 @@ proc drawPbr*(
     lightSpace=mat4(),
     shadowTex=0,
     deferBlend=true,
-    blended=blended
+    blended=blended,
+    root=node
   )
 
   if blended.len > 0:
@@ -724,7 +751,8 @@ proc drawPbr*(
         shadowTex=0,
         deferBlend=false,
         blended=dummy,
-        owner=entry.node
+        owner=entry.node,
+        root=node
       )
     glDepthMask(GL_TRUE)
 
@@ -767,6 +795,8 @@ proc drawPbrWithShadow*(
   if not node.visible:
     return
 
+  node.updateTransforms(transform, useTrs)
+
   let (lightView, lightProj, lightSpace, _) =
     getShadowMatrices(node, transform, sunLightDirection)
 
@@ -794,7 +824,8 @@ proc drawPbrWithShadow*(
     lightProj,
     tint,
     useTrs=true,
-    skipBlend=true
+    skipBlend=true,
+    root=node
   )
 
   glBindFramebuffer(GL_FRAMEBUFFER, oldFramebuffer.GLuint)
@@ -822,7 +853,8 @@ proc drawPbrWithShadow*(
     lightSpace=lightSpace,
     shadowTex=shadowMapTex,
     deferBlend=true,
-    blended=blended
+    blended=blended,
+    root=node
   )
 
   if blended.len > 0:
@@ -855,6 +887,7 @@ proc drawPbrWithShadow*(
         shadowTex=0,
         deferBlend=false,
         blended=dummy,
-        owner=entry.node
+        owner=entry.node,
+        root=node
       )
     glDepthMask(GL_TRUE)

@@ -40,12 +40,16 @@ type
     perspective*: PerspectiveCamera
     orthographic*: OrthographicCamera
 
+  JointIds* = array[4, uint16]
+
   Primitive* = ref object
     points*: seq[Vec3]
     uvs*: seq[Vec2]
     normals*: seq[Vec3]
     tangents*: seq[Vec4]
     colors*: seq[ColorRGBX]
+    jointIds*: seq[JointIds]
+    jointWeights*: seq[Vec4]
     indices16*: seq[uint16]
     indices32*: seq[uint32]
     material*: Material
@@ -58,6 +62,8 @@ type
     normalsId*: GLuint
     tangentsId*: GLuint
     colorsId*: GLuint
+    jointIdsId*: GLuint
+    jointWeightsId*: GLuint
     indicesId*: GLuint
 
   Mesh* = ref object
@@ -82,12 +88,19 @@ type
     animTime*: float32
 
     mesh*: Mesh
+    skin*: Skin
     camera*: Camera
     nodes*: seq[Node]
 
   Scene* = ref object
     name*: string
     nodes*: seq[Node]
+
+  Skin* = ref object
+    name*: string
+    joints*: seq[Node]
+    inverseBindMatrices*: seq[Mat4]
+    skeleton*: Node
 
   AnimPath* = enum
     AnimTranslation, AnimRotation, AnimScale, AnimVisibility
@@ -159,5 +172,6 @@ type
     scenes*: seq[Scene]
     scene*: int
     cameras*: seq[Camera]
+    skins*: seq[Skin]
     unsupportedUsedExtensions*: seq[string]
 
