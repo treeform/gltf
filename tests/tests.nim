@@ -136,6 +136,9 @@ doAssert invisibleNode.visible == false
 doAssert animatedNode.visible == true
 applyClipAt(visibilityModel.animations[0], 0.75)
 doAssert invisibleNode.visible == false
+doAssert animatedNode.visible == true
+applyClipAt(visibilityModel.animations[0], 1.0)
+doAssert invisibleNode.visible == false
 doAssert animatedNode.visible == false
 
 echo "Testing glTF cameras."

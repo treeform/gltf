@@ -1,4 +1,5 @@
 import
+  gltf/animations,
   gltf/common,
   gltf/models,
   gltf/pbr,
@@ -7,6 +8,7 @@ import
   gltf/writer
 
 export
+  animations,
   common,
   models,
   pbr,

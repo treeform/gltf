@@ -2,7 +2,7 @@ import
   std/[algorithm, math, os, strformat, strutils, times],
   opengl, windy, chroma, silky, silky/atlas, jsony, pixie,
   pixie/fileformats/png, vmath,
-  ../src/gltf/[models, pbr, reader]
+  ../src/gltf/[animations, models, pbr, reader]
 
 const
   AtlasPng = staticRead("dist/atlas.png")

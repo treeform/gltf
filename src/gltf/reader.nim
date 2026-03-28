@@ -174,7 +174,7 @@ proc readAccessorQuat(
       readFloat32(buffer, off + 4),
       readFloat32(buffer, off + 8),
       readFloat32(buffer, off + 12)
-    ).normalize()
+    )
   if accessor.sparse.used:
     let
       indices = readSparseIndices(accessor, bufferViews, buffers)
@@ -188,7 +188,7 @@ proc readAccessorQuat(
         readFloat32(sparseBuffer, off + 4),
         readFloat32(sparseBuffer, off + 8),
         readFloat32(sparseBuffer, off + 12)
-      ).normalize()
+      )
 
 proc assertRaise(test: bool, msg: string) =
   ## Raises an exception when a glTF invariant is not met.
@@ -483,6 +483,49 @@ proc defaultRuntimeMaterial(): Material =
   result.alphaCutoff = -1.0
   result.doubleSided = false
   result.transmissionFactor = 0.0
+
+proc parseInterpolation(name: string): AnimInterpolation =
+  ## Converts a glTF interpolation name into a runtime enum.
+  case name
+  of "STEP":
+    aiStep
+  of "CUBICSPLINE":
+    aiCubicSpline
+  else:
+    aiLinear
+
+proc splitCubicVec3(channel: var AnimationChannel) =
+  ## Splits vec3 cubic spline triplets into tangents and values.
+  let triplets = channel.valuesVec3
+  channel.valuesVec3.setLen(channel.times.len)
+  channel.inTangentsVec3.setLen(channel.times.len)
+  channel.outTangentsVec3.setLen(channel.times.len)
+  for i in 0 ..< channel.times.len:
+    channel.inTangentsVec3[i] = triplets[i * 3]
+    channel.valuesVec3[i] = triplets[i * 3 + 1]
+    channel.outTangentsVec3[i] = triplets[i * 3 + 2]
+
+proc splitCubicQuat(channel: var AnimationChannel) =
+  ## Splits quaternion cubic spline triplets into tangents and values.
+  let triplets = channel.valuesQuat
+  channel.valuesQuat.setLen(channel.times.len)
+  channel.inTangentsQuat.setLen(channel.times.len)
+  channel.outTangentsQuat.setLen(channel.times.len)
+  for i in 0 ..< channel.times.len:
+    channel.inTangentsQuat[i] = triplets[i * 3]
+    channel.valuesQuat[i] = triplets[i * 3 + 1].normalize()
+    channel.outTangentsQuat[i] = triplets[i * 3 + 2]
+
+proc splitCubicFloat(channel: var AnimationChannel) =
+  ## Splits scalar cubic spline triplets into tangents and values.
+  let triplets = channel.valuesFloat
+  channel.valuesFloat.setLen(channel.times.len)
+  channel.inTangentsFloat.setLen(channel.times.len)
+  channel.outTangentsFloat.setLen(channel.times.len)
+  for i in 0 ..< channel.times.len:
+    channel.inTangentsFloat[i] = triplets[i * 3]
+    channel.valuesFloat[i] = triplets[i * 3 + 1]
+    channel.outTangentsFloat[i] = triplets[i * 3 + 2]
 
 proc loadPrimitive(
   primitiveIndex: int,
@@ -1542,6 +1585,7 @@ proc loadModelJsonInternal(
           var channel = AnimationChannel()
           channel.target = nodes[nodeIdx]
           channel.path = path
+          channel.interpolation = parseInterpolation(sampler.interpolation)
           channel.times = times
 
           case path
@@ -1572,7 +1616,24 @@ proc loadModelJsonInternal(
 
           if channel.times.len == 0:
             continue
-          if channel.times.len != channel.valuesVec3.len and
+          if channel.interpolation == aiCubicSpline:
+            case path
+            of AnimTranslation, AnimScale:
+              if channel.valuesVec3.len != channel.times.len * 3:
+                echo "[gltf] animation sampler length mismatch"
+                continue
+              splitCubicVec3(channel)
+            of AnimRotation:
+              if channel.valuesQuat.len != channel.times.len * 3:
+                echo "[gltf] animation sampler length mismatch"
+                continue
+              splitCubicQuat(channel)
+            of AnimVisibility:
+              if channel.valuesFloat.len != channel.times.len * 3:
+                echo "[gltf] animation sampler length mismatch"
+                continue
+              splitCubicFloat(channel)
+          elif channel.times.len != channel.valuesVec3.len and
              channel.times.len != channel.valuesQuat.len and
              channel.times.len != channel.valuesFloat.len:
             echo "[gltf] animation sampler length mismatch"
@@ -1650,7 +1711,9 @@ proc loadModelJsonInternal(
     for sceneNode in scenes[selectedScene].nodes:
       result.root.nodes.add(sceneNode)
   result.root.animations = clips
-  result.root.currentClip = 0
+  result.root.activeClips.setLen(clips.len)
+  for i in 0 ..< clips.len:
+    result.root.activeClips[i] = i
   result.root.animTime = 0
   result.scenes = scenes
   result.cameras = cameras
