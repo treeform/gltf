@@ -55,33 +55,43 @@ The package depends on:
 
 The table below reflects the current code, not the full glTF 2.0 spec.
 
-| Feature | Read | Write | Notes |
-| --- | --- | --- | --- |
-| `.gltf` JSON files | Yes | No | Reads external buffers and data URIs. |
-| `.glb` binary files | Yes | Yes | `writeGLB` writes binary glTF 2.0. |
-| Scenes and node hierarchies | Yes | Yes | Preserves names, children, and TRS transforms. |
-| Triangle meshes | Yes | Yes | The renderer and writer assume triangle data. |
-| Non-triangle primitive modes | No | No | Modes other than triangles are not handled correctly. |
-| Positions | Yes | Yes | `POSITION` is supported. |
-| Normals | Yes | Yes | `NORMAL` is supported. |
-| UV set 0 | Yes | Yes | `TEXCOORD_0` is supported. |
-| Vertex colors | Yes | Yes | `COLOR_0` is supported. |
-| Indices | Yes | Partial | Reads `uint8`, `uint16`, and `uint32`. Writes `uint16` and `uint32`. |
-| PBR base color | Yes | Yes | Reads texture and factor. Writes texture and factor. |
-| Metallic and roughness factors | Yes | Yes | Scalar factors are read and written. |
-| Metallic-roughness texture | Yes | No | Loaded and rendered, not exported yet. |
-| Normal texture | Yes | No | Loaded and rendered, not exported yet. |
-| Occlusion texture | Yes | No | Loaded and rendered, not exported yet. |
-| Emissive texture and factor | Yes | No | Loaded and rendered, not exported yet. |
-| Alpha modes | Yes | Yes | `OPAQUE`, `MASK`, and `BLEND` are supported. |
-| Double-sided materials | Yes | Yes | Read and written. |
-| PNG and JPEG images | Yes | Partial | Reader supports file URIs, data URIs, and buffer views. Writer embeds PNG data in GLB. |
-| Animations | Partial | No | Translation, rotation, and scale clips are supported. |
-| Tangents | Partial | No | Tangents are generated from normals and UVs when possible. |
-| Required extensions | No | No | Unknown required extensions raise an error. |
-| Skins | No | No | Not implemented yet. |
-| Morph targets | No | No | Not implemented yet. |
-| Cameras and lights from glTF | No | No | Not implemented yet. |
+| Feature | Read | Render | Write | Notes |
+| --- | --- | --- | --- | --- |
+| `.gltf` JSON files | Yes | n/a | No | Reads external buffers and data URIs. |
+| `.glb` binary files | Yes | n/a | Yes | `writeGLB` writes binary glTF 2.0. |
+| Scenes and node hierarchies | Yes | Yes | Yes | Preserves names, children, and TRS transforms. |
+| Primitive modes | Yes | Yes | Yes | Points, lines, strips, fans, and triangles are read and rendered. |
+| Positions | Yes | Yes | Yes | `POSITION` is supported. |
+| Normals | Yes | Yes | Yes | `NORMAL` is supported. |
+| Tangents | Yes | Yes | No | Reads authored tangents and falls back to generated tangents when missing. |
+| UV set 0 | Yes | Yes | Yes | `TEXCOORD_0` is supported. |
+| UV set 1 | Yes | Yes | No | `TEXCOORD_1` is loaded and used by texture inputs with `texCoord: 1`. |
+| Vertex colors | Yes | Yes | Yes | `COLOR_0` is supported. |
+| Indices | Yes | Yes | Partial | Reads `uint8`, `uint16`, and `uint32`. Writes `uint16` and `uint32`. |
+| PBR base color | Yes | Yes | Yes | Reads texture and factor. Writes texture and factor. |
+| Metallic and roughness factors | Yes | Yes | Yes | Scalar factors are read and written. |
+| Metallic-roughness texture | Yes | Yes | No | Loaded and rendered, not exported yet. |
+| Normal texture | Yes | Yes | No | Loaded and rendered, not exported yet. |
+| Occlusion texture | Yes | Yes | No | Loaded and rendered, not exported yet. |
+| Emissive texture and factor | Yes | Yes | No | Loaded and rendered, not exported yet. |
+| Alpha modes | Yes | Yes | Yes | `OPAQUE`, `MASK`, and `BLEND` are supported. |
+| Double-sided materials | Yes | Yes | Yes | Read and written. |
+| PNG and JPEG images | Yes | Yes | Partial | Reader supports file URIs, data URIs, and buffer views. Writer embeds PNG data in GLB. |
+| Sparse accessors | Partial | Partial | No | Scalar, `VEC2`, `VEC3`, `VEC4`, and quaternion paths are supported. Sparse `MAT4` is not handled yet. |
+| Animations | Partial | Partial | No | Translation, rotation, scale, and morph weight channels support `STEP`, `LINEAR`, and `CUBICSPLINE`. |
+| Skins | Yes | Yes | No | `JOINTS_0` and `WEIGHTS_0` are supported with GPU skinning. |
+| Morph targets | Yes | Yes | No | Position, normal, and tangent targets are applied at runtime. |
+| Cameras | Yes | Yes | No | Perspective and orthographic cameras are loaded from glTF. |
+| `KHR_texture_transform` | Yes | Yes | No | Texture transforms and `texCoord` overrides are supported. |
+| `KHR_materials_transmission` | Partial | Partial | No | Transmission factors are read and rendered, but broader extension coverage is incomplete. |
+| `KHR_node_visibility` | Yes | Yes | No | Static visibility and visibility animation are supported. |
+| `KHR_animation_pointer` | Partial | Partial | No | Only the visibility target path is supported. |
+| `KHR_draco_mesh_compression` | No | No | No | Not supported yet. |
+| `KHR_mesh_quantization` | No | No | No | Not supported yet. |
+| `KHR_texture_basisu` | No | No | No | Not supported yet. |
+| `KHR_lights_punctual` | No | No | No | Not supported yet. |
+| `KHR_materials_unlit` | No | No | No | Not supported yet. |
+| `EXT_texture_webp` | No | No | No | Not supported yet. |
 
 ## Usage
 
