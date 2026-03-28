@@ -1,113 +1,7 @@
 import
   std/[strformat, math],
-  vmath, chroma, pixie, opengl
-
-type
-  TextureTransform* = object
-    texCoord*: int
-    offset*: Vec2
-    scale*: Vec2
-    rotation*: float32
-
-  TextureSampler* = object
-    magFilter*: GLint
-    minFilter*: GLint
-    wrapS*: GLint
-    wrapT*: GLint
-
-  AlphaMode* = enum
-    OpaqueAlphaMode, MaskAlphaMode, BlendAlphaMode
-
-  AnimPath* = enum
-    AnimTranslation, AnimRotation, AnimScale, AnimVisibility
-
-  AnimationChannel* = object
-    target*: Node
-    path*: AnimPath
-    times*: seq[float32]
-    valuesVec3*: seq[Vec3]
-    valuesQuat*: seq[Quat]
-    valuesFloat*: seq[float32]
-
-  AnimationClip* = object
-    name*: string
-    duration*: float32
-    channels*: seq[AnimationChannel]
-
-  Material* = ref object
-    name*: string
-    baseColor*: Image
-    baseColorTransform*: TextureTransform
-    baseColorSampler*: TextureSampler
-    baseColorFactor*: Color
-    metallicRoughness*: Image
-    metallicRoughnessTransform*: TextureTransform
-    metallicRoughnessSampler*: TextureSampler
-    metallicFactor*: float32
-    roughnessFactor*: float32
-    normal*: Image
-    normalTransform*: TextureTransform
-    normalSampler*: TextureSampler
-    hasNormalTexture*: bool
-    normalScale*: float32
-    occlusion*: Image
-    occlusionTransform*: TextureTransform
-    occlusionSampler*: TextureSampler
-    occlusionStrength*: float32
-    emissive*: Image
-    emissiveTransform*: TextureTransform
-    emissiveSampler*: TextureSampler
-    emissiveFactor*: Color
-
-    alphaMode*: AlphaMode
-    alphaCutoff*: float32
-    doubleSided*: bool
-    transmissionFactor*: float32
-
-    # These are the OpenGL IDs.
-    baseColorId*: GLuint
-    metallicRoughnessId*: GLuint
-    normalId*: GLuint
-    occlusionId*: GLuint
-    emissiveId*: GLuint
-
-  Node* = ref object
-    name*: string
-    visible*: bool = true
-    pos*: Vec3
-    rot*: Quat
-    scale*: Vec3
-    mat*: Mat4
-
-    baseVisible*: bool
-    basePos*: Vec3
-    baseRot*: Quat
-    baseScale*: Vec3
-
-    animations*: seq[AnimationClip]
-    currentClip*: int
-    animTime*: float32
-
-    points*: seq[Vec3]
-    uvs*: seq[Vec2]
-    normals*: seq[Vec3]
-    tangents*: seq[Vec4]
-    colors*: seq[ColorRGBX]
-    indices16*: seq[uint16] ## 16bit indices for small models.
-    indices32*: seq[uint32] ## 32bit indices for large models.
-    material*: Material
-
-    nodes*: seq[Node]
-
-    # These are the OpenGL IDs.
-    uploaded*: bool
-    vertexArrayId*: GLuint
-    pointsId*: GLuint
-    uvsId*: GLuint
-    normalsId*: GLuint
-    tangentsId*: GLuint
-    colorsId*: GLuint
-    indicesId*: GLuint
+  vmath, chroma, pixie, opengl,
+  common
 
 proc shallowCopy*(node: Node): Node =
   ## Creates a shallow copy of a node.
@@ -128,25 +22,8 @@ proc shallowCopy*(node: Node): Node =
   result.currentClip = node.currentClip
   result.animTime = node.animTime
 
-  result.points = node.points
-  result.uvs = node.uvs
-  result.normals = node.normals
-  result.tangents = node.tangents
-  result.colors = node.colors
-  result.indices16 = node.indices16
-  result.indices32 = node.indices32
-  result.material = node.material
-
+  result.mesh = node.mesh
   result.nodes = node.nodes
-
-  result.uploaded = node.uploaded
-  result.vertexArrayId = node.vertexArrayId
-  result.pointsId = node.pointsId
-  result.uvsId = node.uvsId
-  result.normalsId = node.normalsId
-  result.tangentsId = node.tangentsId
-  result.colorsId = node.colorsId
-  result.indicesId = node.indicesId
 
 proc defaultTextureSampler*(): TextureSampler =
   TextureSampler(
@@ -277,6 +154,27 @@ proc updateAnimation*(node: Node, dt: float32) =
     node.animTime += dt
     applyClipAt(node.animations[node.currentClip], node.animTime)
 
+proc hasGeometry*(primitive: Primitive): bool =
+  primitive != nil and primitive.points.len > 0
+
+proc hasGeometry*(mesh: Mesh): bool =
+  if mesh == nil:
+    return false
+  for primitive in mesh.primitives:
+    if primitive.hasGeometry():
+      return true
+  false
+
+proc hasGeometry*(node: Node): bool =
+  if node == nil:
+    return false
+  if node.mesh.hasGeometry():
+    return true
+  for child in node.nodes:
+    if child.hasGeometry():
+      return true
+  false
+
 proc uploadTextureToGpu(
   textureId: var GLuint,
   image: Image,
@@ -320,87 +218,141 @@ proc uploadTextureToGpu(
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, sampler.wrapT)
   glGenerateMipmap(GL_TEXTURE_2D)
 
-proc uploadToGpu*(node: Node) =
-  ## Upload the vertex data to the GPU.
+proc uploadMaterialToGpu(material: Material) =
+  if material == nil:
+    return
+  if material.baseColor != nil and material.baseColorId == 0:
+    uploadTextureToGpu(
+      material.baseColorId,
+      material.baseColor,
+      material.baseColorSampler
+    )
+  if material.metallicRoughness != nil and material.metallicRoughnessId == 0:
+    uploadTextureToGpu(
+      material.metallicRoughnessId,
+      material.metallicRoughness,
+      material.metallicRoughnessSampler
+    )
+  if material.normal != nil and material.normalId == 0:
+    uploadTextureToGpu(
+      material.normalId,
+      material.normal,
+      material.normalSampler
+    )
+  if material.occlusion != nil and material.occlusionId == 0:
+    uploadTextureToGpu(
+      material.occlusionId,
+      material.occlusion,
+      material.occlusionSampler
+    )
+  if material.emissive != nil and material.emissiveId == 0:
+    uploadTextureToGpu(
+      material.emissiveId,
+      material.emissive,
+      material.emissiveSampler
+    )
 
-  # Generate the vertex array.
-  glGenVertexArrays(1, node.vertexArrayId.addr)
-  glBindVertexArray(node.vertexArrayId)
+proc clearMaterialFromGpu(material: Material) =
+  if material == nil:
+    return
+  if material.baseColorId != 0.GLuint:
+    glDeleteTextures(1, material.baseColorId.addr)
+    material.baseColorId = 0
+  if material.metallicRoughnessId != 0.GLuint:
+    glDeleteTextures(1, material.metallicRoughnessId.addr)
+    material.metallicRoughnessId = 0
+  if material.normalId != 0.GLuint:
+    glDeleteTextures(1, material.normalId.addr)
+    material.normalId = 0
+  if material.occlusionId != 0.GLuint:
+    glDeleteTextures(1, material.occlusionId.addr)
+    material.occlusionId = 0
+  if material.emissiveId != 0.GLuint:
+    glDeleteTextures(1, material.emissiveId.addr)
+    material.emissiveId = 0
 
-  if node.indices32.len > 0:
-    glGenBuffers(1, node.indicesId.addr)
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, node.indicesId)
+proc uploadToGpu*(primitive: Primitive) =
+  ## Upload the primitive data to the GPU.
+  if primitive == nil or primitive.uploaded:
+    return
+
+  glGenVertexArrays(1, primitive.vertexArrayId.addr)
+  glBindVertexArray(primitive.vertexArrayId)
+
+  if primitive.indices32.len > 0:
+    glGenBuffers(1, primitive.indicesId.addr)
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, primitive.indicesId)
     glBufferData(
       GL_ELEMENT_ARRAY_BUFFER,
-      node.indices32.len * sizeof(uint32),
-      node.indices32[0].addr,
+      primitive.indices32.len * sizeof(uint32),
+      primitive.indices32[0].addr,
       GL_STATIC_DRAW
     )
-  elif node.indices16.len > 0:
-    glGenBuffers(1, node.indicesId.addr)
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, node.indicesId)
+  elif primitive.indices16.len > 0:
+    glGenBuffers(1, primitive.indicesId.addr)
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, primitive.indicesId)
     glBufferData(
       GL_ELEMENT_ARRAY_BUFFER,
-      node.indices16.len * sizeof(uint16),
-      node.indices16[0].addr,
+      primitive.indices16.len * sizeof(uint16),
+      primitive.indices16[0].addr,
       GL_STATIC_DRAW
     )
 
-  if node.points.len > 0:
-    glGenBuffers(1, node.pointsId.addr)
-    glBindBuffer(GL_ARRAY_BUFFER, node.pointsId)
+  if primitive.points.len > 0:
+    glGenBuffers(1, primitive.pointsId.addr)
+    glBindBuffer(GL_ARRAY_BUFFER, primitive.pointsId)
     glBufferData(
       GL_ARRAY_BUFFER,
-      node.points.len * sizeof(Vec3),
-      node.points[0].addr,
+      primitive.points.len * sizeof(Vec3),
+      primitive.points[0].addr,
       GL_STATIC_DRAW
     )
     glEnableVertexAttribArray(0)
     glVertexAttribPointer(0, 3, cGL_FLOAT, GL_FALSE, 0, nil)
 
-  if node.uvs.len > 0:
-    glGenBuffers(1, node.uvsId.addr)
-    glBindBuffer(GL_ARRAY_BUFFER, node.uvsId)
+  if primitive.uvs.len > 0:
+    glGenBuffers(1, primitive.uvsId.addr)
+    glBindBuffer(GL_ARRAY_BUFFER, primitive.uvsId)
     glBufferData(
       GL_ARRAY_BUFFER,
-      node.uvs.len * sizeof(Vec2),
-      node.uvs[0].addr,
+      primitive.uvs.len * sizeof(Vec2),
+      primitive.uvs[0].addr,
       GL_STATIC_DRAW
     )
     glEnableVertexAttribArray(3)
     glVertexAttribPointer(3, 2, cGL_FLOAT, GL_FALSE, 0, nil)
 
-  if node.normals.len > 0:
-    glGenBuffers(1, node.normalsId.addr)
-    glBindBuffer(GL_ARRAY_BUFFER, node.normalsId)
+  if primitive.normals.len > 0:
+    glGenBuffers(1, primitive.normalsId.addr)
+    glBindBuffer(GL_ARRAY_BUFFER, primitive.normalsId)
     glBufferData(
       GL_ARRAY_BUFFER,
-      node.normals.len * sizeof(Vec3),
-      node.normals[0].addr,
+      primitive.normals.len * sizeof(Vec3),
+      primitive.normals[0].addr,
       GL_STATIC_DRAW
     )
     glEnableVertexAttribArray(2)
     glVertexAttribPointer(2, 3, cGL_FLOAT, GL_FALSE, 0, nil)
 
-  if node.tangents.len > 0:
-    glGenBuffers(1, node.tangentsId.addr)
-    glBindBuffer(GL_ARRAY_BUFFER, node.tangentsId)
+  if primitive.tangents.len > 0:
+    glGenBuffers(1, primitive.tangentsId.addr)
+    glBindBuffer(GL_ARRAY_BUFFER, primitive.tangentsId)
     glBufferData(
       GL_ARRAY_BUFFER,
-      node.tangents.len * sizeof(Vec4),
-      node.tangents[0].addr,
+      primitive.tangents.len * sizeof(Vec4),
+      primitive.tangents[0].addr,
       GL_STATIC_DRAW
     )
     glEnableVertexAttribArray(4)
     glVertexAttribPointer(4, 4, cGL_FLOAT, GL_FALSE, 0, nil)
 
-  if node.colors.len > 0:
-    glGenBuffers(1, node.colorsId.addr)
-    glBindBuffer(GL_ARRAY_BUFFER, node.colorsId)
+  if primitive.colors.len > 0:
+    glGenBuffers(1, primitive.colorsId.addr)
+    glBindBuffer(GL_ARRAY_BUFFER, primitive.colorsId)
     glBufferData(
       GL_ARRAY_BUFFER,
-      node.colors.len * sizeof(ColorRGBX),
-      node.colors[0].addr,
+      primitive.colors.len * sizeof(ColorRGBX),
+      primitive.colors[0].addr,
       GL_STATIC_DRAW
     )
     glEnableVertexAttribArray(1)
@@ -409,152 +361,152 @@ proc uploadToGpu*(node: Node) =
     glDisableVertexAttribArray(1)
     glVertexAttrib4f(1, 1.0, 1.0, 1.0, 1.0)
 
-  if node.material != nil:
-    if node.material.baseColor != nil:
-      uploadTextureToGpu(
-        node.material.baseColorId,
-        node.material.baseColor,
-        node.material.baseColorSampler
+  uploadMaterialToGpu(primitive.material)
+  primitive.uploaded = true
+
+proc clearFromGpu*(primitive: Primitive) =
+  ## Clear primitive data from the GPU.
+  if primitive == nil:
+    return
+  if primitive.uploaded:
+    glDeleteVertexArrays(1, primitive.vertexArrayId.addr)
+    if primitive.indices16.len > 0 or primitive.indices32.len > 0:
+      glDeleteBuffers(1, primitive.indicesId.addr)
+    if primitive.points.len > 0:
+      glDeleteBuffers(1, primitive.pointsId.addr)
+    if primitive.uvs.len > 0:
+      glDeleteBuffers(1, primitive.uvsId.addr)
+    if primitive.normals.len > 0:
+      glDeleteBuffers(1, primitive.normalsId.addr)
+    if primitive.tangents.len > 0:
+      glDeleteBuffers(1, primitive.tangentsId.addr)
+    if primitive.colors.len > 0:
+      glDeleteBuffers(1, primitive.colorsId.addr)
+    primitive.vertexArrayId = 0
+    primitive.pointsId = 0
+    primitive.uvsId = 0
+    primitive.normalsId = 0
+    primitive.tangentsId = 0
+    primitive.colorsId = 0
+    primitive.indicesId = 0
+  clearMaterialFromGpu(primitive.material)
+  primitive.uploaded = false
+
+proc updateOnGpu*(primitive: Primitive) =
+  ## Update primitive data on the GPU.
+  if primitive == nil:
+    return
+  if not primitive.uploaded:
+    primitive.uploadToGpu()
+  else:
+    glBindVertexArray(primitive.vertexArrayId)
+
+    if primitive.points.len > 0:
+      glBindBuffer(GL_ARRAY_BUFFER, primitive.pointsId)
+      glBufferData(
+        GL_ARRAY_BUFFER,
+        primitive.points.len * sizeof(Vec3),
+        primitive.points[0].addr,
+        GL_STATIC_DRAW
       )
 
-    if node.material.metallicRoughness != nil:
-      uploadTextureToGpu(
-        node.material.metallicRoughnessId,
-        node.material.metallicRoughness,
-        node.material.metallicRoughnessSampler
+    if primitive.uvs.len > 0:
+      glBindBuffer(GL_ARRAY_BUFFER, primitive.uvsId)
+      glBufferData(
+        GL_ARRAY_BUFFER,
+        primitive.uvs.len * sizeof(Vec2),
+        primitive.uvs[0].addr,
+        GL_STATIC_DRAW
       )
 
-    if node.material.normal != nil:
-      uploadTextureToGpu(
-        node.material.normalId,
-        node.material.normal,
-        node.material.normalSampler
+    if primitive.normals.len > 0:
+      glBindBuffer(GL_ARRAY_BUFFER, primitive.normalsId)
+      glBufferData(
+        GL_ARRAY_BUFFER,
+        primitive.normals.len * sizeof(Vec3),
+        primitive.normals[0].addr,
+        GL_STATIC_DRAW
       )
 
-    if node.material.occlusion != nil:
-      uploadTextureToGpu(
-        node.material.occlusionId,
-        node.material.occlusion,
-        node.material.occlusionSampler
+    if primitive.tangents.len > 0:
+      glBindBuffer(GL_ARRAY_BUFFER, primitive.tangentsId)
+      glBufferData(
+        GL_ARRAY_BUFFER,
+        primitive.tangents.len * sizeof(Vec4),
+        primitive.tangents[0].addr,
+        GL_STATIC_DRAW
       )
 
-    if node.material.emissive != nil:
-      uploadTextureToGpu(
-        node.material.emissiveId,
-        node.material.emissive,
-        node.material.emissiveSampler
+    if primitive.colors.len > 0:
+      glBindBuffer(GL_ARRAY_BUFFER, primitive.colorsId)
+      glBufferData(
+        GL_ARRAY_BUFFER,
+        primitive.colors.len * sizeof(ColorRGBX),
+        primitive.colors[0].addr,
+        GL_STATIC_DRAW
       )
 
-  node.uploaded = true
+    if primitive.indices32.len > 0:
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, primitive.indicesId)
+      glBufferData(
+        GL_ELEMENT_ARRAY_BUFFER,
+        primitive.indices32.len * sizeof(uint32),
+        primitive.indices32[0].addr,
+        GL_STATIC_DRAW
+      )
+    elif primitive.indices16.len > 0:
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, primitive.indicesId)
+      glBufferData(
+        GL_ELEMENT_ARRAY_BUFFER,
+        primitive.indices16.len * sizeof(uint16),
+        primitive.indices16[0].addr,
+        GL_STATIC_DRAW
+      )
+
+proc uploadToGpu*(mesh: Mesh) =
+  if mesh == nil:
+    return
+  for primitive in mesh.primitives:
+    primitive.uploadToGpu()
+
+proc clearFromGpu*(mesh: Mesh) =
+  if mesh == nil:
+    return
+  for primitive in mesh.primitives:
+    primitive.clearFromGpu()
+
+proc updateOnGpu*(mesh: Mesh) =
+  if mesh == nil:
+    return
+  for primitive in mesh.primitives:
+    primitive.updateOnGpu()
+
+proc uploadToGpu*(node: Node) =
+  ## Upload the node subtree to the GPU.
+  if node == nil:
+    return
+  node.mesh.uploadToGpu()
+  for child in node.nodes:
+    child.uploadToGpu()
 
 proc clearFromGpu*(node: Node) =
-  ## Clear the vertex data from the GPU.
-  if node.uploaded:
-    glDeleteVertexArrays(1, node.vertexArrayId.addr)
-    if node.indices16.len > 0 or node.indices32.len > 0:
-      glDeleteBuffers(1, node.indicesId.addr)
-    if node.points.len > 0:
-      glDeleteBuffers(1, node.pointsId.addr)
-    if node.uvs.len > 0:
-      glDeleteBuffers(1, node.uvsId.addr)
-    if node.normals.len > 0:
-      glDeleteBuffers(1, node.normalsId.addr)
-    if node.tangents.len > 0:
-      glDeleteBuffers(1, node.tangentsId.addr)
-    if node.colors.len > 0:
-      glDeleteBuffers(1, node.colorsId.addr)
-    if node.material != nil:
-      if node.material.baseColorId != 0.GLuint:
-        glDeleteTextures(1, node.material.baseColorId.addr)
-      if node.material.metallicRoughnessId != 0.GLuint:
-        glDeleteTextures(1, node.material.metallicRoughnessId.addr)
-      if node.material.normalId != 0.GLuint:
-        glDeleteTextures(1, node.material.normalId.addr)
-      if node.material.occlusionId != 0.GLuint:
-        glDeleteTextures(1, node.material.occlusionId.addr)
-      if node.material.emissiveId != 0.GLuint:
-        glDeleteTextures(1, node.material.emissiveId.addr)
-  node.uploaded = false
-  for n in node.nodes:
-    n.clearFromGpu()
+  ## Clear the node subtree from the GPU.
+  if node == nil:
+    return
+  node.mesh.clearFromGpu()
+  for child in node.nodes:
+    child.clearFromGpu()
 
 proc updateOnGpu*(node: Node) =
-  ## Update the data on the GPU.
-
-  if not node.uploaded:
-    node.uploadToGpu()
-  else:
-    glBindVertexArray(node.vertexArrayId)
-
-    if node.points.len > 0:
-      glBindBuffer(GL_ARRAY_BUFFER, node.pointsId)
-      glBufferData(
-        GL_ARRAY_BUFFER,
-        node.points.len * sizeof(Vec3),
-        node.points[0].addr,
-        GL_STATIC_DRAW
-      )
-
-    if node.uvs.len > 0:
-      glBindBuffer(GL_ARRAY_BUFFER, node.uvsId)
-      glBufferData(
-        GL_ARRAY_BUFFER,
-        node.uvs.len * sizeof(Vec2),
-        node.uvs[0].addr,
-        GL_STATIC_DRAW
-      )
-
-    if node.normals.len > 0:
-      glBindBuffer(GL_ARRAY_BUFFER, node.normalsId)
-      glBufferData(
-        GL_ARRAY_BUFFER,
-        node.normals.len * sizeof(Vec3),
-        node.normals[0].addr,
-        GL_STATIC_DRAW
-      )
-
-    if node.tangents.len > 0:
-      glBindBuffer(GL_ARRAY_BUFFER, node.tangentsId)
-      glBufferData(
-        GL_ARRAY_BUFFER,
-        node.tangents.len * sizeof(Vec4),
-        node.tangents[0].addr,
-        GL_STATIC_DRAW
-      )
-
-    if node.colors.len > 0:
-      glBindBuffer(GL_ARRAY_BUFFER, node.colorsId)
-      glBufferData(
-        GL_ARRAY_BUFFER,
-        node.colors.len * sizeof(ColorRGBX),
-        node.colors[0].addr,
-        GL_STATIC_DRAW
-      )
-
-    if node.indices32.len > 0:
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, node.indicesId)
-      glBufferData(
-        GL_ELEMENT_ARRAY_BUFFER,
-        node.indices32.len * sizeof(uint32),
-        node.indices32[0].addr,
-        GL_STATIC_DRAW
-      )
-    elif node.indices16.len > 0:
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, node.indicesId)
-      glBufferData(
-        GL_ELEMENT_ARRAY_BUFFER,
-        node.indices16.len * sizeof(uint16),
-        node.indices16[0].addr,
-        GL_STATIC_DRAW
-      )
-
-  for n in node.nodes:
-    n.updateOnGpu()
+  ## Update the node subtree on the GPU.
+  if node == nil:
+    return
+  node.mesh.updateOnGpu()
+  for child in node.nodes:
+    child.updateOnGpu()
 
 proc clearTreeFromGpu*(node: Node) =
   ## Clear the vertex data from the GPU for the whole tree.
-  for n in node.nodes:
-    n.clearTreeFromGpu()
   node.clearFromGpu()
 
 proc trs*(node: Node): Mat4 =
@@ -570,6 +522,83 @@ proc toMat4(m: DMat4): Mat4 =
     m[3, 0].float32, m[3, 1].float32, m[3, 2].float32, m[3, 3].float32
   )
 
+proc drawPrimitive(
+  primitive: Primitive,
+  shader: GLuint,
+  tint: Color,
+  skipBlend = false
+) =
+  if primitive == nil or not primitive.hasGeometry():
+    return
+
+  if skipBlend and
+     primitive.material != nil and
+     primitive.material.alphaMode == BlendAlphaMode:
+    return
+
+  if not primitive.uploaded:
+    primitive.uploadToGpu()
+
+  glBindVertexArray(primitive.vertexArrayId)
+
+  if primitive.material != nil and
+     not (skipBlend and primitive.material.alphaMode == BlendAlphaMode):
+    glActiveTexture(GL_TEXTURE0)
+    glBindTexture(GL_TEXTURE_2D, primitive.material.baseColorId)
+
+    let sampleTexUniform = glGetUniformLocation(shader, "sampleTex")
+    if sampleTexUniform >= 0:
+      glUniform1i(sampleTexUniform, 0)
+
+    let baseColorFactorUniform = glGetUniformLocation(shader, "baseColorFactor")
+    if baseColorFactorUniform >= 0:
+      glUniform4f(
+        baseColorFactorUniform,
+        primitive.material.baseColorFactor.r,
+        primitive.material.baseColorFactor.g,
+        primitive.material.baseColorFactor.b,
+        primitive.material.baseColorFactor.a
+      )
+
+    let alphaCutoffUniform = glGetUniformLocation(shader, "alphaCutoff")
+    if alphaCutoffUniform >= 0:
+      var cutoff = -1.0
+      if primitive.material.alphaMode == MaskAlphaMode:
+        cutoff = primitive.material.alphaCutoff
+      glUniform1f(alphaCutoffUniform, cutoff)
+  else:
+    glBindTexture(GL_TEXTURE_2D, 0)
+    let sampleTexUniform = glGetUniformLocation(shader, "sampleTex")
+    if sampleTexUniform >= 0:
+      glUniform1i(sampleTexUniform, 0)
+
+  if primitive.material != nil and primitive.material.doubleSided:
+    glDisable(GL_CULL_FACE)
+  else:
+    glEnable(GL_CULL_FACE)
+
+  let colorTintUniform = glGetUniformLocation(shader, "tint")
+  glUniform4f(colorTintUniform, tint.r, tint.g, tint.b, tint.a)
+
+  if primitive.indices32.len > 0:
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, primitive.indicesId)
+    glDrawElements(
+      GL_TRIANGLES,
+      primitive.indices32.len.GLint,
+      GL_UNSIGNED_INT,
+      nil
+    )
+  elif primitive.indices16.len > 0:
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, primitive.indicesId)
+    glDrawElements(
+      GL_TRIANGLES,
+      primitive.indices16.len.GLint,
+      GL_UNSIGNED_SHORT,
+      nil
+    )
+  else:
+    glDrawArrays(GL_TRIANGLES, 0, primitive.points.len.cint)
+
 proc draw*(
   node: Node,
   shader: GLuint,
@@ -582,14 +611,11 @@ proc draw*(
   if not node.visible:
     return
 
-  node.mat = transform * node.trs
-
-  if skipBlend and
-    node.material != nil and
-    node.material.alphaMode == BlendAlphaMode:
-    for n in node.nodes:
-      n.draw(shader, node.mat, view, proj, tint, useTrs=true, skipBlend=skipBlend)
-    return
+  node.mat =
+    if useTrs:
+      transform * node.trs
+    else:
+      transform
   let
     modelUniform = glGetUniformLocation(shader, "model")
     viewUniform = glGetUniformLocation(shader, "view")
@@ -618,69 +644,9 @@ proc draw*(
     cast[ptr float32](projArray.addr)
   )
 
-  if not node.uploaded:
-    node.uploadToGpu()
-
-  glBindVertexArray(node.vertexArrayId)
-
-  if node.material != nil and not (skipBlend and node.material.alphaMode == BlendAlphaMode):
-    # Bind the material texture (or 0 to ensure no previous texture is bound)
-    glActiveTexture(GL_TEXTURE0)
-    glBindTexture(GL_TEXTURE_2D, node.material.baseColorId)
-
-    let sampleTexUniform = glGetUniformLocation(shader, "sampleTex")
-    if sampleTexUniform >= 0:
-      glUniform1i(sampleTexUniform, 0)
-
-    let baseColorFactorUniform = glGetUniformLocation(shader, "baseColorFactor")
-    if baseColorFactorUniform >= 0:
-      glUniform4f(
-        baseColorFactorUniform,
-        node.material.baseColorFactor.r,
-        node.material.baseColorFactor.g,
-        node.material.baseColorFactor.b,
-        node.material.baseColorFactor.a
-      )
-
-    let alphaCutoffUniform = glGetUniformLocation(shader, "alphaCutoff")
-    if alphaCutoffUniform >= 0:
-      var cutoff = -1.0
-      if node.material.alphaMode == MaskAlphaMode:
-        cutoff = node.material.alphaCutoff
-      glUniform1f(alphaCutoffUniform, cutoff)
-
-  else:
-    glBindTexture(GL_TEXTURE_2D, 0)
-    let sampleTexUniform = glGetUniformLocation(shader, "sampleTex")
-    if sampleTexUniform >= 0:
-      glUniform1i(sampleTexUniform, 0)
-
-  if node.material != nil and node.material.doubleSided:
-    glDisable(GL_CULL_FACE)
-  else:
-    glEnable(GL_CULL_FACE)
-
-  let colorTintUniform = glGetUniformLocation(shader, "tint")
-  glUniform4f(colorTintUniform, tint.r, tint.g, tint.b, tint.a)
-
-  if node.indices32.len > 0:
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, node.indicesId)
-    glDrawElements(
-      GL_TRIANGLES,
-      node.indices32.len.GLint,
-      GL_UNSIGNED_INT,
-      nil
-    )
-  elif node.indices16.len > 0:
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, node.indicesId)
-    glDrawElements(
-      GL_TRIANGLES,
-      node.indices16.len.GLint,
-      GL_UNSIGNED_SHORT,
-      nil
-    )
-  else:
-    glDrawArrays(GL_TRIANGLES, 0, node.points.len.cint)
+  if node.mesh != nil:
+    for primitive in node.mesh.primitives:
+      primitive.drawPrimitive(shader, tint, skipBlend)
 
   for n in node.nodes:
     n.draw(shader, node.mat, view, proj, tint, useTrs=true, skipBlend=skipBlend)
@@ -695,56 +661,58 @@ proc dumpTree*(node: Node, indent: string = "") =
   echo &"{indent}  rot: {node.rot} ({euler})"
   echo &"{indent}  scale: {node.scale}"
 
-  # Print the material values.
-  if node.material != nil:
-    echo &"{indent}  material: {node.material.name}"
-    if node.material.baseColor != nil:
-      echo &"{indent}    baseColor: {node.material.baseColor}"
-      echo &"{indent}    baseColorFactor: {node.material.baseColorFactor}"
-      echo &"{indent}    baseColorSampler: {node.material.baseColorSampler}"
-    if node.material.metallicRoughness != nil:
-      echo &"{indent}    metallicRoughness: {node.material.metallicRoughness}"
-      echo &"{indent}    metallicRoughnessSampler: {node.material.metallicRoughnessSampler}"
-    echo &"{indent}    metallicFactor: {node.material.metallicFactor}"
-    echo &"{indent}    roughnessFactor: {node.material.roughnessFactor}"
-    if node.material.normal != nil:
-      echo &"{indent}    normal: {node.material.normal}"
-      echo &"{indent}    normalSampler: {node.material.normalSampler}"
-      echo &"{indent}    normalScale: {node.material.normalScale}"
-    if node.material.occlusion != nil:
-      echo &"{indent}    occlusion: {node.material.occlusion}"
-      echo &"{indent}    occlusionSampler: {node.material.occlusionSampler}"
-      echo &"{indent}    occlusionStrength: {node.material.occlusionStrength}"
-    if node.material.emissive != nil:
-      echo &"{indent}    emissive: {node.material.emissive}"
-      echo &"{indent}    emissiveSampler: {node.material.emissiveSampler}"
-      echo &"{indent}    emissiveFactor: {node.material.emissiveFactor}"
-    # Print the alpha mode.
-    if node.material.alphaMode == MaskAlphaMode:
-      echo &"{indent}    alphaMode: Mask"
-      echo &"{indent}    alphaCutoff: {node.material.alphaCutoff}"
-    elif node.material.alphaMode == BlendAlphaMode:
-      echo &"{indent}    alphaMode: Blend"
-    else:
-      echo &"{indent}    alphaMode: Opaque"
-    echo &"{indent}    transmissionFactor: {node.material.transmissionFactor}"
-    echo &"{indent}    doubleSided: {node.material.doubleSided}"
+  if node.mesh != nil:
+    echo &"{indent}  mesh: {node.mesh.name}"
+    echo &"{indent}  primitives: {node.mesh.primitives.len}"
+    for i, primitive in node.mesh.primitives:
+      let prefix = indent & &"    primitive[{i}]"
+      if primitive.material != nil:
+        echo &"{prefix} material: {primitive.material.name}"
+        if primitive.material.baseColor != nil:
+          echo &"{prefix} baseColor: {primitive.material.baseColor}"
+          echo &"{prefix} baseColorFactor: {primitive.material.baseColorFactor}"
+          echo &"{prefix} baseColorSampler: {primitive.material.baseColorSampler}"
+        if primitive.material.metallicRoughness != nil:
+          echo &"{prefix} metallicRoughness: {primitive.material.metallicRoughness}"
+          echo &"{prefix} metallicRoughnessSampler: {primitive.material.metallicRoughnessSampler}"
+        echo &"{prefix} metallicFactor: {primitive.material.metallicFactor}"
+        echo &"{prefix} roughnessFactor: {primitive.material.roughnessFactor}"
+        if primitive.material.normal != nil:
+          echo &"{prefix} normal: {primitive.material.normal}"
+          echo &"{prefix} normalSampler: {primitive.material.normalSampler}"
+          echo &"{prefix} normalScale: {primitive.material.normalScale}"
+        if primitive.material.occlusion != nil:
+          echo &"{prefix} occlusion: {primitive.material.occlusion}"
+          echo &"{prefix} occlusionSampler: {primitive.material.occlusionSampler}"
+          echo &"{prefix} occlusionStrength: {primitive.material.occlusionStrength}"
+        if primitive.material.emissive != nil:
+          echo &"{prefix} emissive: {primitive.material.emissive}"
+          echo &"{prefix} emissiveSampler: {primitive.material.emissiveSampler}"
+          echo &"{prefix} emissiveFactor: {primitive.material.emissiveFactor}"
+        if primitive.material.alphaMode == MaskAlphaMode:
+          echo &"{prefix} alphaMode: Mask"
+          echo &"{prefix} alphaCutoff: {primitive.material.alphaCutoff}"
+        elif primitive.material.alphaMode == BlendAlphaMode:
+          echo &"{prefix} alphaMode: Blend"
+        else:
+          echo &"{prefix} alphaMode: Opaque"
+        echo &"{prefix} transmissionFactor: {primitive.material.transmissionFactor}"
+        echo &"{prefix} doubleSided: {primitive.material.doubleSided}"
 
-  # Print the mesh values.
-  if node.points.len > 0:
-    echo &"{indent}  points: {node.points.len}"
-  if node.uvs.len > 0:
-    echo &"{indent}  uvs: {node.uvs.len}"
-  if node.normals.len > 0:
-    echo &"{indent}  normals: {node.normals.len}"
-  if node.tangents.len > 0:
-    echo &"{indent}  tangents: {node.tangents.len}"
-  if node.colors.len > 0:
-    echo &"{indent}  colors: {node.colors.len}"
-  if node.indices16.len > 0:
-    echo &"{indent}  indices (16bit): {node.indices16.len}"
-  if node.indices32.len > 0:
-    echo &"{indent}  indices (32bit): {node.indices32.len}"
+      if primitive.points.len > 0:
+        echo &"{prefix} points: {primitive.points.len}"
+      if primitive.uvs.len > 0:
+        echo &"{prefix} uvs: {primitive.uvs.len}"
+      if primitive.normals.len > 0:
+        echo &"{prefix} normals: {primitive.normals.len}"
+      if primitive.tangents.len > 0:
+        echo &"{prefix} tangents: {primitive.tangents.len}"
+      if primitive.colors.len > 0:
+        echo &"{prefix} colors: {primitive.colors.len}"
+      if primitive.indices16.len > 0:
+        echo &"{prefix} indices (16bit): {primitive.indices16.len}"
+      if primitive.indices32.len > 0:
+        echo &"{prefix} indices (32bit): {primitive.indices32.len}"
 
   for n in node.nodes:
     n.dumpTree(indent & "  ")
@@ -756,19 +724,6 @@ proc walkNodes*(node: Node): seq[Node] =
     for n in node.nodes:
       innerWalk(n, arr)
   innerWalk(node, result)
-
-type
-  AABounds* = object
-    min, max*: Vec3
-
-  Bounds* = object
-    center*: Vec3
-    size*: Vec3
-    radius*: float32
-
-  BoundingSphere* = object
-    center*: Vec3
-    radius*: float
 
 proc center*(a: AABounds): Vec3 =
   ## Get the center of the axis-aligned bounding box.
@@ -798,9 +753,11 @@ proc getAABoundsNode*(node: Node, trs = mat4()): AABounds =
   var bounds = AABounds()
   bounds.min = vec3(float32.high, float32.high, float32.high)
   bounds.max = vec3(float32.low, float32.low, float32.low)
-  for p in node.points:
-    bounds.min = min(bounds.min, trs * p)
-    bounds.max = max(bounds.max, trs * p)
+  if node.mesh != nil:
+    for primitive in node.mesh.primitives:
+      for p in primitive.points:
+        bounds.min = min(bounds.min, trs * p)
+        bounds.max = max(bounds.max, trs * p)
   return bounds
 
 proc getAABounds*(node: Node, trs = mat4()): AABounds =
@@ -831,15 +788,21 @@ proc computeBounds*(node: Node, trs = mat4()): Bounds =
 
 proc getBoundingSphereNode*(node: Node, trs = mat4()): BoundingSphere =
   ## Get the bounding sphere of the node.
-  if node.points.len == 0:
+  if node.mesh == nil or not node.mesh.hasGeometry():
     return BoundingSphere(center: vec3(0, 0, 0), radius: 0)
   var center = vec3(0, 0, 0)
-  for p in node.points:
-    center += trs * p
-  center /= node.points.len.float32
+  var pointCount = 0
+  for primitive in node.mesh.primitives:
+    for p in primitive.points:
+      center += trs * p
+      inc pointCount
+  if pointCount == 0:
+    return BoundingSphere(center: vec3(0, 0, 0), radius: 0)
+  center /= pointCount.float32
   var radius = 0.float32
-  for p in node.points:
-    radius = max(radius, length(trs * p - center))
+  for primitive in node.mesh.primitives:
+    for p in primitive.points:
+      radius = max(radius, length(trs * p - center))
   return BoundingSphere(center: center, radius: radius)
 
 proc getBoundingSphere*(node: Node, trs = mat4()): BoundingSphere =
@@ -851,18 +814,20 @@ proc getBoundingSphere*(node: Node, trs = mat4()): BoundingSphere =
 
 iterator triangles*(node: Node): (Vec3, Vec3, Vec3) =
   ## Triangles iterator for a node.
-  for i in 0 ..< node.indices16.len div 3:
-    yield (
-      node.points[node.indices16[i * 3 + 0]],
-      node.points[node.indices16[i * 3 + 1]],
-      node.points[node.indices16[i * 3 + 2]]
-    )
-  for i in 0 ..< node.indices32.len div 3:
-    yield (
-      node.points[node.indices32[i * 3 + 0]],
-      node.points[node.indices32[i * 3 + 1]],
-      node.points[node.indices32[i * 3 + 2]]
-    )
+  if node.mesh != nil:
+    for primitive in node.mesh.primitives:
+      for i in 0 ..< primitive.indices16.len div 3:
+        yield (
+          primitive.points[primitive.indices16[i * 3 + 0]],
+          primitive.points[primitive.indices16[i * 3 + 1]],
+          primitive.points[primitive.indices16[i * 3 + 2]]
+        )
+      for i in 0 ..< primitive.indices32.len div 3:
+        yield (
+          primitive.points[primitive.indices32[i * 3 + 0]],
+          primitive.points[primitive.indices32[i * 3 + 1]],
+          primitive.points[primitive.indices32[i * 3 + 2]]
+        )
 
 proc `[]`*(node: Node, name: string): Node =
   ## Get a child node by name.
