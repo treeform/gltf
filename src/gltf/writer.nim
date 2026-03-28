@@ -235,19 +235,39 @@ proc writeGLB*(root: Node, path: string) =
 
     var indicesAcc = -1
     if primitive.indices16.len > 0:
-      var payload = newString(primitive.indices16.len * 2)
-      for i, idxVal in primitive.indices16:
-        payload.writeUint16AtLe(i * 2, idxVal)
-      indicesAcc = addAccessor(
-        accessors,
-        bufferViews,
-        data,
-        payload,
-        atSCALAR,
-        cGL_UNSIGNED_SHORT,
-        primitive.indices16.len,
-        0
-      )
+      var fitsUint8 = true
+      for idxVal in primitive.indices16:
+        if idxVal > 255:
+          fitsUint8 = false
+          break
+      if fitsUint8:
+        var payload = newString(primitive.indices16.len)
+        for i, idxVal in primitive.indices16:
+          payload[i] = char(idxVal.uint8)
+        indicesAcc = addAccessor(
+          accessors,
+          bufferViews,
+          data,
+          payload,
+          atSCALAR,
+          GL_UNSIGNED_BYTE,
+          primitive.indices16.len,
+          0
+        )
+      else:
+        var payload = newString(primitive.indices16.len * 2)
+        for i, idxVal in primitive.indices16:
+          payload.writeUint16AtLe(i * 2, idxVal)
+        indicesAcc = addAccessor(
+          accessors,
+          bufferViews,
+          data,
+          payload,
+          atSCALAR,
+          cGL_UNSIGNED_SHORT,
+          primitive.indices16.len,
+          0
+        )
     elif primitive.indices32.len > 0:
       var payload = newString(primitive.indices32.len * 4)
       for i, idxVal in primitive.indices32:

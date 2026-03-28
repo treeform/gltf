@@ -67,7 +67,7 @@ The table below reflects the current code, not the full glTF 2.0 spec.
 | UV set 0 | Yes | Yes | Yes | `TEXCOORD_0` is supported. |
 | UV set 1 | Yes | Yes | No | `TEXCOORD_1` is loaded and used by texture inputs with `texCoord: 1`. |
 | Vertex colors | Yes | Yes | Yes | `COLOR_0` is supported. |
-| Indices | Yes | Yes | Partial | Reads `uint8`, `uint16`, and `uint32`. Writes `uint16` and `uint32`. |
+| Indices | Yes | Yes | Yes | Reads `uint8`, `uint16`, and `uint32`. Writes `uint8`, `uint16`, and `uint32`. |
 | PBR base color | Yes | Yes | Yes | Reads texture and factor. Writes texture and factor. |
 | Metallic and roughness factors | Yes | Yes | Yes | Scalar factors are read and written. |
 | Metallic-roughness texture | Yes | Yes | No | Loaded and rendered, not exported yet. |
