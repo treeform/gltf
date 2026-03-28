@@ -275,6 +275,21 @@ proc uploadToGpu*(primitive: Primitive) =
     glEnableVertexAttribArray(3)
     glVertexAttribPointer(3, 2, cGL_FLOAT, GL_FALSE, 0, nil)
 
+  if primitive.uvs1.len > 0:
+    glGenBuffers(1, primitive.uvs1Id.addr)
+    glBindBuffer(GL_ARRAY_BUFFER, primitive.uvs1Id)
+    glBufferData(
+      GL_ARRAY_BUFFER,
+      primitive.uvs1.len * sizeof(Vec2),
+      primitive.uvs1[0].addr,
+      GL_STATIC_DRAW
+    )
+    glEnableVertexAttribArray(7)
+    glVertexAttribPointer(7, 2, cGL_FLOAT, GL_FALSE, 0, nil)
+  else:
+    glDisableVertexAttribArray(7)
+    glVertexAttrib2f(7, 0.0, 0.0)
+
   if primitive.normals.len > 0:
     glGenBuffers(1, primitive.normalsId.addr)
     glBindBuffer(GL_ARRAY_BUFFER, primitive.normalsId)
@@ -359,6 +374,8 @@ proc clearFromGpu*(primitive: Primitive) =
       glDeleteBuffers(1, primitive.pointsId.addr)
     if primitive.uvs.len > 0:
       glDeleteBuffers(1, primitive.uvsId.addr)
+    if primitive.uvs1.len > 0:
+      glDeleteBuffers(1, primitive.uvs1Id.addr)
     if primitive.normals.len > 0:
       glDeleteBuffers(1, primitive.normalsId.addr)
     if primitive.tangents.len > 0:
@@ -372,6 +389,7 @@ proc clearFromGpu*(primitive: Primitive) =
     primitive.vertexArrayId = 0
     primitive.pointsId = 0
     primitive.uvsId = 0
+    primitive.uvs1Id = 0
     primitive.normalsId = 0
     primitive.tangentsId = 0
     primitive.colorsId = 0
@@ -405,6 +423,15 @@ proc updateOnGpu*(primitive: Primitive) =
         GL_ARRAY_BUFFER,
         primitive.uvs.len * sizeof(Vec2),
         primitive.uvs[0].addr,
+        GL_STATIC_DRAW
+      )
+
+    if primitive.uvs1.len > 0:
+      glBindBuffer(GL_ARRAY_BUFFER, primitive.uvs1Id)
+      glBufferData(
+        GL_ARRAY_BUFFER,
+        primitive.uvs1.len * sizeof(Vec2),
+        primitive.uvs1[0].addr,
         GL_STATIC_DRAW
       )
 
@@ -781,6 +808,8 @@ proc dumpTree*(node: Node, indent: string = "") =
         echo &"{prefix} points: {primitive.points.len}"
       if primitive.uvs.len > 0:
         echo &"{prefix} uvs: {primitive.uvs.len}"
+      if primitive.uvs1.len > 0:
+        echo &"{prefix} uvs1: {primitive.uvs1.len}"
       if primitive.normals.len > 0:
         echo &"{prefix} normals: {primitive.normals.len}"
       if primitive.tangents.len > 0:

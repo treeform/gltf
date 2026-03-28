@@ -7,6 +7,7 @@ layout(location = 3) in vec2 vertexUV;
 layout(location = 4) in vec4 vertexTangent;
 layout(location = 5) in uvec4 vertexJoints;
 layout(location = 6) in vec4 vertexWeights;
+layout(location = 7) in vec2 vertexUV1;
 
 uniform mat4 model;
 uniform mat4 view;
@@ -19,6 +20,7 @@ out vec3 position;
 out vec4 color;
 out vec3 normal;
 out vec2 uv;
+out vec2 uv1;
 out mat3 TBN;
 out mat4 modelMat;
 out vec4 vPosLightSpace;
@@ -43,6 +45,7 @@ void main() {
   position = (model * skinnedPosition).xyz;
   color = vertexColor;
   uv = vertexUV;
+  uv1 = vertexUV1;
 
   // Normal, Tangent, and Bitangent
   vec3 N = normalize(mat3(model) * skinnedNormal); // Normal
