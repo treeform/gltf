@@ -1,42 +1,43 @@
 nimTitle	models	gltf/models.html	module gltf/models		0
 nim	shallowCopy	gltf/models.html#shallowCopy,Node	proc shallowCopy(node: Node): Node		6
-nim	defaultTextureSampler	gltf/models.html#defaultTextureSampler	proc defaultTextureSampler(): TextureSampler		28
-nim	`$`	gltf/models.html#$,TextureSampler	proc `$`(sampler: TextureSampler): string		64
-nim	resetToBase	gltf/models.html#resetToBase,Node	proc resetToBase(node: Node)		70
-nim	applyClipAt	gltf/models.html#applyClipAt,AnimationClip,float32	proc applyClipAt(clip: AnimationClip; time: float32)		126
-nim	updateAnimation	gltf/models.html#updateAnimation,Node,float32	proc updateAnimation(node: Node; dt: float32)		148
-nim	hasGeometry	gltf/models.html#hasGeometry,Primitive	proc hasGeometry(primitive: Primitive): bool		157
-nim	hasGeometry	gltf/models.html#hasGeometry,Mesh	proc hasGeometry(mesh: Mesh): bool		160
-nim	hasGeometry	gltf/models.html#hasGeometry,Node	proc hasGeometry(node: Node): bool		168
-nim	uploadToGpu	gltf/models.html#uploadToGpu,Primitive	proc uploadToGpu(primitive: Primitive)		274
-nim	clearFromGpu	gltf/models.html#clearFromGpu,Primitive	proc clearFromGpu(primitive: Primitive)		367
-nim	updateOnGpu	gltf/models.html#updateOnGpu,Primitive	proc updateOnGpu(primitive: Primitive)		395
-nim	uploadToGpu	gltf/models.html#uploadToGpu,Mesh	proc uploadToGpu(mesh: Mesh)		466
-nim	clearFromGpu	gltf/models.html#clearFromGpu,Mesh	proc clearFromGpu(mesh: Mesh)		472
-nim	updateOnGpu	gltf/models.html#updateOnGpu,Mesh	proc updateOnGpu(mesh: Mesh)		478
-nim	uploadToGpu	gltf/models.html#uploadToGpu,Node	proc uploadToGpu(node: Node)		484
-nim	clearFromGpu	gltf/models.html#clearFromGpu,Node	proc clearFromGpu(node: Node)		492
-nim	updateOnGpu	gltf/models.html#updateOnGpu,Node	proc updateOnGpu(node: Node)		500
-nim	clearTreeFromGpu	gltf/models.html#clearTreeFromGpu,Node	proc clearTreeFromGpu(node: Node)		508
-nim	trs	gltf/models.html#trs,Node	proc trs(node: Node): Mat4		512
-nim	draw	gltf/models.html#draw,Node,GLuint,Mat4,Mat4,Mat4,Color	proc draw(node: Node; shader: GLuint; transform, view, proj: Mat4; tint: Color;\n     useTrs = true; skipBlend = false)		602
-nim	dumpTree	gltf/models.html#dumpTree,Node,string	proc dumpTree(node: Node; indent: string = "")		654
-nim	walkNodes	gltf/models.html#walkNodes,Node	proc walkNodes(node: Node): seq[Node]		720
-nim	center	gltf/models.html#center,AABounds	proc center(a: AABounds): Vec3		728
-nim	radius	gltf/models.html#radius,AABounds	proc radius(a: AABounds): float		732
-nim	merge	gltf/models.html#merge,AABounds,AABounds	proc merge(a, b: AABounds): AABounds		736
-nim	merge	gltf/models.html#merge,BoundingSphere,BoundingSphere	proc merge(a, b: BoundingSphere): BoundingSphere		741
-nim	getAABoundsNode	gltf/models.html#getAABoundsNode,Node	proc getAABoundsNode(node: Node; trs = mat4()): AABounds		751
-nim	getAABounds	gltf/models.html#getAABounds,Node	proc getAABounds(node: Node; trs = mat4()): AABounds		763
-nim	computeBounds	gltf/models.html#computeBounds,Node	proc computeBounds(node: Node; trs = mat4()): Bounds		770
-nim	getBoundingSphereNode	gltf/models.html#getBoundingSphereNode,Node	proc getBoundingSphereNode(node: Node; trs = mat4()): BoundingSphere		789
-nim	getBoundingSphere	gltf/models.html#getBoundingSphere,Node	proc getBoundingSphere(node: Node; trs = mat4()): BoundingSphere		808
-nim	triangles	gltf/models.html#triangles.i,Node	iterator triangles(node: Node): (Vec3, Vec3, Vec3)		815
-nim	`[]`	gltf/models.html#[],Node,string	proc `[]`(node: Node; name: string): Node		832
-nim	draw	gltf/models.html#draw,Node,GLuint,DMat4,DMat4,DMat4,Color	proc draw(node: Node; shader: GLuint; transform, view, proj: DMat4; tint: Color;\n     useTrs = true)		838
-nimgrp	hasgeometry	gltf/models.html#hasGeometry-procs-all	proc		157
-nimgrp	uploadtogpu	gltf/models.html#uploadToGpu-procs-all	proc		274
-nimgrp	updateongpu	gltf/models.html#updateOnGpu-procs-all	proc		395
-nimgrp	clearfromgpu	gltf/models.html#clearFromGpu-procs-all	proc		367
-nimgrp	draw	gltf/models.html#draw-procs-all	proc		602
-nimgrp	merge	gltf/models.html#merge-procs-all	proc		736
+nim	defaultTextureSampler	gltf/models.html#defaultTextureSampler	proc defaultTextureSampler(): TextureSampler		29
+nim	`$`	gltf/models.html#$,TextureSampler	proc `$`(sampler: TextureSampler): string		65
+nim	resetToBase	gltf/models.html#resetToBase,Node	proc resetToBase(node: Node)		71
+nim	applyClipAt	gltf/models.html#applyClipAt,AnimationClip,float32	proc applyClipAt(clip: AnimationClip; time: float32)		127
+nim	updateAnimation	gltf/models.html#updateAnimation,Node,float32	proc updateAnimation(node: Node; dt: float32)		149
+nim	hasGeometry	gltf/models.html#hasGeometry,Primitive	proc hasGeometry(primitive: Primitive): bool		158
+nim	hasGeometry	gltf/models.html#hasGeometry,Mesh	proc hasGeometry(mesh: Mesh): bool		161
+nim	hasGeometry	gltf/models.html#hasGeometry,Node	proc hasGeometry(node: Node): bool		169
+nim	uploadToGpu	gltf/models.html#uploadToGpu,Primitive	proc uploadToGpu(primitive: Primitive)		275
+nim	clearFromGpu	gltf/models.html#clearFromGpu,Primitive	proc clearFromGpu(primitive: Primitive)		368
+nim	updateOnGpu	gltf/models.html#updateOnGpu,Primitive	proc updateOnGpu(primitive: Primitive)		396
+nim	uploadToGpu	gltf/models.html#uploadToGpu,Mesh	proc uploadToGpu(mesh: Mesh)		467
+nim	clearFromGpu	gltf/models.html#clearFromGpu,Mesh	proc clearFromGpu(mesh: Mesh)		473
+nim	updateOnGpu	gltf/models.html#updateOnGpu,Mesh	proc updateOnGpu(mesh: Mesh)		479
+nim	uploadToGpu	gltf/models.html#uploadToGpu,Node	proc uploadToGpu(node: Node)		485
+nim	clearFromGpu	gltf/models.html#clearFromGpu,Node	proc clearFromGpu(node: Node)		493
+nim	updateOnGpu	gltf/models.html#updateOnGpu,Node	proc updateOnGpu(node: Node)		501
+nim	clearTreeFromGpu	gltf/models.html#clearTreeFromGpu,Node	proc clearTreeFromGpu(node: Node)		509
+nim	trs	gltf/models.html#trs,Node	proc trs(node: Node): Mat4		513
+nim	findTransform	gltf/models.html#findTransform,Node,Node,Mat4	proc findTransform(node, target: Node; transform = mat4(); world: var Mat4): bool		517
+nim	draw	gltf/models.html#draw,Node,GLuint,Mat4,Mat4,Mat4,Color	proc draw(node: Node; shader: GLuint; transform, view, proj: Mat4; tint: Color;\n     useTrs = true; skipBlend = false)		620
+nim	dumpTree	gltf/models.html#dumpTree,Node,string	proc dumpTree(node: Node; indent: string = "")		672
+nim	walkNodes	gltf/models.html#walkNodes,Node	proc walkNodes(node: Node): seq[Node]		740
+nim	center	gltf/models.html#center,AABounds	proc center(a: AABounds): Vec3		748
+nim	radius	gltf/models.html#radius,AABounds	proc radius(a: AABounds): float		752
+nim	merge	gltf/models.html#merge,AABounds,AABounds	proc merge(a, b: AABounds): AABounds		756
+nim	merge	gltf/models.html#merge,BoundingSphere,BoundingSphere	proc merge(a, b: BoundingSphere): BoundingSphere		761
+nim	getAABoundsNode	gltf/models.html#getAABoundsNode,Node	proc getAABoundsNode(node: Node; trs = mat4()): AABounds		771
+nim	getAABounds	gltf/models.html#getAABounds,Node	proc getAABounds(node: Node; trs = mat4()): AABounds		783
+nim	computeBounds	gltf/models.html#computeBounds,Node	proc computeBounds(node: Node; trs = mat4()): Bounds		790
+nim	getBoundingSphereNode	gltf/models.html#getBoundingSphereNode,Node	proc getBoundingSphereNode(node: Node; trs = mat4()): BoundingSphere		809
+nim	getBoundingSphere	gltf/models.html#getBoundingSphere,Node	proc getBoundingSphere(node: Node; trs = mat4()): BoundingSphere		828
+nim	triangles	gltf/models.html#triangles.i,Node	iterator triangles(node: Node): (Vec3, Vec3, Vec3)		835
+nim	`[]`	gltf/models.html#[],Node,string	proc `[]`(node: Node; name: string): Node		852
+nim	draw	gltf/models.html#draw,Node,GLuint,DMat4,DMat4,DMat4,Color	proc draw(node: Node; shader: GLuint; transform, view, proj: DMat4; tint: Color;\n     useTrs = true)		858
+nimgrp	hasgeometry	gltf/models.html#hasGeometry-procs-all	proc		158
+nimgrp	uploadtogpu	gltf/models.html#uploadToGpu-procs-all	proc		275
+nimgrp	updateongpu	gltf/models.html#updateOnGpu-procs-all	proc		396
+nimgrp	clearfromgpu	gltf/models.html#clearFromGpu-procs-all	proc		368
+nimgrp	draw	gltf/models.html#draw-procs-all	proc		620
+nimgrp	merge	gltf/models.html#merge-procs-all	proc		756
