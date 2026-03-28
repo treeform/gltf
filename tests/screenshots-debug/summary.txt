@@ -1,0 +1,1 @@
+ok		C:\p\glTF-Sample-Assets\Models\ABeautifulGame\glTF\ABeautifulGame.gltf	C:\p\gltf\tests\screenshots-debug\001_ABeautifulGame.gltf.png	Rendered and captured successfully.

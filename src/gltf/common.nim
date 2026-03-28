@@ -3,6 +3,8 @@ import
   models
 
 type
+  GltfError* = object of CatchableError
+
   BufferView* = object
     buffer*: int
     byteOffset*, byteLength*, byteStride*: int

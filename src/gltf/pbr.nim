@@ -3,7 +3,7 @@
 import
   std/[strutils, algorithm],
   opengl, windy, pixie, vmath,
-  models, shaders
+  common, models, shaders
 
 const
   envMapSize* = 512 # Size of the environment map.
@@ -544,7 +544,7 @@ proc renderPbrNode(
         nil
       )
     else:
-      raise newException(Exception, "Invalid indices")
+      raise newException(GltfError, "Invalid indices")
 
   # Remove material settings.
   if node.material != nil and (not (deferBlend and isBlend)):

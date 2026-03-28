@@ -75,7 +75,7 @@ proc readAccessorQuat(
 proc assertRaise(test: bool, msg: string) =
   ## Raises an exception when a glTF invariant is not met.
   if not test:
-    raise newException(Exception, msg)
+    raise newException(GltfError, msg)
 
 proc loadPrimitive(
   n: Node,
@@ -150,7 +150,7 @@ proc loadPrimitive(
       n.material.alphaMode = BlendAlphaMode
       n.material.alphaCutoff = -1.0
     else:
-      raise newException(Exception, &"Invalid alpha mode {material.alphaMode}")
+      raise newException(GltfError, &"Invalid alpha mode {material.alphaMode}")
 
     n.material.doubleSided = material.doubleSided
 
@@ -178,7 +178,7 @@ proc loadPrimitive(
       copyMem(n.indices32[0].addr, buffer[start].addr, accessor.count * 4)
     else:
       raise newException(
-        Exception,
+        GltfError,
         "Invalid index component type: " & $accessor.componentType.int
       )
 
@@ -228,7 +228,7 @@ proc loadPrimitive(
         )
     else:
       raise newException(
-        Exception,
+        GltfError,
         "Invalid position component type: " & $accessor.componentType.int
       )
 
@@ -286,7 +286,7 @@ proc loadPrimitive(
             )
       else:
         raise newException(
-          Exception,
+          GltfError,
           "Invalid color component type: " & $accessor.componentType.int
         )
     elif accessor.kind == atVEC3:
@@ -331,7 +331,7 @@ proc loadPrimitive(
           )
     else:
       raise newException(
-        Exception,
+        GltfError,
         "Invalid color kind: " & $accessor.kind
       )
 
@@ -414,7 +414,7 @@ proc loadModelJson*(
       case extension.getStr()
       else:
         raise newException(
-          Exception,
+          GltfError,
           &"Unsupported extension required: {extension}"
         )
 
@@ -431,7 +431,8 @@ proc loadModelJson*(
     else:
       data = externalBuffers[bufferIndex][0 ..< entry["byteLength"].getInt()]
       inc bufferIndex
-    assert data.len == entry["byteLength"].getInt()
+    assertRaise data.len == entry["byteLength"].getInt(),
+      "Buffer length does not match declared byteLength"
     buffers.add(data)
 
   var bufferViews: seq[BufferView]
@@ -445,7 +446,7 @@ proc loadModelJson*(
     if "target" in entry:
       let target = entry["target"].getInt()
       if target notin @[GL_ARRAY_BUFFER.int, GL_ELEMENT_ARRAY_BUFFER.int]:
-        raise newException(Exception, &"Invalid bufferView target {target}")
+        raise newException(GltfError, &"Invalid bufferView target {target}")
 
     bufferViews.add(bufferView)
 
@@ -476,7 +477,7 @@ proc loadModelJson*(
       accessor.kind = atMAT4
     else:
       raise newException(
-        Exception,
+        GltfError,
         &"Invalid accessor type {accessorKind}"
       )
     accessors.add(accessor)
@@ -506,7 +507,7 @@ proc loadModelJson*(
              uri.endsWith(".jpeg"):
           image = readImage(joinPath(modelDir, uri))
         else:
-          raise newException(Exception, &"Unsupported file extension {uri}")
+          raise newException(GltfError, &"Unsupported file extension {uri}")
       elif "bufferView" in entry:
         let
           bufferViewIndex = entry["bufferView"].getInt()
@@ -515,7 +516,7 @@ proc loadModelJson*(
           imageData = ib[bv.byteOffset ..< bv.byteOffset + bv.byteLength]
         image = decodeImage(imageData)
       else:
-        raise newException(Exception, "Unsupported image type")
+        raise newException(GltfError, "Unsupported image type")
       images.add(image)
 
   var samplers: seq[Sampler]
@@ -658,7 +659,7 @@ proc loadModelJson*(
     mesh.primitives = @[]
     for primitive in entry["primitives"]:
       var prim = Primitive()
-      assert "attributes" in primitive
+      assertRaise "attributes" in primitive, "Missing primitive attributes"
       let attributes = primitive["attributes"]
       if "POSITION" in attributes:
         prim.attributes.position = attributes["POSITION"].getInt()

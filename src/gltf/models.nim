@@ -433,8 +433,6 @@ proc clearFromGpu*(node: Node) =
     glDeleteVertexArrays(1, node.vertexArrayId.addr)
     if node.indices16.len > 0 or node.indices32.len > 0:
       glDeleteBuffers(1, node.indicesId.addr)
-    if node.indices32.len > 0:
-      glDeleteBuffers(1, node.indicesId.addr)
     if node.points.len > 0:
       glDeleteBuffers(1, node.pointsId.addr)
     if node.uvs.len > 0:
@@ -450,6 +448,12 @@ proc clearFromGpu*(node: Node) =
         glDeleteTextures(1, node.material.baseColorId.addr)
       if node.material.metallicRoughnessId != 0.GLuint:
         glDeleteTextures(1, node.material.metallicRoughnessId.addr)
+      if node.material.normalId != 0.GLuint:
+        glDeleteTextures(1, node.material.normalId.addr)
+      if node.material.occlusionId != 0.GLuint:
+        glDeleteTextures(1, node.material.occlusionId.addr)
+      if node.material.emissiveId != 0.GLuint:
+        glDeleteTextures(1, node.material.emissiveId.addr)
   node.uploaded = false
   for n in node.nodes:
     n.clearFromGpu()

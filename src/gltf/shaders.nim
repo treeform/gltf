@@ -1,4 +1,6 @@
-import opengl
+import
+  opengl,
+  common
 
 proc getErrorLog(
   id: GLuint,
@@ -37,7 +39,7 @@ proc compileShaderFiles*(vertShaderSrc: string, fragShaderSrc: string): GLuint =
       echo vertShaderSrc
       echo "Vertex shader compilation failed:"
       echo getErrorLog(vertShader, glGetShaderiv, glGetShaderInfoLog)
-      raise newException(ValueError, "Vertex shader compilation failed")
+      raise newException(GltfError, "Vertex shader compilation failed")
 
     fragShader = glCreateShader(GL_FRAGMENT_SHADER)
     glShaderSource(fragShader, 1, fragShaderArray, nil)
@@ -48,7 +50,7 @@ proc compileShaderFiles*(vertShaderSrc: string, fragShaderSrc: string): GLuint =
       echo fragShaderSrc
       echo "Fragment shader compilation failed:"
       echo getErrorLog(fragShader, glGetShaderiv, glGetShaderInfoLog)
-      raise newException(ValueError, "Fragment shader compilation failed")
+      raise newException(GltfError, "Fragment shader compilation failed")
 
   # Attach shaders to a GL program.
   var program = glCreateProgram()
@@ -62,6 +64,6 @@ proc compileShaderFiles*(vertShaderSrc: string, fragShaderSrc: string): GLuint =
   if isLinked == 0:
     echo "Linking shaders failed:"
     echo getErrorLog(program, glGetProgramiv, glGetProgramInfoLog)
-    raise newException(ValueError, "Linking shaders failed")
+    raise newException(GltfError, "Linking shaders failed")
 
   return program
