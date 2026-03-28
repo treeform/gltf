@@ -137,3 +137,64 @@ doAssert animatedNode.visible == true
 applyClipAt(visibilityModel.animations[0], 0.75)
 doAssert invisibleNode.visible == false
 doAssert animatedNode.visible == false
+
+echo "Testing glTF cameras."
+let cameraModel = loadModelJson(
+  %*{
+    "asset": {"version": "2.0"},
+    "buffers": [],
+    "bufferViews": [],
+    "accessors": [],
+    "images": [],
+    "textures": [],
+    "samplers": [],
+    "materials": [],
+    "meshes": [],
+    "cameras": [
+      {
+        "name": "PerspectiveCamera",
+        "type": "perspective",
+        "perspective": {
+          "yfov": 0.78539816339,
+          "znear": 0.1,
+          "zfar": 50.0
+        }
+      },
+      {
+        "name": "OrthoCamera",
+        "type": "orthographic",
+        "orthographic": {
+          "xmag": 2.0,
+          "ymag": 1.5,
+          "znear": 0.01,
+          "zfar": 100.0
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "name": "PerspectiveNode",
+        "camera": 0
+      },
+      {
+        "name": "OrthoNode",
+        "camera": 1
+      }
+    ],
+    "scenes": [{"nodes": [0, 1]}],
+    "scene": 0,
+    "animations": []
+  },
+  ".",
+  @[]
+)
+let perspectiveNode = cameraModel["PerspectiveNode"]
+let orthoNode = cameraModel["OrthoNode"]
+doAssert perspectiveNode != nil
+doAssert orthoNode != nil
+doAssert perspectiveNode.camera != nil
+doAssert orthoNode.camera != nil
+doAssert perspectiveNode.camera.kind == ckPerspective
+doAssert orthoNode.camera.kind == ckOrthographic
+doAssert abs(perspectiveNode.camera.perspective.yfov - 0.7853982) < 0.0001
+doAssert abs(orthoNode.camera.orthographic.xmag - 2.0) < 0.0001

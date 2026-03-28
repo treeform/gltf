@@ -549,6 +549,7 @@ type
     root: Node
     scenes: seq[Scene]
     sceneId: int
+    cameras: seq[Camera]
 
 proc loadModelJsonInternal(
   jsonRoot: JsonNode,
@@ -824,6 +825,46 @@ proc loadModelJsonInternal(
 
       materials.add(material)
 
+  var cameras: seq[Camera]
+  if "cameras" in jsonRoot:
+    for entry in jsonRoot["cameras"]:
+      var camera = Camera()
+      if "name" in entry:
+        camera.name = entry["name"].getStr()
+      let cameraType = entry["type"].getStr()
+      case cameraType
+      of "perspective":
+        camera.kind = ckPerspective
+        let perspectiveInfo = entry["perspective"]
+        camera.perspective.yfov =
+          perspectiveInfo["yfov"].getFloat().float32
+        camera.perspective.znear =
+          perspectiveInfo["znear"].getFloat().float32
+        if "aspectRatio" in perspectiveInfo:
+          camera.perspective.aspectRatio =
+            perspectiveInfo["aspectRatio"].getFloat().float32
+        else:
+          camera.perspective.aspectRatio = 0.0
+        if "zfar" in perspectiveInfo:
+          camera.perspective.zfar =
+            perspectiveInfo["zfar"].getFloat().float32
+        else:
+          camera.perspective.zfar = 0.0
+      of "orthographic":
+        camera.kind = ckOrthographic
+        let orthographicInfo = entry["orthographic"]
+        camera.orthographic.xmag =
+          orthographicInfo["xmag"].getFloat().float32
+        camera.orthographic.ymag =
+          orthographicInfo["ymag"].getFloat().float32
+        camera.orthographic.znear =
+          orthographicInfo["znear"].getFloat().float32
+        camera.orthographic.zfar =
+          orthographicInfo["zfar"].getFloat().float32
+      else:
+        raise newException(GltfError, &"Invalid camera type {cameraType}")
+      cameras.add(camera)
+
   var
     meshDefs: seq[MeshInfo]
     primitiveDefs: seq[PrimitiveInfo]
@@ -871,6 +912,7 @@ proc loadModelJsonInternal(
   var
     nodes: seq[Node]
     nodeMeshes: seq[int]
+    nodeCameras: seq[int]
     nodeChildren: seq[seq[int]]
   for entry in jsonRoot["nodes"]:
     var node = Node()
@@ -889,6 +931,13 @@ proc loadModelJsonInternal(
     var meshId = -1
     if "mesh" in entry:
       meshId = entry["mesh"].getInt()
+    var cameraId = -1
+    if "camera" in entry:
+      cameraId = entry["camera"].getInt()
+      assertRaise(
+        cameraId >= 0 and cameraId < cameras.len,
+        &"Invalid camera index {cameraId}"
+      )
 
     if "matrix" in entry and entry["matrix"].len >= 16:
       let matrix = entry["matrix"]
@@ -998,6 +1047,7 @@ proc loadModelJsonInternal(
 
     nodes.add(node)
     nodeMeshes.add(meshId)
+    nodeCameras.add(cameraId)
     nodeChildren.add(children)
 
   var clips: seq[AnimationClip]
@@ -1158,6 +1208,7 @@ proc loadModelJsonInternal(
   proc processNode(nodeId: int): Node =
     var n = nodes[nodeId]
     let meshId = nodeMeshes[nodeId]
+    let cameraId = nodeCameras[nodeId]
     if meshId >= 0:
       let meshInfo = meshDefs[meshId]
       let runtimeMesh = Mesh(name: meshInfo.name)
@@ -1174,6 +1225,8 @@ proc loadModelJsonInternal(
           materials
         ))
       n.mesh = runtimeMesh
+    if cameraId >= 0:
+      n.camera = cameras[cameraId]
 
     for childId in nodeChildren[nodeId]:
       n.nodes.add(processNode(childId))
@@ -1202,6 +1255,7 @@ proc loadModelJsonInternal(
   result.root.currentClip = 0
   result.root.animTime = 0
   result.scenes = scenes
+  result.cameras = cameras
   result.sceneId =
     if scenes.len > 0:
       max(0, min(sceneId, scenes.high))
@@ -1272,6 +1326,7 @@ proc readGltfJsonFile*(file: string): GltfFile =
     root: loaded.root,
     scenes: loaded.scenes,
     scene: loaded.sceneId,
+    cameras: loaded.cameras,
     unsupportedUsedExtensions: unsupportedUsedExtensions(jsonRoot)
   )
 
@@ -1311,6 +1366,7 @@ proc readGltfBinaryFile*(file: string): GltfFile =
     root: loaded.root,
     scenes: loaded.scenes,
     scene: loaded.sceneId,
+    cameras: loaded.cameras,
     unsupportedUsedExtensions: unsupportedUsedExtensions(jsonRoot)
   )
 

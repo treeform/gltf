@@ -23,6 +23,7 @@ proc shallowCopy*(node: Node): Node =
   result.animTime = node.animTime
 
   result.mesh = node.mesh
+  result.camera = node.camera
   result.nodes = node.nodes
 
 proc defaultTextureSampler*(): TextureSampler =
@@ -513,6 +514,23 @@ proc trs*(node: Node): Mat4 =
   ## Get the transformation matrix of a node.
   translate(node.pos) * node.rot.mat4() * scale(node.scale)
 
+proc findTransform*(
+  node, target: Node,
+  transform = mat4(),
+  world: var Mat4
+): bool =
+  ## Finds the world transform for a node in a tree.
+  if node == nil or target == nil:
+    return false
+  let current = transform * node.trs
+  if node == target:
+    world = current
+    return true
+  for child in node.nodes:
+    if findTransform(child, target, current, world):
+      return true
+  false
+
 proc toMat4(m: DMat4): Mat4 =
   ## Converts a double-precision matrix to float32.
   gmat4(
@@ -660,6 +678,8 @@ proc dumpTree*(node: Node, indent: string = "") =
   let euler = node.rot.mat4().toAngles().toDegrees()
   echo &"{indent}  rot: {node.rot} ({euler})"
   echo &"{indent}  scale: {node.scale}"
+  if node.camera != nil:
+    echo &"{indent}  camera: {node.camera.name}"
 
   if node.mesh != nil:
     echo &"{indent}  mesh: {node.mesh.name}"
