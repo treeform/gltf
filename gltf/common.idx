@@ -15,7 +15,7 @@ nim	Sampler	gltf/common.html#Sampler	object Sampler		25
 nim	MaterialTexture	gltf/common.html#MaterialTexture	object MaterialTexture		28
 nim	PbrMetallicRoughness	gltf/common.html#PbrMetallicRoughness	object PbrMetallicRoughness		37
 nim	InnerMaterial	gltf/common.html#InnerMaterial	object InnerMaterial		44
-nim	Mesh	gltf/common.html#Mesh	object Mesh		55
-nim	PrimitiveAttributes	gltf/common.html#PrimitiveAttributes	object PrimitiveAttributes		59
-nim	Primitive	gltf/common.html#Primitive	object Primitive		62
-nim	GltfFile	gltf/common.html#GltfFile	type GltfFile		67
+nim	Mesh	gltf/common.html#Mesh	object Mesh		56
+nim	PrimitiveAttributes	gltf/common.html#PrimitiveAttributes	object PrimitiveAttributes		60
+nim	Primitive	gltf/common.html#Primitive	object Primitive		63
+nim	GltfFile	gltf/common.html#GltfFile	type GltfFile		68
