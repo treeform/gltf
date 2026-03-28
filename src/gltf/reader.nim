@@ -5,6 +5,20 @@ import
 
 export common
 
+const SupportedExtensions = [
+  "KHR_texture_transform",
+  "KHR_materials_transmission"
+]
+
+proc unsupportedUsedExtensions(jsonRoot: JsonNode): seq[string] =
+  ## Returns used extensions we do not currently support.
+  if "extensionsUsed" notin jsonRoot:
+    return
+  for extension in jsonRoot["extensionsUsed"]:
+    let name = extension.getStr()
+    if name notin SupportedExtensions and name notin result:
+      result.add(name)
+
 proc readFloat32(data: string, offset: int): float32 =
   ## Reads a float32 from a byte string.
   cast[ptr float32](data[offset].unsafeAddr)[]
@@ -229,10 +243,14 @@ proc loadPrimitive(
       rotation: material.emissiveTexture.rotation
     )
     n.material.emissiveFactor = material.emissiveFactor
+    n.material.transmissionFactor = material.transmissionFactor
 
     case material.alphaMode
     of "OPAQUE":
-      n.material.alphaMode = OpaqueAlphaMode
+      if n.material.transmissionFactor > 0:
+        n.material.alphaMode = BlendAlphaMode
+      else:
+        n.material.alphaMode = OpaqueAlphaMode
       n.material.alphaCutoff = -1.0
     of "MASK":
       n.material.alphaMode = MaskAlphaMode
@@ -757,6 +775,15 @@ proc loadModelJson*(
       else:
         material.doubleSided = false
 
+      material.transmissionFactor = 0
+      if "extensions" in entry:
+        let extensions = entry["extensions"]
+        if "KHR_materials_transmission" in extensions:
+          let transmission = extensions["KHR_materials_transmission"]
+          if "transmissionFactor" in transmission:
+            material.transmissionFactor =
+              transmission["transmissionFactor"].getFloat().float32
+
       materials.add(material)
 
   var
@@ -1161,16 +1188,49 @@ proc loadModel*(file: string): Node =
 
 proc readGltfJsonFile*(file: string): GltfFile =
   ## Reads a glTF json file into a glTF file wrapper.
+  let
+    jsonRoot = parseJson(readFile(file))
+    modelDir = splitPath(file)[0]
   GltfFile(
     path: file,
-    root: loadModelJsonFile(file)
+    root: loadModelJson(jsonRoot, modelDir, @[]),
+    unsupportedUsedExtensions: unsupportedUsedExtensions(jsonRoot)
   )
 
 proc readGltfBinaryFile*(file: string): GltfFile =
   ## Reads a binary glTF file into a glTF file wrapper.
+  let
+    modelDir = splitPath(file)[0]
+    data = readFile(file)
+    magic = data.readUint32(0)
+    version = data.readUint32(4)
+    length = data.readUint32(8)
+
+  assertRaise magic == 0x46546C67, "Invalid magic, this is not a glTF file"
+  assertRaise version == 2, "Invalid version, only glTF 2.0 is supported"
+  assertRaise length.int == data.len, "Length mismatch, the file is corrupted"
+
+  var
+    i = 12
+    jsonData: string
+    buffers: seq[string]
+  while i < data.len:
+    var
+      chunkLength = data.readUint32(i)
+      chunkType = data.readUint32(i + 4)
+      chunkData = data.readStr(i + 8, chunkLength.int)
+      isJson = chunkType == 0x4E4F534A
+    i += 8 + chunkLength.int
+    if isJson:
+      jsonData = chunkData
+    else:
+      buffers.add(chunkData)
+
+  let jsonRoot = parseJson(jsonData)
   GltfFile(
     path: file,
-    root: loadModelBinaryFile(file)
+    root: loadModelJson(jsonRoot, modelDir, buffers),
+    unsupportedUsedExtensions: unsupportedUsedExtensions(jsonRoot)
   )
 
 proc readGltfFile*(file: string): GltfFile =

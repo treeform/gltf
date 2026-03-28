@@ -1,5 +1,5 @@
 import
-  std/[algorithm, os, strformat, strutils, times],
+  std/[algorithm, os, sequtils, strformat, strutils, tables, times],
   chroma, opengl, pixie, windy, vmath,
   gltf
 
@@ -10,6 +10,7 @@ const
   OrbitYaw = -20.0'f
   OrbitPitch = -20.0'f
   MaxXrayScore = 2.0'f
+  UpdateXrayScore = 0.5'f
 
 type
   AssetResult = object
@@ -19,6 +20,7 @@ type
     xrayPath: string
     status: string
     score: float32
+    unsupportedUsedExtensions: seq[string]
     exceptionName: string
     message: string
 
@@ -224,6 +226,7 @@ proc testModel(
   generatedDir: string,
   masterScreenshotsDir: string,
   xrayDir: string,
+  updateBaselines: bool,
   modelPath: string,
   index: int
 ): AssetResult =
@@ -246,6 +249,9 @@ proc testModel(
     let gltfFile = readGltfFile(modelPath)
     let loadElapsed = epochTime() - loadStart
     echo &"  loaded in {loadElapsed:>7.3f}s"
+    result.unsupportedUsedExtensions = gltfFile.unsupportedUsedExtensions
+    if result.unsupportedUsedExtensions.len > 0:
+      echo "  unsupported used extensions: ", result.unsupportedUsedExtensions.join(", ")
     model = gltfFile.root
     if not model.hasModel():
       result.status = "skip"
@@ -270,7 +276,18 @@ proc testModel(
         if fileExists(baselinePath):
           echo "  phase: xray"
           result.score = xray(image, baselinePath, outPath, xrayPath)
-          if result.score > MaxXrayScore:
+          if updateBaselines and result.score > UpdateXrayScore:
+            echo "  phase: update"
+            createDir(baselinePath.parentDir())
+            copyFile(outPath, baselinePath)
+            result.status = "ok"
+            result.message =
+              &"Rendered with xray score {result.score:0.3f}; updated baseline because it exceeded {UpdateXrayScore:0.3f}."
+          elif updateBaselines:
+            result.status = "ok"
+            result.message =
+              &"Rendered with xray score {result.score:0.3f}; baseline unchanged."
+          elif result.score > MaxXrayScore:
             result.status = "diff_error"
             result.message = &"Rendered, but xray score {result.score:0.3f} exceeded {MaxXrayScore:0.3f}."
           else:
@@ -305,30 +322,57 @@ proc testModel(
 
 proc writeSummary(path: string, results: seq[AssetResult]) =
   ## Writes a text summary for the test run.
-  var lines: seq[string]
+  var
+    lines: seq[string]
+    unsupportedExtensionCounts: CountTable[string]
   for result in results:
     lines.add(
       &"{result.status}\t{result.score:0.3f}\t{result.exceptionName}\t" &
       &"{result.modelPath}\t{result.screenshotPath}\t{result.baselinePath}\t" &
       &"{result.xrayPath}\t{result.message}"
     )
+    for extension in result.unsupportedUsedExtensions:
+      unsupportedExtensionCounts.inc(extension)
+
+  if unsupportedExtensionCounts.len > 0:
+    lines.add("")
+    lines.add("unsupported_used_extensions_not_required\tcount")
+    var extensions = toSeq(unsupportedExtensionCounts.pairs)
+    extensions.sort(proc(a, b: (string, int)): int =
+      if a[1] > b[1]: -1
+      elif a[1] < b[1]: 1
+      elif a[0] < b[0]: -1
+      elif a[0] > b[0]: 1
+      else: 0
+    )
+    for (extension, count) in extensions:
+      lines.add(&"{extension}\t{count}")
   writeFile(path, lines.join("\n") & "\n")
 
-let params = commandLineParams()
+let rawParams = commandLineParams()
+var
+  updateBaselines = false
+  positionalParams: seq[string]
+for param in rawParams:
+  if param == "--update":
+    updateBaselines = true
+  else:
+    positionalParams.add(param)
+
 let
   modelsPath =
-    if params.len > 0:
-      resolvePath(params[0])
+    if positionalParams.len > 0:
+      resolvePath(positionalParams[0])
     else:
       defaultModelsDir()
   tmpDir =
-    if params.len > 1:
-      resolvePath(params[1])
+    if positionalParams.len > 1:
+      resolvePath(positionalParams[1])
     else:
       defaultTmpDir()
   masterScreenshotsDir =
-    if params.len > 2:
-      resolvePath(params[2])
+    if positionalParams.len > 2:
+      resolvePath(positionalParams[2])
     else:
       defaultMasterScreenshotsDir()
 
@@ -353,6 +397,8 @@ echo "Generated dir: ", generatedDir
 echo "Xray dir: ", xrayDir
 echo "Baseline dir: ", masterScreenshotsDir
 echo &"Max xray score: {MaxXrayScore:0.3f}"
+echo "Update mode: ", updateBaselines
+echo &"Update xray score: {UpdateXrayScore:0.3f}"
 
 var window = newWindow(
   "glTF Sample Assets",
@@ -377,6 +423,7 @@ for i, modelPath in modelPaths:
     generatedDir,
     masterScreenshotsDir,
     xrayDir,
+    updateBaselines,
     modelPath,
     i
   )

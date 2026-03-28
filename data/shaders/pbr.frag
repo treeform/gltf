@@ -19,6 +19,7 @@ uniform float baseColorUvRotation;
 uniform sampler2D metallicRoughnessTexture;
 uniform float metallicFactor;
 uniform float roughnessFactor;
+uniform float transmissionFactor;
 uniform vec2 metallicRoughnessUvOffset;
 uniform vec2 metallicRoughnessUvScale;
 uniform float metallicRoughnessUvRotation;
@@ -145,6 +146,7 @@ void main() {
   float metallic =
     texture(metallicRoughnessTexture, metallicRoughnessUv).b *
     metallicFactor;
+  float transmission = clamp(transmissionFactor, 0.0, 1.0);
   float ambientOcclusion =
     texture(occlusionTexture, occlusionUv).g *
     occlusionStrength;
@@ -256,6 +258,13 @@ void main() {
 
   // Reflective color blended with direct lighting
   fragColor.rgb = mix(Lo, envColor, fresnel * metallic);
+
+  if (transmission > 0.0) {
+    float glassMix = clamp(0.35 + transmission * 0.55 + roughness * 0.1, 0.0, 1.0);
+    fragColor.rgb = mix(fragColor.rgb, envColor, glassMix);
+    fragColor.rgb *= mix(1.0, 0.82, transmission);
+    fragColor.a *= mix(1.0, 0.08 + roughness * 0.2, transmission);
+  }
 
   // Emissive
   fragColor.rgb += emissiveValue;

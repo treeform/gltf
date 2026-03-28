@@ -426,6 +426,10 @@ proc renderPbrNode(
       glGetUniformLocation(pbrShader, "roughnessFactor"),
       node.material.roughnessFactor
     )
+    glUniform1f(
+      glGetUniformLocation(pbrShader, "transmissionFactor"),
+      node.material.transmissionFactor
+    )
     setTextureTransformUniform(
       pbrShader,
       "metallicRoughness",

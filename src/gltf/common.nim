@@ -51,6 +51,7 @@ type
     alphaMode*: string
     alphaCutoff*: float32
     doubleSided*: bool
+    transmissionFactor*: float32
 
   Mesh* = object
     name*: string
@@ -67,4 +68,5 @@ type
   GltfFile* = ref object
     path*: string
     root*: Node
+    unsupportedUsedExtensions*: seq[string]
 
