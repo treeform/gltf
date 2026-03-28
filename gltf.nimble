@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.1.0"
+version       = "0.1.1"
 author        = "Your name"
 description   = "glTF library and viewer for Nim."
 license       = "MIT"
@@ -16,3 +16,4 @@ requires "flatty >= 0.3.0"
 requires "opengl >= 1.2.3"
 requires "webby >= 0.2.1"
 requires "windy >= 0.4.4"
+requires "silky >= 0.0.2"
