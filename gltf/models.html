@@ -52,109 +52,7 @@
     </div>
     <ul class="simple simple-toc" id="toc-list">
   <li>
-  <details open>
-    <summary><a class="reference reference-toplevel" href="#7" id="57">Types</a></summary>
-    <ul class="simple simple-toc-section">
-      <li><a class="reference" href="#AABounds" title="AABounds = object">AABounds</a></li>
-<li><a class="reference" href="#AlphaMode" title="AlphaMode = enum
-  OpaqueAlphaMode, MaskAlphaMode, BlendAlphaMode">AlphaMode</a></li>
-<li><a class="reference" href="#AnimationChannel" title="AnimationChannel = object
-  target*: Node
-  path*: AnimPath
-  times*: seq[float32]
-  valuesVec3*: seq[Vec3]
-  valuesQuat*: seq[Quat]
-  valuesFloat*: seq[float32]">AnimationChannel</a></li>
-<li><a class="reference" href="#AnimationClip" title="AnimationClip = object
-  name*: string
-  duration*: float32
-  channels*: seq[AnimationChannel]">AnimationClip</a></li>
-<li><a class="reference" href="#AnimPath" title="AnimPath = enum
-  AnimTranslation, AnimRotation, AnimScale, AnimVisibility">AnimPath</a></li>
-<li><a class="reference" href="#BoundingSphere" title="BoundingSphere = object
-  center*: Vec3
-  radius*: float">BoundingSphere</a></li>
-<li><a class="reference" href="#Bounds" title="Bounds = object
-  center*: Vec3
-  size*: Vec3
-  radius*: float32">Bounds</a></li>
-<li><a class="reference" href="#Material" title="Material = ref object
-  name*: string
-  baseColor*: Image
-  baseColorTransform*: TextureTransform
-  baseColorSampler*: TextureSampler
-  baseColorFactor*: Color
-  metallicRoughness*: Image
-  metallicRoughnessTransform*: TextureTransform
-  metallicRoughnessSampler*: TextureSampler
-  metallicFactor*: float32
-  roughnessFactor*: float32
-  normal*: Image
-  normalTransform*: TextureTransform
-  normalSampler*: TextureSampler
-  hasNormalTexture*: bool
-  normalScale*: float32
-  occlusion*: Image
-  occlusionTransform*: TextureTransform
-  occlusionSampler*: TextureSampler
-  occlusionStrength*: float32
-  emissive*: Image
-  emissiveTransform*: TextureTransform
-  emissiveSampler*: TextureSampler
-  emissiveFactor*: Color
-  alphaMode*: AlphaMode
-  alphaCutoff*: float32
-  doubleSided*: bool
-  transmissionFactor*: float32
-  baseColorId*: GLuint
-  metallicRoughnessId*: GLuint
-  normalId*: GLuint
-  occlusionId*: GLuint
-  emissiveId*: GLuint">Material</a></li>
-<li><a class="reference" href="#Node" title="Node = ref object
-  name*: string
-  visible*: bool = true
-  pos*: Vec3
-  rot*: Quat
-  scale*: Vec3
-  mat*: Mat4
-  baseVisible*: bool
-  basePos*: Vec3
-  baseRot*: Quat
-  baseScale*: Vec3
-  animations*: seq[AnimationClip]
-  currentClip*: int
-  animTime*: float32
-  points*: seq[Vec3]
-  uvs*: seq[Vec2]
-  normals*: seq[Vec3]
-  tangents*: seq[Vec4]
-  colors*: seq[ColorRGBX]
-  indices16*: seq[uint16]    ## 16bit indices for small models.
-  indices32*: seq[uint32]    ## 32bit indices for large models.
-  material*: Material
-  nodes*: seq[Node]
-  uploaded*: bool
-  vertexArrayId*: GLuint
-  pointsId*: GLuint
-  uvsId*: GLuint
-  normalsId*: GLuint
-  tangentsId*: GLuint
-  colorsId*: GLuint
-  indicesId*: GLuint">Node</a></li>
-<li><a class="reference" href="#TextureSampler" title="TextureSampler = object
-  magFilter*: GLint
-  minFilter*: GLint
-  wrapS*: GLint
-  wrapT*: GLint">TextureSampler</a></li>
-<li><a class="reference" href="#TextureTransform" title="TextureTransform = object
-  texCoord*: int
-  offset*: Vec2
-  scale*: Vec2
-  rotation*: float32">TextureTransform</a></li>
-
-    </ul>
-  </details>
+  <a class="reference reference-toplevel" href="#6" id="56">Imports</a>
 </li>
 <li>
   <details open>
@@ -177,7 +75,9 @@
 
 </ul>
 <ul class="simple nested-toc-section">clearFromGpu
-  <li><a class="reference" href="#clearFromGpu%2CNode" title="clearFromGpu(node: Node)">clearFromGpu(node: Node)</a></li>
+  <li><a class="reference" href="#clearFromGpu%2CMesh" title="clearFromGpu(mesh: Mesh)">clearFromGpu(mesh: Mesh)</a></li>
+<li><a class="reference" href="#clearFromGpu%2CNode" title="clearFromGpu(node: Node)">clearFromGpu(node: Node)</a></li>
+<li><a class="reference" href="#clearFromGpu%2CPrimitive" title="clearFromGpu(primitive: Primitive)">clearFromGpu(primitive: Primitive)</a></li>
 
 </ul>
 <ul class="simple nested-toc-section">clearTreeFromGpu
@@ -221,6 +121,12 @@
   <li><a class="reference" href="#getBoundingSphereNode%2CNode" title="getBoundingSphereNode(node: Node; trs = mat4()): BoundingSphere">getBoundingSphereNode(node: Node; trs = mat4()): BoundingSphere</a></li>
 
 </ul>
+<ul class="simple nested-toc-section">hasGeometry
+  <li><a class="reference" href="#hasGeometry%2CMesh" title="hasGeometry(mesh: Mesh): bool">hasGeometry(mesh: Mesh): bool</a></li>
+<li><a class="reference" href="#hasGeometry%2CNode" title="hasGeometry(node: Node): bool">hasGeometry(node: Node): bool</a></li>
+<li><a class="reference" href="#hasGeometry%2CPrimitive" title="hasGeometry(primitive: Primitive): bool">hasGeometry(primitive: Primitive): bool</a></li>
+
+</ul>
 <ul class="simple nested-toc-section">merge
   <li><a class="reference" href="#merge%2CAABounds%2CAABounds" title="merge(a, b: AABounds): AABounds">merge(a, b: AABounds): AABounds</a></li>
 <li><a class="reference" href="#merge%2CBoundingSphere%2CBoundingSphere" title="merge(a, b: BoundingSphere): BoundingSphere">merge(a, b: BoundingSphere): BoundingSphere</a></li>
@@ -247,11 +153,15 @@
 
 </ul>
 <ul class="simple nested-toc-section">updateOnGpu
-  <li><a class="reference" href="#updateOnGpu%2CNode" title="updateOnGpu(node: Node)">updateOnGpu(node: Node)</a></li>
+  <li><a class="reference" href="#updateOnGpu%2CMesh" title="updateOnGpu(mesh: Mesh)">updateOnGpu(mesh: Mesh)</a></li>
+<li><a class="reference" href="#updateOnGpu%2CNode" title="updateOnGpu(node: Node)">updateOnGpu(node: Node)</a></li>
+<li><a class="reference" href="#updateOnGpu%2CPrimitive" title="updateOnGpu(primitive: Primitive)">updateOnGpu(primitive: Primitive)</a></li>
 
 </ul>
 <ul class="simple nested-toc-section">uploadToGpu
-  <li><a class="reference" href="#uploadToGpu%2CNode" title="uploadToGpu(node: Node)">uploadToGpu(node: Node)</a></li>
+  <li><a class="reference" href="#uploadToGpu%2CMesh" title="uploadToGpu(mesh: Mesh)">uploadToGpu(mesh: Mesh)</a></li>
+<li><a class="reference" href="#uploadToGpu%2CNode" title="uploadToGpu(node: Node)">uploadToGpu(node: Node)</a></li>
+<li><a class="reference" href="#uploadToGpu%2CPrimitive" title="uploadToGpu(primitive: Primitive)">uploadToGpu(primitive: Primitive)</a></li>
 
 </ul>
 <ul class="simple nested-toc-section">walkNodes
@@ -285,206 +195,10 @@
     <div id="tocRoot"></div>
     
     <p class="module-desc"></p>
-    <div class="section" id="7">
-  <h1><a class="toc-backref" href="#7">Types</a></h1>
+    <div class="section" id="6">
+  <h1><a class="toc-backref" href="#6">Imports</a></h1>
   <dl class="item">
-    <div id="AABounds">
-  <dt><pre><a href="models.html#AABounds"><span class="Identifier">AABounds</span></a> <span class="Other">=</span> <span class="Keyword">object</span></pre></dt>
-  <dd>
-    
-    
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L761" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L761" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-<div id="AlphaMode">
-  <dt><pre><a href="models.html#AlphaMode"><span class="Identifier">AlphaMode</span></a> <span class="Other">=</span> <span class="Keyword">enum</span>
-  <span class="Identifier">OpaqueAlphaMode</span><span class="Other">,</span> <span class="Identifier">MaskAlphaMode</span><span class="Other">,</span> <span class="Identifier">BlendAlphaMode</span></pre></dt>
-  <dd>
-    
-    
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L18" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L18" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-<div id="AnimationChannel">
-  <dt><pre><a href="models.html#AnimationChannel"><span class="Identifier">AnimationChannel</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
-  <span class="Identifier">target</span><span class="Operator">*</span><span class="Other">:</span> <a href="models.html#Node"><span class="Identifier">Node</span></a>
-  <span class="Identifier">path</span><span class="Operator">*</span><span class="Other">:</span> <a href="models.html#AnimPath"><span class="Identifier">AnimPath</span></a>
-  <span class="Identifier">times</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">float32</span><span class="Other">]</span>
-  <span class="Identifier">valuesVec3</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">Vec3</span><span class="Other">]</span>
-  <span class="Identifier">valuesQuat</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">Quat</span><span class="Other">]</span>
-  <span class="Identifier">valuesFloat</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">float32</span><span class="Other">]</span></pre></dt>
-  <dd>
-    
-    
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L24" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L24" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-<div id="AnimationClip">
-  <dt><pre><a href="models.html#AnimationClip"><span class="Identifier">AnimationClip</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
-  <span class="Identifier">name</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
-  <span class="Identifier">duration</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
-  <span class="Identifier">channels</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="models.html#AnimationChannel"><span class="Identifier">AnimationChannel</span></a><span class="Other">]</span></pre></dt>
-  <dd>
-    
-    
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L32" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L32" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-<div id="AnimPath">
-  <dt><pre><a href="models.html#AnimPath"><span class="Identifier">AnimPath</span></a> <span class="Other">=</span> <span class="Keyword">enum</span>
-  <span class="Identifier">AnimTranslation</span><span class="Other">,</span> <span class="Identifier">AnimRotation</span><span class="Other">,</span> <span class="Identifier">AnimScale</span><span class="Other">,</span> <span class="Identifier">AnimVisibility</span></pre></dt>
-  <dd>
-    
-    
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L21" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L21" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-<div id="BoundingSphere">
-  <dt><pre><a href="models.html#BoundingSphere"><span class="Identifier">BoundingSphere</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
-  <span class="Identifier">center</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec3</span>
-  <span class="Identifier">radius</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float</span></pre></dt>
-  <dd>
-    
-    
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L769" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L769" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-<div id="Bounds">
-  <dt><pre><a href="models.html#Bounds"><span class="Identifier">Bounds</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
-  <span class="Identifier">center</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec3</span>
-  <span class="Identifier">size</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec3</span>
-  <span class="Identifier">radius</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span></pre></dt>
-  <dd>
-    
-    
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L764" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L764" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-<div id="Material">
-  <dt><pre><a href="models.html#Material"><span class="Identifier">Material</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
-  <span class="Identifier">name</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
-  <span class="Identifier">baseColor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Image</span>
-  <span class="Identifier">baseColorTransform</span><span class="Operator">*</span><span class="Other">:</span> <a href="models.html#TextureTransform"><span class="Identifier">TextureTransform</span></a>
-  <span class="Identifier">baseColorSampler</span><span class="Operator">*</span><span class="Other">:</span> <a href="models.html#TextureSampler"><span class="Identifier">TextureSampler</span></a>
-  <span class="Identifier">baseColorFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Color</span>
-  <span class="Identifier">metallicRoughness</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Image</span>
-  <span class="Identifier">metallicRoughnessTransform</span><span class="Operator">*</span><span class="Other">:</span> <a href="models.html#TextureTransform"><span class="Identifier">TextureTransform</span></a>
-  <span class="Identifier">metallicRoughnessSampler</span><span class="Operator">*</span><span class="Other">:</span> <a href="models.html#TextureSampler"><span class="Identifier">TextureSampler</span></a>
-  <span class="Identifier">metallicFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
-  <span class="Identifier">roughnessFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
-  <span class="Identifier">normal</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Image</span>
-  <span class="Identifier">normalTransform</span><span class="Operator">*</span><span class="Other">:</span> <a href="models.html#TextureTransform"><span class="Identifier">TextureTransform</span></a>
-  <span class="Identifier">normalSampler</span><span class="Operator">*</span><span class="Other">:</span> <a href="models.html#TextureSampler"><span class="Identifier">TextureSampler</span></a>
-  <span class="Identifier">hasNormalTexture</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
-  <span class="Identifier">normalScale</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
-  <span class="Identifier">occlusion</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Image</span>
-  <span class="Identifier">occlusionTransform</span><span class="Operator">*</span><span class="Other">:</span> <a href="models.html#TextureTransform"><span class="Identifier">TextureTransform</span></a>
-  <span class="Identifier">occlusionSampler</span><span class="Operator">*</span><span class="Other">:</span> <a href="models.html#TextureSampler"><span class="Identifier">TextureSampler</span></a>
-  <span class="Identifier">occlusionStrength</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
-  <span class="Identifier">emissive</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Image</span>
-  <span class="Identifier">emissiveTransform</span><span class="Operator">*</span><span class="Other">:</span> <a href="models.html#TextureTransform"><span class="Identifier">TextureTransform</span></a>
-  <span class="Identifier">emissiveSampler</span><span class="Operator">*</span><span class="Other">:</span> <a href="models.html#TextureSampler"><span class="Identifier">TextureSampler</span></a>
-  <span class="Identifier">emissiveFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Color</span>
-  <span class="Identifier">alphaMode</span><span class="Operator">*</span><span class="Other">:</span> <a href="models.html#AlphaMode"><span class="Identifier">AlphaMode</span></a>
-  <span class="Identifier">alphaCutoff</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
-  <span class="Identifier">doubleSided</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
-  <span class="Identifier">transmissionFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
-  <span class="Identifier">baseColorId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
-  <span class="Identifier">metallicRoughnessId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
-  <span class="Identifier">normalId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
-  <span class="Identifier">occlusionId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
-  <span class="Identifier">emissiveId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span></pre></dt>
-  <dd>
-    
-    
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L37" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L37" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-<div id="Node">
-  <dt><pre><a href="models.html#Node"><span class="Identifier">Node</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
-  <span class="Identifier">name</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
-  <span class="Identifier">visible</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span> <span class="Other">=</span> <span class="DecNumber">true</span>
-  <span class="Identifier">pos</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec3</span>
-  <span class="Identifier">rot</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Quat</span>
-  <span class="Identifier">scale</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec3</span>
-  <span class="Identifier">mat</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Mat4</span>
-  <span class="Identifier">baseVisible</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
-  <span class="Identifier">basePos</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec3</span>
-  <span class="Identifier">baseRot</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Quat</span>
-  <span class="Identifier">baseScale</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec3</span>
-  <span class="Identifier">animations</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="models.html#AnimationClip"><span class="Identifier">AnimationClip</span></a><span class="Other">]</span>
-  <span class="Identifier">currentClip</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
-  <span class="Identifier">animTime</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
-  <span class="Identifier">points</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">Vec3</span><span class="Other">]</span>
-  <span class="Identifier">uvs</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">Vec2</span><span class="Other">]</span>
-  <span class="Identifier">normals</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">Vec3</span><span class="Other">]</span>
-  <span class="Identifier">tangents</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">Vec4</span><span class="Other">]</span>
-  <span class="Identifier">colors</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">ColorRGBX</span><span class="Other">]</span>
-  <span class="Identifier">indices16</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">uint16</span><span class="Other">]</span>    <span class="Comment">## 16bit indices for small models.</span>
-  <span class="Identifier">indices32</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">uint32</span><span class="Other">]</span>    <span class="Comment">## 32bit indices for large models.</span>
-  <span class="Identifier">material</span><span class="Operator">*</span><span class="Other">:</span> <a href="models.html#Material"><span class="Identifier">Material</span></a>
-  <span class="Identifier">nodes</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="models.html#Node"><span class="Identifier">Node</span></a><span class="Other">]</span>
-  <span class="Identifier">uploaded</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
-  <span class="Identifier">vertexArrayId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
-  <span class="Identifier">pointsId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
-  <span class="Identifier">uvsId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
-  <span class="Identifier">normalsId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
-  <span class="Identifier">tangentsId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
-  <span class="Identifier">colorsId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
-  <span class="Identifier">indicesId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span></pre></dt>
-  <dd>
-    
-    
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L74" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L74" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-<div id="TextureSampler">
-  <dt><pre><a href="models.html#TextureSampler"><span class="Identifier">TextureSampler</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
-  <span class="Identifier">magFilter</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLint</span>
-  <span class="Identifier">minFilter</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLint</span>
-  <span class="Identifier">wrapS</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLint</span>
-  <span class="Identifier">wrapT</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLint</span></pre></dt>
-  <dd>
-    
-    
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L12" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L12" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-<div id="TextureTransform">
-  <dt><pre><a href="models.html#TextureTransform"><span class="Identifier">TextureTransform</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
-  <span class="Identifier">texCoord</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
-  <span class="Identifier">offset</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec2</span>
-  <span class="Identifier">scale</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec2</span>
-  <span class="Identifier">rotation</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span></pre></dt>
-  <dd>
-    
-    
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L6" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L6" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-
+    <a class="reference external" href="common.html">common</a>
   </dl>
 </div>
 <div class="section" id="12">
@@ -492,12 +206,12 @@
   <dl class="item">
     <div id="$-procs-all">
   <div id="$,TextureSampler">
-  <dt><pre><span class="Keyword">proc</span> <a href="#%24%2CTextureSampler"><span class="Identifier">`$`</span></a><span class="Other">(</span><span class="Identifier">sampler</span><span class="Other">:</span> <a href="models.html#TextureSampler"><span class="Identifier">TextureSampler</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dt><pre><span class="Keyword">proc</span> <a href="#%24%2CTextureSampler"><span class="Identifier">`$`</span></a><span class="Other">(</span><span class="Identifier">sampler</span><span class="Other">:</span> <a href="common.html#TextureSampler"><span class="Identifier">TextureSampler</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L187" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L187" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L64" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L64" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -505,186 +219,10 @@
 </div>
 <div id="[]-procs-all">
   <div id="[],Node,string">
-  <dt><pre><span class="Keyword">proc</span> <a href="#%5B%5D%2CNode%2Cstring"><span class="Identifier">`[]`</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="models.html#Node"><span class="Identifier">Node</span></a><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="models.html#Node"><span class="Identifier">Node</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dt><pre><span class="Keyword">proc</span> <a href="#%5B%5D%2CNode%2Cstring"><span class="Identifier">`[]`</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     Get a child node by name.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L867" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L867" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-
-</div>
-<div id="applyClipAt-procs-all">
-  <div id="applyClipAt,AnimationClip,float32">
-  <dt><pre><span class="Keyword">proc</span> <a href="#applyClipAt%2CAnimationClip%2Cfloat32"><span class="Identifier">applyClipAt</span></a><span class="Other">(</span><span class="Identifier">clip</span><span class="Other">:</span> <a href="models.html#AnimationClip"><span class="Identifier">AnimationClip</span></a><span class="Other">;</span> <span class="Identifier">time</span><span class="Other">:</span> <span class="Identifier">float32</span><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
-    <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
-  <dd>
-    
-    Applies an animation clip at a time.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L249" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L249" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-
-</div>
-<div id="center-procs-all">
-  <div id="center,AABounds">
-  <dt><pre><span class="Keyword">proc</span> <a href="#center%2CAABounds"><span class="Identifier">center</span></a><span class="Other">(</span><span class="Identifier">a</span><span class="Other">:</span> <a href="models.html#AABounds"><span class="Identifier">AABounds</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Vec3</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
-  <dd>
-    
-    Get the center of the axis-aligned bounding box.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L773" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L773" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-
-</div>
-<div id="clearFromGpu-procs-all">
-  <div id="clearFromGpu,Node">
-  <dt><pre><span class="Keyword">proc</span> <a href="#clearFromGpu%2CNode"><span class="Identifier">clearFromGpu</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="models.html#Node"><span class="Identifier">Node</span></a><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
-  <dd>
-    
-    Clear the vertex data from the GPU.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L450" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L450" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-
-</div>
-<div id="clearTreeFromGpu-procs-all">
-  <div id="clearTreeFromGpu,Node">
-  <dt><pre><span class="Keyword">proc</span> <a href="#clearTreeFromGpu%2CNode"><span class="Identifier">clearTreeFromGpu</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="models.html#Node"><span class="Identifier">Node</span></a><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
-  <dd>
-    
-    Clear the vertex data from the GPU for the whole tree.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L554" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L554" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-
-</div>
-<div id="computeBounds-procs-all">
-  <div id="computeBounds,Node">
-  <dt><pre><span class="Keyword">proc</span> <a href="#computeBounds%2CNode"><span class="Identifier">computeBounds</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="models.html#Node"><span class="Identifier">Node</span></a><span class="Other">;</span> <span class="Identifier">trs</span> <span class="Other">=</span> <span class="Identifier">mat4</span><span class="Other">(</span><span class="Other">)</span><span class="Other">)</span><span class="Other">:</span> <a href="models.html#Bounds"><span class="Identifier">Bounds</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
-    <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
-  <dd>
-    
-    Computes a stable center, size, and radius for a node tree.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L813" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L813" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-
-</div>
-<div id="defaultTextureSampler-procs-all">
-  <div id="defaultTextureSampler">
-  <dt><pre><span class="Keyword">proc</span> <a href="#defaultTextureSampler"><span class="Identifier">defaultTextureSampler</span></a><span class="Other">(</span><span class="Other">)</span><span class="Other">:</span> <a href="models.html#TextureSampler"><span class="Identifier">TextureSampler</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
-  <dd>
-    
-    
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L151" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L151" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-
-</div>
-<div id="draw-procs-all">
-  <div id="draw,Node,GLuint,DMat4,DMat4,DMat4,Color">
-  <dt><pre><span class="Keyword">proc</span> <a href="#draw%2CNode%2CGLuint%2CDMat4%2CDMat4%2CDMat4%2CColor"><span class="Identifier">draw</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="models.html#Node"><span class="Identifier">Node</span></a><span class="Other">;</span> <span class="Identifier">shader</span><span class="Other">:</span> <span class="Identifier">GLuint</span><span class="Other">;</span> <span class="Identifier">transform</span><span class="Other">,</span> <span class="Identifier">view</span><span class="Other">,</span> <span class="Identifier">proj</span><span class="Other">:</span> <span class="Identifier">DMat4</span><span class="Other">;</span> <span class="Identifier">tint</span><span class="Other">:</span> <span class="Identifier">Color</span><span class="Other">;</span>
-          <span class="Identifier">useTrs</span> <span class="Other">=</span> <span class="Identifier">true</span><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
-  <dd>
-    
-    Draw the node using a double precision transformation matrix.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L873" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L873" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-<div id="draw,Node,GLuint,Mat4,Mat4,Mat4,Color">
-  <dt><pre><span class="Keyword">proc</span> <a href="#draw%2CNode%2CGLuint%2CMat4%2CMat4%2CMat4%2CColor"><span class="Identifier">draw</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="models.html#Node"><span class="Identifier">Node</span></a><span class="Other">;</span> <span class="Identifier">shader</span><span class="Other">:</span> <span class="Identifier">GLuint</span><span class="Other">;</span> <span class="Identifier">transform</span><span class="Other">,</span> <span class="Identifier">view</span><span class="Other">,</span> <span class="Identifier">proj</span><span class="Other">:</span> <span class="Identifier">Mat4</span><span class="Other">;</span> <span class="Identifier">tint</span><span class="Other">:</span> <span class="Identifier">Color</span><span class="Other">;</span>
-          <span class="Identifier">useTrs</span> <span class="Other">=</span> <span class="Identifier">true</span><span class="Other">;</span> <span class="Identifier">skipBlend</span> <span class="Other">=</span> <span class="Identifier">false</span><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
-    <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
-  <dd>
-    
-    Draws the node with a float32 transform.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L573" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L573" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-
-</div>
-<div id="dumpTree-procs-all">
-  <div id="dumpTree,Node,string">
-  <dt><pre><span class="Keyword">proc</span> <a href="#dumpTree%2CNode%2Cstring"><span class="Identifier">dumpTree</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="models.html#Node"><span class="Identifier">Node</span></a><span class="Other">;</span> <span class="Identifier">indent</span><span class="Other">:</span> <span class="Identifier">string</span> <span class="Other">=</span> <span class="StringLit">&quot;&quot;</span><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
-    <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
-  <dd>
-    
-    Prints the node tree for debugging.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L688" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L688" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-
-</div>
-<div id="getAABounds-procs-all">
-  <div id="getAABounds,Node">
-  <dt><pre><span class="Keyword">proc</span> <a href="#getAABounds%2CNode"><span class="Identifier">getAABounds</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="models.html#Node"><span class="Identifier">Node</span></a><span class="Other">;</span> <span class="Identifier">trs</span> <span class="Other">=</span> <span class="Identifier">mat4</span><span class="Other">(</span><span class="Other">)</span><span class="Other">)</span><span class="Other">:</span> <a href="models.html#AABounds"><span class="Identifier">AABounds</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
-    <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
-  <dd>
-    
-    Get the axis-aligned bounding box of the node and its children.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L806" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L806" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-
-</div>
-<div id="getAABoundsNode-procs-all">
-  <div id="getAABoundsNode,Node">
-  <dt><pre><span class="Keyword">proc</span> <a href="#getAABoundsNode%2CNode"><span class="Identifier">getAABoundsNode</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="models.html#Node"><span class="Identifier">Node</span></a><span class="Other">;</span> <span class="Identifier">trs</span> <span class="Other">=</span> <span class="Identifier">mat4</span><span class="Other">(</span><span class="Other">)</span><span class="Other">)</span><span class="Other">:</span> <a href="models.html#AABounds"><span class="Identifier">AABounds</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
-    <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
-  <dd>
-    
-    Get the axis-aligned bounding box of the node.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L796" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L796" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-
-</div>
-<div id="getBoundingSphere-procs-all">
-  <div id="getBoundingSphere,Node">
-  <dt><pre><span class="Keyword">proc</span> <a href="#getBoundingSphere%2CNode"><span class="Identifier">getBoundingSphere</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="models.html#Node"><span class="Identifier">Node</span></a><span class="Other">;</span> <span class="Identifier">trs</span> <span class="Other">=</span> <span class="Identifier">mat4</span><span class="Other">(</span><span class="Other">)</span><span class="Other">)</span><span class="Other">:</span> <a href="models.html#BoundingSphere"><span class="Identifier">BoundingSphere</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
-    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
-  <dd>
-    
-    Get the bounding sphere of the node and its children.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L845" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L845" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-
-</div>
-<div id="getBoundingSphereNode-procs-all">
-  <div id="getBoundingSphereNode,Node">
-  <dt><pre><span class="Keyword">proc</span> <a href="#getBoundingSphereNode%2CNode"><span class="Identifier">getBoundingSphereNode</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="models.html#Node"><span class="Identifier">Node</span></a><span class="Other">;</span> <span class="Identifier">trs</span> <span class="Other">=</span> <span class="Identifier">mat4</span><span class="Other">(</span><span class="Other">)</span><span class="Other">)</span><span class="Other">:</span> <a href="models.html#BoundingSphere"><span class="Identifier">BoundingSphere</span></a> {.
-    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
-  <dd>
-    
-    Get the bounding sphere of the node.
     <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L832" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
 <a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L832" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
@@ -692,25 +230,255 @@
 </div>
 
 </div>
+<div id="applyClipAt-procs-all">
+  <div id="applyClipAt,AnimationClip,float32">
+  <dt><pre><span class="Keyword">proc</span> <a href="#applyClipAt%2CAnimationClip%2Cfloat32"><span class="Identifier">applyClipAt</span></a><span class="Other">(</span><span class="Identifier">clip</span><span class="Other">:</span> <a href="common.html#AnimationClip"><span class="Identifier">AnimationClip</span></a><span class="Other">;</span> <span class="Identifier">time</span><span class="Other">:</span> <span class="Identifier">float32</span><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Applies an animation clip at a time.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L126" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L126" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="center-procs-all">
+  <div id="center,AABounds">
+  <dt><pre><span class="Keyword">proc</span> <a href="#center%2CAABounds"><span class="Identifier">center</span></a><span class="Other">(</span><span class="Identifier">a</span><span class="Other">:</span> <a href="common.html#AABounds"><span class="Identifier">AABounds</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Vec3</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Get the center of the axis-aligned bounding box.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L728" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L728" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="clearFromGpu-procs-all">
+  <div id="clearFromGpu,Mesh">
+  <dt><pre><span class="Keyword">proc</span> <a href="#clearFromGpu%2CMesh"><span class="Identifier">clearFromGpu</span></a><span class="Other">(</span><span class="Identifier">mesh</span><span class="Other">:</span> <a href="common.html#Mesh"><span class="Identifier">Mesh</span></a><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L472" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L472" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="clearFromGpu,Node">
+  <dt><pre><span class="Keyword">proc</span> <a href="#clearFromGpu%2CNode"><span class="Identifier">clearFromGpu</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Clear the node subtree from the GPU.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L492" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L492" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="clearFromGpu,Primitive">
+  <dt><pre><span class="Keyword">proc</span> <a href="#clearFromGpu%2CPrimitive"><span class="Identifier">clearFromGpu</span></a><span class="Other">(</span><span class="Identifier">primitive</span><span class="Other">:</span> <a href="common.html#Primitive"><span class="Identifier">Primitive</span></a><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Clear primitive data from the GPU.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L367" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L367" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="clearTreeFromGpu-procs-all">
+  <div id="clearTreeFromGpu,Node">
+  <dt><pre><span class="Keyword">proc</span> <a href="#clearTreeFromGpu%2CNode"><span class="Identifier">clearTreeFromGpu</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Clear the vertex data from the GPU for the whole tree.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L508" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L508" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="computeBounds-procs-all">
+  <div id="computeBounds,Node">
+  <dt><pre><span class="Keyword">proc</span> <a href="#computeBounds%2CNode"><span class="Identifier">computeBounds</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a><span class="Other">;</span> <span class="Identifier">trs</span> <span class="Other">=</span> <span class="Identifier">mat4</span><span class="Other">(</span><span class="Other">)</span><span class="Other">)</span><span class="Other">:</span> <a href="common.html#Bounds"><span class="Identifier">Bounds</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Computes a stable center, size, and radius for a node tree.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L770" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L770" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="defaultTextureSampler-procs-all">
+  <div id="defaultTextureSampler">
+  <dt><pre><span class="Keyword">proc</span> <a href="#defaultTextureSampler"><span class="Identifier">defaultTextureSampler</span></a><span class="Other">(</span><span class="Other">)</span><span class="Other">:</span> <a href="common.html#TextureSampler"><span class="Identifier">TextureSampler</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L28" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L28" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="draw-procs-all">
+  <div id="draw,Node,GLuint,DMat4,DMat4,DMat4,Color">
+  <dt><pre><span class="Keyword">proc</span> <a href="#draw%2CNode%2CGLuint%2CDMat4%2CDMat4%2CDMat4%2CColor"><span class="Identifier">draw</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a><span class="Other">;</span> <span class="Identifier">shader</span><span class="Other">:</span> <span class="Identifier">GLuint</span><span class="Other">;</span> <span class="Identifier">transform</span><span class="Other">,</span> <span class="Identifier">view</span><span class="Other">,</span> <span class="Identifier">proj</span><span class="Other">:</span> <span class="Identifier">DMat4</span><span class="Other">;</span> <span class="Identifier">tint</span><span class="Other">:</span> <span class="Identifier">Color</span><span class="Other">;</span>
+          <span class="Identifier">useTrs</span> <span class="Other">=</span> <span class="Identifier">true</span><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Draw the node using a double precision transformation matrix.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L838" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L838" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="draw,Node,GLuint,Mat4,Mat4,Mat4,Color">
+  <dt><pre><span class="Keyword">proc</span> <a href="#draw%2CNode%2CGLuint%2CMat4%2CMat4%2CMat4%2CColor"><span class="Identifier">draw</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a><span class="Other">;</span> <span class="Identifier">shader</span><span class="Other">:</span> <span class="Identifier">GLuint</span><span class="Other">;</span> <span class="Identifier">transform</span><span class="Other">,</span> <span class="Identifier">view</span><span class="Other">,</span> <span class="Identifier">proj</span><span class="Other">:</span> <span class="Identifier">Mat4</span><span class="Other">;</span> <span class="Identifier">tint</span><span class="Other">:</span> <span class="Identifier">Color</span><span class="Other">;</span>
+          <span class="Identifier">useTrs</span> <span class="Other">=</span> <span class="Identifier">true</span><span class="Other">;</span> <span class="Identifier">skipBlend</span> <span class="Other">=</span> <span class="Identifier">false</span><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Draws the node with a float32 transform.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L602" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L602" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="dumpTree-procs-all">
+  <div id="dumpTree,Node,string">
+  <dt><pre><span class="Keyword">proc</span> <a href="#dumpTree%2CNode%2Cstring"><span class="Identifier">dumpTree</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a><span class="Other">;</span> <span class="Identifier">indent</span><span class="Other">:</span> <span class="Identifier">string</span> <span class="Other">=</span> <span class="StringLit">&quot;&quot;</span><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Prints the node tree for debugging.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L654" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L654" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="getAABounds-procs-all">
+  <div id="getAABounds,Node">
+  <dt><pre><span class="Keyword">proc</span> <a href="#getAABounds%2CNode"><span class="Identifier">getAABounds</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a><span class="Other">;</span> <span class="Identifier">trs</span> <span class="Other">=</span> <span class="Identifier">mat4</span><span class="Other">(</span><span class="Other">)</span><span class="Other">)</span><span class="Other">:</span> <a href="common.html#AABounds"><span class="Identifier">AABounds</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Get the axis-aligned bounding box of the node and its children.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L763" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L763" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="getAABoundsNode-procs-all">
+  <div id="getAABoundsNode,Node">
+  <dt><pre><span class="Keyword">proc</span> <a href="#getAABoundsNode%2CNode"><span class="Identifier">getAABoundsNode</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a><span class="Other">;</span> <span class="Identifier">trs</span> <span class="Other">=</span> <span class="Identifier">mat4</span><span class="Other">(</span><span class="Other">)</span><span class="Other">)</span><span class="Other">:</span> <a href="common.html#AABounds"><span class="Identifier">AABounds</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Get the axis-aligned bounding box of the node.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L751" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L751" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="getBoundingSphere-procs-all">
+  <div id="getBoundingSphere,Node">
+  <dt><pre><span class="Keyword">proc</span> <a href="#getBoundingSphere%2CNode"><span class="Identifier">getBoundingSphere</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a><span class="Other">;</span> <span class="Identifier">trs</span> <span class="Other">=</span> <span class="Identifier">mat4</span><span class="Other">(</span><span class="Other">)</span><span class="Other">)</span><span class="Other">:</span> <a href="common.html#BoundingSphere"><span class="Identifier">BoundingSphere</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Get the bounding sphere of the node and its children.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L808" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L808" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="getBoundingSphereNode-procs-all">
+  <div id="getBoundingSphereNode,Node">
+  <dt><pre><span class="Keyword">proc</span> <a href="#getBoundingSphereNode%2CNode"><span class="Identifier">getBoundingSphereNode</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a><span class="Other">;</span> <span class="Identifier">trs</span> <span class="Other">=</span> <span class="Identifier">mat4</span><span class="Other">(</span><span class="Other">)</span><span class="Other">)</span><span class="Other">:</span> <a href="common.html#BoundingSphere"><span class="Identifier">BoundingSphere</span></a> {.
+    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Get the bounding sphere of the node.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L789" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L789" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="hasGeometry-procs-all">
+  <div id="hasGeometry,Mesh">
+  <dt><pre><span class="Keyword">proc</span> <a href="#hasGeometry%2CMesh"><span class="Identifier">hasGeometry</span></a><span class="Other">(</span><span class="Identifier">mesh</span><span class="Other">:</span> <a href="common.html#Mesh"><span class="Identifier">Mesh</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L160" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L160" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="hasGeometry,Node">
+  <dt><pre><span class="Keyword">proc</span> <a href="#hasGeometry%2CNode"><span class="Identifier">hasGeometry</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L168" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L168" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="hasGeometry,Primitive">
+  <dt><pre><span class="Keyword">proc</span> <a href="#hasGeometry%2CPrimitive"><span class="Identifier">hasGeometry</span></a><span class="Other">(</span><span class="Identifier">primitive</span><span class="Other">:</span> <a href="common.html#Primitive"><span class="Identifier">Primitive</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L157" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L157" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
 <div id="merge-procs-all">
   <div id="merge,AABounds,AABounds">
-  <dt><pre><span class="Keyword">proc</span> <a href="#merge%2CAABounds%2CAABounds"><span class="Identifier">merge</span></a><span class="Other">(</span><span class="Identifier">a</span><span class="Other">,</span> <span class="Identifier">b</span><span class="Other">:</span> <a href="models.html#AABounds"><span class="Identifier">AABounds</span></a><span class="Other">)</span><span class="Other">:</span> <a href="models.html#AABounds"><span class="Identifier">AABounds</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dt><pre><span class="Keyword">proc</span> <a href="#merge%2CAABounds%2CAABounds"><span class="Identifier">merge</span></a><span class="Other">(</span><span class="Identifier">a</span><span class="Other">,</span> <span class="Identifier">b</span><span class="Other">:</span> <a href="common.html#AABounds"><span class="Identifier">AABounds</span></a><span class="Other">)</span><span class="Other">:</span> <a href="common.html#AABounds"><span class="Identifier">AABounds</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     Merge two axis-aligned bounding boxes.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L781" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L781" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L736" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L736" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
 <div id="merge,BoundingSphere,BoundingSphere">
-  <dt><pre><span class="Keyword">proc</span> <a href="#merge%2CBoundingSphere%2CBoundingSphere"><span class="Identifier">merge</span></a><span class="Other">(</span><span class="Identifier">a</span><span class="Other">,</span> <span class="Identifier">b</span><span class="Other">:</span> <a href="models.html#BoundingSphere"><span class="Identifier">BoundingSphere</span></a><span class="Other">)</span><span class="Other">:</span> <a href="models.html#BoundingSphere"><span class="Identifier">BoundingSphere</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+  <dt><pre><span class="Keyword">proc</span> <a href="#merge%2CBoundingSphere%2CBoundingSphere"><span class="Identifier">merge</span></a><span class="Other">(</span><span class="Identifier">a</span><span class="Other">,</span> <span class="Identifier">b</span><span class="Other">:</span> <a href="common.html#BoundingSphere"><span class="Identifier">BoundingSphere</span></a><span class="Other">)</span><span class="Other">:</span> <a href="common.html#BoundingSphere"><span class="Identifier">BoundingSphere</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
     <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     Merge two bounding spheres.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L786" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L786" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L741" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L741" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -718,12 +486,12 @@
 </div>
 <div id="radius-procs-all">
   <div id="radius,AABounds">
-  <dt><pre><span class="Keyword">proc</span> <a href="#radius%2CAABounds"><span class="Identifier">radius</span></a><span class="Other">(</span><span class="Identifier">a</span><span class="Other">:</span> <a href="models.html#AABounds"><span class="Identifier">AABounds</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">float</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dt><pre><span class="Keyword">proc</span> <a href="#radius%2CAABounds"><span class="Identifier">radius</span></a><span class="Other">(</span><span class="Identifier">a</span><span class="Other">:</span> <a href="common.html#AABounds"><span class="Identifier">AABounds</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">float</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     Get the radius of the axis-aligned bounding box.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L777" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L777" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L732" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L732" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -731,12 +499,12 @@
 </div>
 <div id="resetToBase-procs-all">
   <div id="resetToBase,Node">
-  <dt><pre><span class="Keyword">proc</span> <a href="#resetToBase%2CNode"><span class="Identifier">resetToBase</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="models.html#Node"><span class="Identifier">Node</span></a><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dt><pre><span class="Keyword">proc</span> <a href="#resetToBase%2CNode"><span class="Identifier">resetToBase</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     Reset the node (and its children) to the original transform.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L193" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L193" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L70" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L70" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -744,12 +512,12 @@
 </div>
 <div id="shallowCopy-procs-all">
   <div id="shallowCopy,Node">
-  <dt><pre><span class="Keyword">proc</span> <a href="#shallowCopy%2CNode"><span class="Identifier">shallowCopy</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="models.html#Node"><span class="Identifier">Node</span></a><span class="Other">)</span><span class="Other">:</span> <a href="models.html#Node"><span class="Identifier">Node</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dt><pre><span class="Keyword">proc</span> <a href="#shallowCopy%2CNode"><span class="Identifier">shallowCopy</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a><span class="Other">)</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     Creates a shallow copy of a node.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L112" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L112" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L6" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L6" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -757,12 +525,12 @@
 </div>
 <div id="trs-procs-all">
   <div id="trs,Node">
-  <dt><pre><span class="Keyword">proc</span> <a href="#trs%2CNode"><span class="Identifier">trs</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="models.html#Node"><span class="Identifier">Node</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Mat4</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dt><pre><span class="Keyword">proc</span> <a href="#trs%2CNode"><span class="Identifier">trs</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Mat4</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     Get the transformation matrix of a node.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L560" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L560" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L512" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L512" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -770,39 +538,81 @@
 </div>
 <div id="updateAnimation-procs-all">
   <div id="updateAnimation,Node,float32">
-  <dt><pre><span class="Keyword">proc</span> <a href="#updateAnimation%2CNode%2Cfloat32"><span class="Identifier">updateAnimation</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="models.html#Node"><span class="Identifier">Node</span></a><span class="Other">;</span> <span class="Identifier">dt</span><span class="Other">:</span> <span class="Identifier">float32</span><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+  <dt><pre><span class="Keyword">proc</span> <a href="#updateAnimation%2CNode%2Cfloat32"><span class="Identifier">updateAnimation</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a><span class="Other">;</span> <span class="Identifier">dt</span><span class="Other">:</span> <span class="Identifier">float32</span><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
     <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     Advance and apply the current animation clip.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L271" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L271" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L148" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L148" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
 
 </div>
 <div id="updateOnGpu-procs-all">
-  <div id="updateOnGpu,Node">
-  <dt><pre><span class="Keyword">proc</span> <a href="#updateOnGpu%2CNode"><span class="Identifier">updateOnGpu</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="models.html#Node"><span class="Identifier">Node</span></a><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <div id="updateOnGpu,Mesh">
+  <dt><pre><span class="Keyword">proc</span> <a href="#updateOnGpu%2CMesh"><span class="Identifier">updateOnGpu</span></a><span class="Other">(</span><span class="Identifier">mesh</span><span class="Other">:</span> <a href="common.html#Mesh"><span class="Identifier">Mesh</span></a><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
-    Update the data on the GPU.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L481" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L481" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L478" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L478" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="updateOnGpu,Node">
+  <dt><pre><span class="Keyword">proc</span> <a href="#updateOnGpu%2CNode"><span class="Identifier">updateOnGpu</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Update the node subtree on the GPU.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L500" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L500" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="updateOnGpu,Primitive">
+  <dt><pre><span class="Keyword">proc</span> <a href="#updateOnGpu%2CPrimitive"><span class="Identifier">updateOnGpu</span></a><span class="Other">(</span><span class="Identifier">primitive</span><span class="Other">:</span> <a href="common.html#Primitive"><span class="Identifier">Primitive</span></a><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Update primitive data on the GPU.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L395" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L395" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
 
 </div>
 <div id="uploadToGpu-procs-all">
-  <div id="uploadToGpu,Node">
-  <dt><pre><span class="Keyword">proc</span> <a href="#uploadToGpu%2CNode"><span class="Identifier">uploadToGpu</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="models.html#Node"><span class="Identifier">Node</span></a><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <div id="uploadToGpu,Mesh">
+  <dt><pre><span class="Keyword">proc</span> <a href="#uploadToGpu%2CMesh"><span class="Identifier">uploadToGpu</span></a><span class="Other">(</span><span class="Identifier">mesh</span><span class="Other">:</span> <a href="common.html#Mesh"><span class="Identifier">Mesh</span></a><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
-    Upload the vertex data to the GPU.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L323" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L323" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L466" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L466" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="uploadToGpu,Node">
+  <dt><pre><span class="Keyword">proc</span> <a href="#uploadToGpu%2CNode"><span class="Identifier">uploadToGpu</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Upload the node subtree to the GPU.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L484" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L484" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="uploadToGpu,Primitive">
+  <dt><pre><span class="Keyword">proc</span> <a href="#uploadToGpu%2CPrimitive"><span class="Identifier">uploadToGpu</span></a><span class="Other">(</span><span class="Identifier">primitive</span><span class="Other">:</span> <a href="common.html#Primitive"><span class="Identifier">Primitive</span></a><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Upload the primitive data to the GPU.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L274" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L274" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -810,12 +620,12 @@
 </div>
 <div id="walkNodes-procs-all">
   <div id="walkNodes,Node">
-  <dt><pre><span class="Keyword">proc</span> <a href="#walkNodes%2CNode"><span class="Identifier">walkNodes</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="models.html#Node"><span class="Identifier">Node</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="models.html#Node"><span class="Identifier">Node</span></a><span class="Other">]</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dt><pre><span class="Keyword">proc</span> <a href="#walkNodes%2CNode"><span class="Identifier">walkNodes</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="common.html#Node"><span class="Identifier">Node</span></a><span class="Other">]</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     Walk the nodes tree and return a flat list of nodes.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L752" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L752" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L720" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L720" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -829,13 +639,13 @@
   <dl class="item">
     <div id="triangles-iterators-all">
   <div id="triangles.i,Node">
-  <dt><pre><span class="Keyword">iterator</span> <a href="#triangles.i%2CNode"><span class="Identifier">triangles</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="models.html#Node"><span class="Identifier">Node</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Other">(</span><span class="Identifier">Vec3</span><span class="Other">,</span> <span class="Identifier">Vec3</span><span class="Other">,</span> <span class="Identifier">Vec3</span><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+  <dt><pre><span class="Keyword">iterator</span> <a href="#triangles.i%2CNode"><span class="Identifier">triangles</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Other">(</span><span class="Identifier">Vec3</span><span class="Other">,</span> <span class="Identifier">Vec3</span><span class="Other">,</span> <span class="Identifier">Vec3</span><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
     <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     Triangles iterator for a node.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L852" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L852" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L815" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L815" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -851,7 +661,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-03-28 16:27:21 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-03-28 16:29:30 UTC</small>
       </div>
     </div>
   </div>

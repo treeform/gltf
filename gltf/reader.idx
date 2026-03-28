@@ -1,8 +1,8 @@
 nimTitle	reader	gltf/reader.html	module gltf/reader		0
-nim	loadModelJson	gltf/reader.html#loadModelJson,JsonNode,string,seq[string]	proc loadModelJson(jsonRoot: JsonNode; modelDir: string; externalBuffers: seq[string]): Node		543
-nim	loadModelJsonFile	gltf/reader.html#loadModelJsonFile,string	proc loadModelJsonFile(file: string): Node		1208
-nim	loadModelBinaryFile	gltf/reader.html#loadModelBinaryFile,string	proc loadModelBinaryFile(file: string): Node		1215
-nim	loadModel	gltf/reader.html#loadModel,string	proc loadModel(file: string): Node		1246
-nim	readGltfJsonFile	gltf/reader.html#readGltfJsonFile,string	proc readGltfJsonFile(file: string): GltfFile		1253
-nim	readGltfBinaryFile	gltf/reader.html#readGltfBinaryFile,string	proc readGltfBinaryFile(file: string): GltfFile		1264
-nim	readGltfFile	gltf/reader.html#readGltfFile,string	proc readGltfFile(file: string): GltfFile		1300
+nim	loadModelJson	gltf/reader.html#loadModelJson,JsonNode,string,seq[string]	proc loadModelJson(jsonRoot: JsonNode; modelDir: string; externalBuffers: seq[string]): Node		1211
+nim	loadModelJsonFile	gltf/reader.html#loadModelJsonFile,string	proc loadModelJsonFile(file: string): Node		1219
+nim	loadModelBinaryFile	gltf/reader.html#loadModelBinaryFile,string	proc loadModelBinaryFile(file: string): Node		1226
+nim	loadModel	gltf/reader.html#loadModel,string	proc loadModel(file: string): Node		1257
+nim	readGltfJsonFile	gltf/reader.html#readGltfJsonFile,string	proc readGltfJsonFile(file: string): GltfFile		1264
+nim	readGltfBinaryFile	gltf/reader.html#readGltfBinaryFile,string	proc readGltfBinaryFile(file: string): GltfFile		1278
+nim	readGltfFile	gltf/reader.html#readGltfFile,string	proc readGltfFile(file: string): GltfFile		1317

@@ -1,0 +1,19 @@
+nimTitle	internal	gltf/internal.html	module gltf/internal		0
+nim	BufferView	gltf/internal.html#BufferView	object BufferView		5
+nim	atSCALAR	gltf/internal.html#atSCALAR	AccessorKind.atSCALAR		9
+nim	atVEC2	gltf/internal.html#atVEC2	AccessorKind.atVEC2		9
+nim	atVEC3	gltf/internal.html#atVEC3	AccessorKind.atVEC3		9
+nim	atVEC4	gltf/internal.html#atVEC4	AccessorKind.atVEC4		9
+nim	atMAT2	gltf/internal.html#atMAT2	AccessorKind.atMAT2		9
+nim	atMAT3	gltf/internal.html#atMAT3	AccessorKind.atMAT3		9
+nim	atMAT4	gltf/internal.html#atMAT4	AccessorKind.atMAT4		9
+nim	AccessorKind	gltf/internal.html#AccessorKind	enum AccessorKind		9
+nim	Accessor	gltf/internal.html#Accessor	object Accessor		12
+nim	Texture	gltf/internal.html#Texture	object Texture		18
+nim	Sampler	gltf/internal.html#Sampler	object Sampler		22
+nim	MaterialTexture	gltf/internal.html#MaterialTexture	object MaterialTexture		25
+nim	PbrMetallicRoughness	gltf/internal.html#PbrMetallicRoughness	object PbrMetallicRoughness		34
+nim	MaterialInfo	gltf/internal.html#MaterialInfo	object MaterialInfo		41
+nim	MeshInfo	gltf/internal.html#MeshInfo	object MeshInfo		53
+nim	PrimitiveAttributes	gltf/internal.html#PrimitiveAttributes	object PrimitiveAttributes		57
+nim	PrimitiveInfo	gltf/internal.html#PrimitiveInfo	object PrimitiveInfo		60

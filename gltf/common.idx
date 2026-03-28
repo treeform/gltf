@@ -1,21 +1,24 @@
 nimTitle	common	gltf/common.html	module gltf/common		0
-nim	GltfError	gltf/common.html#GltfError	object GltfError		6
-nim	BufferView	gltf/common.html#BufferView	object BufferView		8
-nim	atSCALAR	gltf/common.html#atSCALAR	AccessorKind.atSCALAR		12
-nim	atVEC2	gltf/common.html#atVEC2	AccessorKind.atVEC2		12
-nim	atVEC3	gltf/common.html#atVEC3	AccessorKind.atVEC3		12
-nim	atVEC4	gltf/common.html#atVEC4	AccessorKind.atVEC4		12
-nim	atMAT2	gltf/common.html#atMAT2	AccessorKind.atMAT2		12
-nim	atMAT3	gltf/common.html#atMAT3	AccessorKind.atMAT3		12
-nim	atMAT4	gltf/common.html#atMAT4	AccessorKind.atMAT4		12
-nim	AccessorKind	gltf/common.html#AccessorKind	enum AccessorKind		12
-nim	Accessor	gltf/common.html#Accessor	object Accessor		15
-nim	Texture	gltf/common.html#Texture	object Texture		21
-nim	Sampler	gltf/common.html#Sampler	object Sampler		25
-nim	MaterialTexture	gltf/common.html#MaterialTexture	object MaterialTexture		28
-nim	PbrMetallicRoughness	gltf/common.html#PbrMetallicRoughness	object PbrMetallicRoughness		37
-nim	InnerMaterial	gltf/common.html#InnerMaterial	object InnerMaterial		44
-nim	Mesh	gltf/common.html#Mesh	object Mesh		56
-nim	PrimitiveAttributes	gltf/common.html#PrimitiveAttributes	object PrimitiveAttributes		60
-nim	Primitive	gltf/common.html#Primitive	object Primitive		63
-nim	GltfFile	gltf/common.html#GltfFile	type GltfFile		68
+nim	GltfError	gltf/common.html#GltfError	object GltfError		5
+nim	TextureTransform	gltf/common.html#TextureTransform	object TextureTransform		7
+nim	TextureSampler	gltf/common.html#TextureSampler	object TextureSampler		13
+nim	OpaqueAlphaMode	gltf/common.html#OpaqueAlphaMode	AlphaMode.OpaqueAlphaMode		19
+nim	MaskAlphaMode	gltf/common.html#MaskAlphaMode	AlphaMode.MaskAlphaMode		19
+nim	BlendAlphaMode	gltf/common.html#BlendAlphaMode	AlphaMode.BlendAlphaMode		19
+nim	AlphaMode	gltf/common.html#AlphaMode	enum AlphaMode		19
+nim	Primitive	gltf/common.html#Primitive	type Primitive		22
+nim	Mesh	gltf/common.html#Mesh	type Mesh		42
+nim	Node	gltf/common.html#Node	type Node		46
+nim	Scene	gltf/common.html#Scene	type Scene		66
+nim	AnimTranslation	gltf/common.html#AnimTranslation	AnimPath.AnimTranslation		70
+nim	AnimRotation	gltf/common.html#AnimRotation	AnimPath.AnimRotation		70
+nim	AnimScale	gltf/common.html#AnimScale	AnimPath.AnimScale		70
+nim	AnimVisibility	gltf/common.html#AnimVisibility	AnimPath.AnimVisibility		70
+nim	AnimPath	gltf/common.html#AnimPath	enum AnimPath		70
+nim	AnimationChannel	gltf/common.html#AnimationChannel	object AnimationChannel		73
+nim	AnimationClip	gltf/common.html#AnimationClip	object AnimationClip		81
+nim	Material	gltf/common.html#Material	type Material		86
+nim	AABounds	gltf/common.html#AABounds	object AABounds		122
+nim	Bounds	gltf/common.html#Bounds	object Bounds		125
+nim	BoundingSphere	gltf/common.html#BoundingSphere	object BoundingSphere		130
+nim	GltfFile	gltf/common.html#GltfFile	type GltfFile		134

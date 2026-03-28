@@ -52,66 +52,123 @@
     </div>
     <ul class="simple simple-toc" id="toc-list">
   <li>
-  <a class="reference reference-toplevel" href="#6" id="56">Imports</a>
-</li>
-<li>
   <details open>
     <summary><a class="reference reference-toplevel" href="#7" id="57">Types</a></summary>
     <ul class="simple simple-toc-section">
-      <li><a class="reference" href="#Accessor" title="Accessor = object
-  bufferView*: int
-  byteOffset*, count*: int
-  componentType*: GLenum
-  kind*: AccessorKind">Accessor</a></li>
-<li><a class="reference" href="#AccessorKind" title="AccessorKind = enum
-  atSCALAR, atVEC2, atVEC3, atVEC4, atMAT2, atMAT3, atMAT4">AccessorKind</a></li>
-<li><a class="reference" href="#BufferView" title="BufferView = object
-  buffer*: int
-  byteOffset*, byteLength*, byteStride*: int">BufferView</a></li>
+      <li><a class="reference" href="#AABounds" title="AABounds = object
+  min*, max*: Vec3">AABounds</a></li>
+<li><a class="reference" href="#AlphaMode" title="AlphaMode = enum
+  OpaqueAlphaMode, MaskAlphaMode, BlendAlphaMode">AlphaMode</a></li>
+<li><a class="reference" href="#AnimationChannel" title="AnimationChannel = object
+  target*: Node
+  path*: AnimPath
+  times*: seq[float32]
+  valuesVec3*: seq[Vec3]
+  valuesQuat*: seq[Quat]
+  valuesFloat*: seq[float32]">AnimationChannel</a></li>
+<li><a class="reference" href="#AnimationClip" title="AnimationClip = object
+  name*: string
+  duration*: float32
+  channels*: seq[AnimationChannel]">AnimationClip</a></li>
+<li><a class="reference" href="#AnimPath" title="AnimPath = enum
+  AnimTranslation, AnimRotation, AnimScale, AnimVisibility">AnimPath</a></li>
+<li><a class="reference" href="#BoundingSphere" title="BoundingSphere = object
+  center*: Vec3
+  radius*: float">BoundingSphere</a></li>
+<li><a class="reference" href="#Bounds" title="Bounds = object
+  center*: Vec3
+  size*: Vec3
+  radius*: float32">Bounds</a></li>
 <li><a class="reference" href="#GltfError" title="GltfError = object of CatchableError">GltfError</a></li>
 <li><a class="reference" href="#GltfFile" title="GltfFile = ref object
   path*: string
   root*: Node
+  scenes*: seq[Scene]
+  scene*: int
   unsupportedUsedExtensions*: seq[string]">GltfFile</a></li>
-<li><a class="reference" href="#InnerMaterial" title="InnerMaterial = object
+<li><a class="reference" href="#Material" title="Material = ref object
   name*: string
-  pbrMetallicRoughness*: PbrMetallicRoughness
-  normalTexture*: MaterialTexture
-  occlusionTexture*: MaterialTexture
-  emissiveTexture*: MaterialTexture
+  baseColor*: Image
+  baseColorTransform*: TextureTransform
+  baseColorSampler*: TextureSampler
+  baseColorFactor*: Color
+  metallicRoughness*: Image
+  metallicRoughnessTransform*: TextureTransform
+  metallicRoughnessSampler*: TextureSampler
+  metallicFactor*: float32
+  roughnessFactor*: float32
+  normal*: Image
+  normalTransform*: TextureTransform
+  normalSampler*: TextureSampler
+  hasNormalTexture*: bool
+  normalScale*: float32
+  occlusion*: Image
+  occlusionTransform*: TextureTransform
+  occlusionSampler*: TextureSampler
+  occlusionStrength*: float32
+  emissive*: Image
+  emissiveTransform*: TextureTransform
+  emissiveSampler*: TextureSampler
   emissiveFactor*: Color
-  alphaMode*: string
+  alphaMode*: AlphaMode
   alphaCutoff*: float32
   doubleSided*: bool
-  transmissionFactor*: float32">InnerMaterial</a></li>
-<li><a class="reference" href="#MaterialTexture" title="MaterialTexture = object
-  index*: int
+  transmissionFactor*: float32
+  baseColorId*: GLuint
+  metallicRoughnessId*: GLuint
+  normalId*: GLuint
+  occlusionId*: GLuint
+  emissiveId*: GLuint">Material</a></li>
+<li><a class="reference" href="#Mesh" title="Mesh = ref object
+  name*: string
+  primitives*: seq[Primitive]">Mesh</a></li>
+<li><a class="reference" href="#Node" title="Node = ref object
+  name*: string
+  visible*: bool
+  pos*: Vec3
+  rot*: Quat
+  scale*: Vec3
+  mat*: Mat4
+  baseVisible*: bool
+  basePos*: Vec3
+  baseRot*: Quat
+  baseScale*: Vec3
+  animations*: seq[AnimationClip]
+  currentClip*: int
+  animTime*: float32
+  mesh*: Mesh
+  nodes*: seq[Node]">Node</a></li>
+<li><a class="reference" href="#Primitive" title="Primitive = ref object
+  points*: seq[Vec3]
+  uvs*: seq[Vec2]
+  normals*: seq[Vec3]
+  tangents*: seq[Vec4]
+  colors*: seq[ColorRGBX]
+  indices16*: seq[uint16]
+  indices32*: seq[uint32]
+  material*: Material
+  mode*: GLenum
+  uploaded*: bool
+  vertexArrayId*: GLuint
+  pointsId*: GLuint
+  uvsId*: GLuint
+  normalsId*: GLuint
+  tangentsId*: GLuint
+  colorsId*: GLuint
+  indicesId*: GLuint">Primitive</a></li>
+<li><a class="reference" href="#Scene" title="Scene = ref object
+  name*: string
+  nodes*: seq[Node]">Scene</a></li>
+<li><a class="reference" href="#TextureSampler" title="TextureSampler = object
+  magFilter*: GLint
+  minFilter*: GLint
+  wrapS*: GLint
+  wrapT*: GLint">TextureSampler</a></li>
+<li><a class="reference" href="#TextureTransform" title="TextureTransform = object
   texCoord*: int
   offset*: Vec2
-  uvScale*: Vec2
-  rotation*: float32
-  scale*: float32
-  strength*: float32">MaterialTexture</a></li>
-<li><a class="reference" href="#Mesh" title="Mesh = object
-  name*: string
-  primitives*: seq[int]">Mesh</a></li>
-<li><a class="reference" href="#PbrMetallicRoughness" title="PbrMetallicRoughness = object
-  baseColorTexture*: MaterialTexture
-  baseColorFactor*: Color
-  metallicRoughnessTexture*: MaterialTexture
-  metallicFactor*: float32
-  roughnessFactor*: float32">PbrMetallicRoughness</a></li>
-<li><a class="reference" href="#Primitive" title="Primitive = object
-  attributes*: PrimitiveAttributes
-  indices*, material*: int
-  mode*: GLenum">Primitive</a></li>
-<li><a class="reference" href="#PrimitiveAttributes" title="PrimitiveAttributes = object
-  position*, normal*, color0*, texcoord0*: int">PrimitiveAttributes</a></li>
-<li><a class="reference" href="#Sampler" title="Sampler = object
-  magFilter*, minFilter*, wrapS*, wrapT*: GLint">Sampler</a></li>
-<li><a class="reference" href="#Texture" title="Texture = object
-  source*: int
-  sampler*: int">Texture</a></li>
+  scale*: Vec2
+  rotation*: float32">TextureTransform</a></li>
 
     </ul>
   </details>
@@ -127,49 +184,93 @@
     <div id="tocRoot"></div>
     
     <p class="module-desc"></p>
-    <div class="section" id="6">
-  <h1><a class="toc-backref" href="#6">Imports</a></h1>
-  <dl class="item">
-    <a class="reference external" href="models.html">models</a>
-  </dl>
-</div>
-<div class="section" id="7">
+    <div class="section" id="7">
   <h1><a class="toc-backref" href="#7">Types</a></h1>
   <dl class="item">
-    <div id="Accessor">
-  <dt><pre><a href="common.html#Accessor"><span class="Identifier">Accessor</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
-  <span class="Identifier">bufferView</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
-  <span class="Identifier">byteOffset</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">count</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
-  <span class="Identifier">componentType</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLenum</span>
-  <span class="Identifier">kind</span><span class="Operator">*</span><span class="Other">:</span> <a href="common.html#AccessorKind"><span class="Identifier">AccessorKind</span></a></pre></dt>
+    <div id="AABounds">
+  <dt><pre><a href="common.html#AABounds"><span class="Identifier">AABounds</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <span class="Identifier">min</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">max</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec3</span></pre></dt>
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L15" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L15" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L122" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L122" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
-<div id="AccessorKind">
-  <dt><pre><a href="common.html#AccessorKind"><span class="Identifier">AccessorKind</span></a> <span class="Other">=</span> <span class="Keyword">enum</span>
-  <span class="Identifier">atSCALAR</span><span class="Other">,</span> <span class="Identifier">atVEC2</span><span class="Other">,</span> <span class="Identifier">atVEC3</span><span class="Other">,</span> <span class="Identifier">atVEC4</span><span class="Other">,</span> <span class="Identifier">atMAT2</span><span class="Other">,</span> <span class="Identifier">atMAT3</span><span class="Other">,</span> <span class="Identifier">atMAT4</span></pre></dt>
+<div id="AlphaMode">
+  <dt><pre><a href="common.html#AlphaMode"><span class="Identifier">AlphaMode</span></a> <span class="Other">=</span> <span class="Keyword">enum</span>
+  <span class="Identifier">OpaqueAlphaMode</span><span class="Other">,</span> <span class="Identifier">MaskAlphaMode</span><span class="Other">,</span> <span class="Identifier">BlendAlphaMode</span></pre></dt>
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L12" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L12" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L19" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L19" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
-<div id="BufferView">
-  <dt><pre><a href="common.html#BufferView"><span class="Identifier">BufferView</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
-  <span class="Identifier">buffer</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
-  <span class="Identifier">byteOffset</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">byteLength</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">byteStride</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span></pre></dt>
+<div id="AnimationChannel">
+  <dt><pre><a href="common.html#AnimationChannel"><span class="Identifier">AnimationChannel</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <span class="Identifier">target</span><span class="Operator">*</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a>
+  <span class="Identifier">path</span><span class="Operator">*</span><span class="Other">:</span> <a href="common.html#AnimPath"><span class="Identifier">AnimPath</span></a>
+  <span class="Identifier">times</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">float32</span><span class="Other">]</span>
+  <span class="Identifier">valuesVec3</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">Vec3</span><span class="Other">]</span>
+  <span class="Identifier">valuesQuat</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">Quat</span><span class="Other">]</span>
+  <span class="Identifier">valuesFloat</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">float32</span><span class="Other">]</span></pre></dt>
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L8" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L8" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L73" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L73" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="AnimationClip">
+  <dt><pre><a href="common.html#AnimationClip"><span class="Identifier">AnimationClip</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <span class="Identifier">name</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
+  <span class="Identifier">duration</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">channels</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="common.html#AnimationChannel"><span class="Identifier">AnimationChannel</span></a><span class="Other">]</span></pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L81" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L81" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="AnimPath">
+  <dt><pre><a href="common.html#AnimPath"><span class="Identifier">AnimPath</span></a> <span class="Other">=</span> <span class="Keyword">enum</span>
+  <span class="Identifier">AnimTranslation</span><span class="Other">,</span> <span class="Identifier">AnimRotation</span><span class="Other">,</span> <span class="Identifier">AnimScale</span><span class="Other">,</span> <span class="Identifier">AnimVisibility</span></pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L70" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L70" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="BoundingSphere">
+  <dt><pre><a href="common.html#BoundingSphere"><span class="Identifier">BoundingSphere</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <span class="Identifier">center</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec3</span>
+  <span class="Identifier">radius</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float</span></pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L130" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L130" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="Bounds">
+  <dt><pre><a href="common.html#Bounds"><span class="Identifier">Bounds</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <span class="Identifier">center</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec3</span>
+  <span class="Identifier">size</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec3</span>
+  <span class="Identifier">radius</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span></pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L125" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L125" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -178,132 +279,169 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L6" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L6" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L5" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L5" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
 <div id="GltfFile">
   <dt><pre><a href="common.html#GltfFile"><span class="Identifier">GltfFile</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
   <span class="Identifier">path</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
-  <span class="Identifier">root</span><span class="Operator">*</span><span class="Other">:</span> <a href="models.html#Node"><span class="Identifier">Node</span></a>
+  <span class="Identifier">root</span><span class="Operator">*</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a>
+  <span class="Identifier">scenes</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="common.html#Scene"><span class="Identifier">Scene</span></a><span class="Other">]</span>
+  <span class="Identifier">scene</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
   <span class="Identifier">unsupportedUsedExtensions</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span></pre></dt>
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L68" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L68" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L134" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L134" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
-<div id="InnerMaterial">
-  <dt><pre><a href="common.html#InnerMaterial"><span class="Identifier">InnerMaterial</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+<div id="Material">
+  <dt><pre><a href="common.html#Material"><span class="Identifier">Material</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
   <span class="Identifier">name</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
-  <span class="Identifier">pbrMetallicRoughness</span><span class="Operator">*</span><span class="Other">:</span> <a href="common.html#PbrMetallicRoughness"><span class="Identifier">PbrMetallicRoughness</span></a>
-  <span class="Identifier">normalTexture</span><span class="Operator">*</span><span class="Other">:</span> <a href="common.html#MaterialTexture"><span class="Identifier">MaterialTexture</span></a>
-  <span class="Identifier">occlusionTexture</span><span class="Operator">*</span><span class="Other">:</span> <a href="common.html#MaterialTexture"><span class="Identifier">MaterialTexture</span></a>
-  <span class="Identifier">emissiveTexture</span><span class="Operator">*</span><span class="Other">:</span> <a href="common.html#MaterialTexture"><span class="Identifier">MaterialTexture</span></a>
+  <span class="Identifier">baseColor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Image</span>
+  <span class="Identifier">baseColorTransform</span><span class="Operator">*</span><span class="Other">:</span> <a href="common.html#TextureTransform"><span class="Identifier">TextureTransform</span></a>
+  <span class="Identifier">baseColorSampler</span><span class="Operator">*</span><span class="Other">:</span> <a href="common.html#TextureSampler"><span class="Identifier">TextureSampler</span></a>
+  <span class="Identifier">baseColorFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Color</span>
+  <span class="Identifier">metallicRoughness</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Image</span>
+  <span class="Identifier">metallicRoughnessTransform</span><span class="Operator">*</span><span class="Other">:</span> <a href="common.html#TextureTransform"><span class="Identifier">TextureTransform</span></a>
+  <span class="Identifier">metallicRoughnessSampler</span><span class="Operator">*</span><span class="Other">:</span> <a href="common.html#TextureSampler"><span class="Identifier">TextureSampler</span></a>
+  <span class="Identifier">metallicFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">roughnessFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">normal</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Image</span>
+  <span class="Identifier">normalTransform</span><span class="Operator">*</span><span class="Other">:</span> <a href="common.html#TextureTransform"><span class="Identifier">TextureTransform</span></a>
+  <span class="Identifier">normalSampler</span><span class="Operator">*</span><span class="Other">:</span> <a href="common.html#TextureSampler"><span class="Identifier">TextureSampler</span></a>
+  <span class="Identifier">hasNormalTexture</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">normalScale</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">occlusion</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Image</span>
+  <span class="Identifier">occlusionTransform</span><span class="Operator">*</span><span class="Other">:</span> <a href="common.html#TextureTransform"><span class="Identifier">TextureTransform</span></a>
+  <span class="Identifier">occlusionSampler</span><span class="Operator">*</span><span class="Other">:</span> <a href="common.html#TextureSampler"><span class="Identifier">TextureSampler</span></a>
+  <span class="Identifier">occlusionStrength</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">emissive</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Image</span>
+  <span class="Identifier">emissiveTransform</span><span class="Operator">*</span><span class="Other">:</span> <a href="common.html#TextureTransform"><span class="Identifier">TextureTransform</span></a>
+  <span class="Identifier">emissiveSampler</span><span class="Operator">*</span><span class="Other">:</span> <a href="common.html#TextureSampler"><span class="Identifier">TextureSampler</span></a>
   <span class="Identifier">emissiveFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Color</span>
-  <span class="Identifier">alphaMode</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
+  <span class="Identifier">alphaMode</span><span class="Operator">*</span><span class="Other">:</span> <a href="common.html#AlphaMode"><span class="Identifier">AlphaMode</span></a>
   <span class="Identifier">alphaCutoff</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
   <span class="Identifier">doubleSided</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
-  <span class="Identifier">transmissionFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span></pre></dt>
+  <span class="Identifier">transmissionFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">baseColorId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
+  <span class="Identifier">metallicRoughnessId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
+  <span class="Identifier">normalId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
+  <span class="Identifier">occlusionId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
+  <span class="Identifier">emissiveId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span></pre></dt>
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L44" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L44" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-<div id="MaterialTexture">
-  <dt><pre><a href="common.html#MaterialTexture"><span class="Identifier">MaterialTexture</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
-  <span class="Identifier">index</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
-  <span class="Identifier">texCoord</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
-  <span class="Identifier">offset</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec2</span>
-  <span class="Identifier">uvScale</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec2</span>
-  <span class="Identifier">rotation</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
-  <span class="Identifier">scale</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
-  <span class="Identifier">strength</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span></pre></dt>
-  <dd>
-    
-    
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L28" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L28" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L86" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L86" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
 <div id="Mesh">
-  <dt><pre><a href="common.html#Mesh"><span class="Identifier">Mesh</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <dt><pre><a href="common.html#Mesh"><span class="Identifier">Mesh</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
   <span class="Identifier">name</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
-  <span class="Identifier">primitives</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">int</span><span class="Other">]</span></pre></dt>
+  <span class="Identifier">primitives</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="common.html#Primitive"><span class="Identifier">Primitive</span></a><span class="Other">]</span></pre></dt>
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L56" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L56" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L42" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L42" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
-<div id="PbrMetallicRoughness">
-  <dt><pre><a href="common.html#PbrMetallicRoughness"><span class="Identifier">PbrMetallicRoughness</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
-  <span class="Identifier">baseColorTexture</span><span class="Operator">*</span><span class="Other">:</span> <a href="common.html#MaterialTexture"><span class="Identifier">MaterialTexture</span></a>
-  <span class="Identifier">baseColorFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Color</span>
-  <span class="Identifier">metallicRoughnessTexture</span><span class="Operator">*</span><span class="Other">:</span> <a href="common.html#MaterialTexture"><span class="Identifier">MaterialTexture</span></a>
-  <span class="Identifier">metallicFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
-  <span class="Identifier">roughnessFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span></pre></dt>
+<div id="Node">
+  <dt><pre><a href="common.html#Node"><span class="Identifier">Node</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
+  <span class="Identifier">name</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
+  <span class="Identifier">visible</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">pos</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec3</span>
+  <span class="Identifier">rot</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Quat</span>
+  <span class="Identifier">scale</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec3</span>
+  <span class="Identifier">mat</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Mat4</span>
+  <span class="Identifier">baseVisible</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">basePos</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec3</span>
+  <span class="Identifier">baseRot</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Quat</span>
+  <span class="Identifier">baseScale</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec3</span>
+  <span class="Identifier">animations</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="common.html#AnimationClip"><span class="Identifier">AnimationClip</span></a><span class="Other">]</span>
+  <span class="Identifier">currentClip</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
+  <span class="Identifier">animTime</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">mesh</span><span class="Operator">*</span><span class="Other">:</span> <a href="common.html#Mesh"><span class="Identifier">Mesh</span></a>
+  <span class="Identifier">nodes</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="common.html#Node"><span class="Identifier">Node</span></a><span class="Other">]</span></pre></dt>
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L37" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L37" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L46" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L46" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
 <div id="Primitive">
-  <dt><pre><a href="common.html#Primitive"><span class="Identifier">Primitive</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
-  <span class="Identifier">attributes</span><span class="Operator">*</span><span class="Other">:</span> <a href="common.html#PrimitiveAttributes"><span class="Identifier">PrimitiveAttributes</span></a>
-  <span class="Identifier">indices</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">material</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
-  <span class="Identifier">mode</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLenum</span></pre></dt>
+  <dt><pre><a href="common.html#Primitive"><span class="Identifier">Primitive</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
+  <span class="Identifier">points</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">Vec3</span><span class="Other">]</span>
+  <span class="Identifier">uvs</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">Vec2</span><span class="Other">]</span>
+  <span class="Identifier">normals</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">Vec3</span><span class="Other">]</span>
+  <span class="Identifier">tangents</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">Vec4</span><span class="Other">]</span>
+  <span class="Identifier">colors</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">ColorRGBX</span><span class="Other">]</span>
+  <span class="Identifier">indices16</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">uint16</span><span class="Other">]</span>
+  <span class="Identifier">indices32</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">uint32</span><span class="Other">]</span>
+  <span class="Identifier">material</span><span class="Operator">*</span><span class="Other">:</span> <a href="common.html#Material"><span class="Identifier">Material</span></a>
+  <span class="Identifier">mode</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLenum</span>
+  <span class="Identifier">uploaded</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">vertexArrayId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
+  <span class="Identifier">pointsId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
+  <span class="Identifier">uvsId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
+  <span class="Identifier">normalsId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
+  <span class="Identifier">tangentsId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
+  <span class="Identifier">colorsId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
+  <span class="Identifier">indicesId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span></pre></dt>
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L63" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L63" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L22" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L22" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
-<div id="PrimitiveAttributes">
-  <dt><pre><a href="common.html#PrimitiveAttributes"><span class="Identifier">PrimitiveAttributes</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
-  <span class="Identifier">position</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">normal</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">color0</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">texcoord0</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span></pre></dt>
+<div id="Scene">
+  <dt><pre><a href="common.html#Scene"><span class="Identifier">Scene</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
+  <span class="Identifier">name</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
+  <span class="Identifier">nodes</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="common.html#Node"><span class="Identifier">Node</span></a><span class="Other">]</span></pre></dt>
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L60" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L60" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L66" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L66" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
-<div id="Sampler">
-  <dt><pre><a href="common.html#Sampler"><span class="Identifier">Sampler</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
-  <span class="Identifier">magFilter</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">minFilter</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">wrapS</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">wrapT</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLint</span></pre></dt>
+<div id="TextureSampler">
+  <dt><pre><a href="common.html#TextureSampler"><span class="Identifier">TextureSampler</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <span class="Identifier">magFilter</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLint</span>
+  <span class="Identifier">minFilter</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLint</span>
+  <span class="Identifier">wrapS</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLint</span>
+  <span class="Identifier">wrapT</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLint</span></pre></dt>
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L25" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L25" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L13" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L13" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
-<div id="Texture">
-  <dt><pre><a href="common.html#Texture"><span class="Identifier">Texture</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
-  <span class="Identifier">source</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
-  <span class="Identifier">sampler</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span></pre></dt>
+<div id="TextureTransform">
+  <dt><pre><a href="common.html#TextureTransform"><span class="Identifier">TextureTransform</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <span class="Identifier">texCoord</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
+  <span class="Identifier">offset</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec2</span>
+  <span class="Identifier">scale</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec2</span>
+  <span class="Identifier">rotation</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span></pre></dt>
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L21" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L21" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L7" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L7" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -317,7 +455,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-03-28 16:27:22 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-03-28 16:29:30 UTC</small>
       </div>
     </div>
   </div>

@@ -304,7 +304,7 @@
   <dl class="item">
     <div id="drawPbr-procs-all">
   <div id="drawPbr,Node,Mat4,Mat4,Mat4,Color">
-  <dt><pre><span class="Keyword">proc</span> <a href="#drawPbr%2CNode%2CMat4%2CMat4%2CMat4%2CColor"><span class="Identifier">drawPbr</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="models.html#Node"><span class="Identifier">Node</span></a><span class="Other">;</span> <span class="Identifier">transform</span><span class="Other">,</span> <span class="Identifier">view</span><span class="Other">,</span> <span class="Identifier">proj</span><span class="Other">:</span> <span class="Identifier">Mat4</span><span class="Other">;</span> <span class="Identifier">tint</span><span class="Other">:</span> <span class="Identifier">Color</span><span class="Other">;</span>
+  <dt><pre><span class="Keyword">proc</span> <a href="#drawPbr%2CNode%2CMat4%2CMat4%2CMat4%2CColor"><span class="Identifier">drawPbr</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a><span class="Other">;</span> <span class="Identifier">transform</span><span class="Other">,</span> <span class="Identifier">view</span><span class="Other">,</span> <span class="Identifier">proj</span><span class="Other">:</span> <span class="Identifier">Mat4</span><span class="Other">;</span> <span class="Identifier">tint</span><span class="Other">:</span> <span class="Identifier">Color</span><span class="Other">;</span>
              <span class="Identifier">useTrs</span> <span class="Other">=</span> <span class="Identifier">true</span><span class="Other">;</span> <span class="Identifier">ambientLightColor</span> <span class="Other">=</span> <span class="Identifier">color</span><span class="Other">(</span><span class="FloatNumber">0.1</span><span class="Other">,</span> <span class="FloatNumber">0.1</span><span class="Other">,</span> <span class="FloatNumber">0.1</span><span class="Other">,</span> <span class="DecNumber">1</span><span class="Other">)</span><span class="Other">;</span>
              <span class="Identifier">sunLightDirection</span> <span class="Other">=</span> <span class="Identifier">vec3</span><span class="Other">(</span><span class="DecNumber">1</span><span class="Other">,</span> <span class="DecNumber">4</span><span class="Other">,</span> <span class="DecNumber">2</span><span class="Other">)</span><span class="Other">;</span>
              <span class="Identifier">sunLightColor</span> <span class="Other">=</span> <span class="Identifier">color</span><span class="Other">(</span><span class="DecNumber">1</span><span class="Other">,</span> <span class="DecNumber">1</span><span class="Other">,</span> <span class="DecNumber">1</span><span class="Other">,</span> <span class="DecNumber">1</span><span class="Other">)</span><span class="Other">;</span>
@@ -315,8 +315,8 @@
   <dd>
     
     Draws a node tree with PBR shading.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/pbr.nim#L628" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/pbr.nim#L628" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/pbr.nim#L565" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/pbr.nim#L565" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -324,7 +324,7 @@
 </div>
 <div id="drawPbrWithShadow-procs-all">
   <div id="drawPbrWithShadow,Node,Mat4,Mat4,Mat4,Color">
-  <dt><pre><span class="Keyword">proc</span> <a href="#drawPbrWithShadow%2CNode%2CMat4%2CMat4%2CMat4%2CColor"><span class="Identifier">drawPbrWithShadow</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="models.html#Node"><span class="Identifier">Node</span></a><span class="Other">;</span> <span class="Identifier">transform</span><span class="Other">,</span> <span class="Identifier">view</span><span class="Other">,</span> <span class="Identifier">proj</span><span class="Other">:</span> <span class="Identifier">Mat4</span><span class="Other">;</span> <span class="Identifier">tint</span><span class="Other">:</span> <span class="Identifier">Color</span><span class="Other">;</span>
+  <dt><pre><span class="Keyword">proc</span> <a href="#drawPbrWithShadow%2CNode%2CMat4%2CMat4%2CMat4%2CColor"><span class="Identifier">drawPbrWithShadow</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a><span class="Other">;</span> <span class="Identifier">transform</span><span class="Other">,</span> <span class="Identifier">view</span><span class="Other">,</span> <span class="Identifier">proj</span><span class="Other">:</span> <span class="Identifier">Mat4</span><span class="Other">;</span> <span class="Identifier">tint</span><span class="Other">:</span> <span class="Identifier">Color</span><span class="Other">;</span>
                        <span class="Identifier">sunLightDirection</span> <span class="Other">=</span> <span class="Identifier">vec3</span><span class="Other">(</span><span class="DecNumber">1</span><span class="Other">,</span> <span class="DecNumber">4</span><span class="Other">,</span> <span class="DecNumber">2</span><span class="Other">)</span><span class="Other">;</span> <span class="Identifier">useTrs</span> <span class="Other">=</span> <span class="Identifier">true</span><span class="Other">;</span>
                        <span class="Identifier">ambientLightColor</span> <span class="Other">=</span> <span class="Identifier">color</span><span class="Other">(</span><span class="FloatNumber">0.1</span><span class="Other">,</span> <span class="FloatNumber">0.1</span><span class="Other">,</span> <span class="FloatNumber">0.1</span><span class="Other">,</span> <span class="DecNumber">1</span><span class="Other">)</span><span class="Other">;</span>
                        <span class="Identifier">sunLightColor</span> <span class="Other">=</span> <span class="Identifier">color</span><span class="Other">(</span><span class="DecNumber">1</span><span class="Other">,</span> <span class="DecNumber">1</span><span class="Other">,</span> <span class="DecNumber">1</span><span class="Other">,</span> <span class="DecNumber">1</span><span class="Other">)</span><span class="Other">;</span>
@@ -335,8 +335,8 @@
   <dd>
     
     Draws a node tree with PBR shading and shadows.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/pbr.nim#L724" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/pbr.nim#L724" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/pbr.nim#L661" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/pbr.nim#L661" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -409,7 +409,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-03-28 16:27:22 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-03-28 16:29:31 UTC</small>
       </div>
     </div>
   </div>

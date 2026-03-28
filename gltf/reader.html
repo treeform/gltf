@@ -107,7 +107,7 @@
     <div class="section" id="6">
   <h1><a class="toc-backref" href="#6">Imports</a></h1>
   <dl class="item">
-    <a class="reference external" href="common.html">common</a>, <a class="reference external" href="models.html">models</a>
+    <a class="reference external" href="common.html">common</a>, <a class="reference external" href="internal.html">internal</a>, <a class="reference external" href="models.html">models</a>
   </dl>
 </div>
 <div class="section" id="12">
@@ -115,14 +115,14 @@
   <dl class="item">
     <div id="loadModel-procs-all">
   <div id="loadModel,string">
-  <dt><pre><span class="Keyword">proc</span> <a href="#loadModel%2Cstring"><span class="Identifier">loadModel</span></a><span class="Other">(</span><span class="Identifier">file</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="models.html#Node"><span class="Identifier">Node</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">GltfError</span><span class="Other">,</span> <span class="Identifier">KeyError</span><span class="Other">,</span>
+  <dt><pre><span class="Keyword">proc</span> <a href="#loadModel%2Cstring"><span class="Identifier">loadModel</span></a><span class="Other">(</span><span class="Identifier">file</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">GltfError</span><span class="Other">,</span> <span class="Identifier">KeyError</span><span class="Other">,</span>
     <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">CatchableError</span><span class="Other">,</span> <span class="Identifier">PixieError</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">JsonParsingError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span>
     <span class="Identifier">ReadIOEffect</span><span class="Other">,</span> <span class="Identifier">RootEffect</span><span class="Other">,</span> <span class="Identifier">WriteIOEffect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     Loads a 3D model from a glTF file.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/reader.nim#L1246" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/reader.nim#L1246" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/reader.nim#L1257" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/reader.nim#L1257" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -130,14 +130,14 @@
 </div>
 <div id="loadModelBinaryFile-procs-all">
   <div id="loadModelBinaryFile,string">
-  <dt><pre><span class="Keyword">proc</span> <a href="#loadModelBinaryFile%2Cstring"><span class="Identifier">loadModelBinaryFile</span></a><span class="Other">(</span><span class="Identifier">file</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="models.html#Node"><span class="Identifier">Node</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">GltfError</span><span class="Other">,</span>
+  <dt><pre><span class="Keyword">proc</span> <a href="#loadModelBinaryFile%2Cstring"><span class="Identifier">loadModelBinaryFile</span></a><span class="Other">(</span><span class="Identifier">file</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">GltfError</span><span class="Other">,</span>
     <span class="Identifier">KeyError</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">CatchableError</span><span class="Other">,</span> <span class="Identifier">PixieError</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">JsonParsingError</span><span class="Other">]</span><span class="Other">,</span>
     <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ReadIOEffect</span><span class="Other">,</span> <span class="Identifier">RootEffect</span><span class="Other">,</span> <span class="Identifier">WriteIOEffect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     Loads a 3D model from a binary glTF file.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/reader.nim#L1215" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/reader.nim#L1215" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/reader.nim#L1226" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/reader.nim#L1226" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -146,14 +146,14 @@
 <div id="loadModelJson-procs-all">
   <div id="loadModelJson,JsonNode,string,seq[string]">
   <dt><pre><span class="Keyword">proc</span> <a href="#loadModelJson%2CJsonNode%2Cstring%2Cseq%5Bstring%5D"><span class="Identifier">loadModelJson</span></a><span class="Other">(</span><span class="Identifier">jsonRoot</span><span class="Other">:</span> <span class="Identifier">JsonNode</span><span class="Other">;</span> <span class="Identifier">modelDir</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span>
-                   <span class="Identifier">externalBuffers</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <a href="models.html#Node"><span class="Identifier">Node</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">KeyError</span><span class="Other">,</span>
+                   <span class="Identifier">externalBuffers</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span><span class="Other">)</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">KeyError</span><span class="Other">,</span>
     <span class="Identifier">GltfError</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">CatchableError</span><span class="Other">,</span> <span class="Identifier">PixieError</span><span class="Other">]</span><span class="Other">,</span>
     <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ReadIOEffect</span><span class="Other">,</span> <span class="Identifier">RootEffect</span><span class="Other">,</span> <span class="Identifier">WriteIOEffect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     Loads a 3D model from a parsed glTF json tree.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/reader.nim#L543" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/reader.nim#L543" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/reader.nim#L1211" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/reader.nim#L1211" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -161,14 +161,14 @@
 </div>
 <div id="loadModelJsonFile-procs-all">
   <div id="loadModelJsonFile,string">
-  <dt><pre><span class="Keyword">proc</span> <a href="#loadModelJsonFile%2Cstring"><span class="Identifier">loadModelJsonFile</span></a><span class="Other">(</span><span class="Identifier">file</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="models.html#Node"><span class="Identifier">Node</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span>
+  <dt><pre><span class="Keyword">proc</span> <a href="#loadModelJsonFile%2Cstring"><span class="Identifier">loadModelJsonFile</span></a><span class="Other">(</span><span class="Identifier">file</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span>
     <span class="Identifier">JsonParsingError</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">,</span> <span class="Identifier">KeyError</span><span class="Other">,</span> <span class="Identifier">GltfError</span><span class="Other">,</span> <span class="Identifier">CatchableError</span><span class="Other">,</span>
     <span class="Identifier">PixieError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">ReadIOEffect</span><span class="Other">,</span> <span class="Identifier">WriteIOEffect</span><span class="Other">,</span> <span class="Identifier">RootEffect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     Loads a 3D model from a json glTF file.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/reader.nim#L1208" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/reader.nim#L1208" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/reader.nim#L1219" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/reader.nim#L1219" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -182,8 +182,8 @@
   <dd>
     
     Reads a binary glTF file into a glTF file wrapper.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/reader.nim#L1264" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/reader.nim#L1264" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/reader.nim#L1278" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/reader.nim#L1278" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -197,8 +197,8 @@
   <dd>
     
     Reads a glTF file into a glTF file wrapper.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/reader.nim#L1300" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/reader.nim#L1300" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/reader.nim#L1317" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/reader.nim#L1317" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -212,8 +212,8 @@
   <dd>
     
     Reads a glTF json file into a glTF file wrapper.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/reader.nim#L1253" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/reader.nim#L1253" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/reader.nim#L1264" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/reader.nim#L1264" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -225,7 +225,7 @@
 <div class="section" id="19">
   <h1><a class="toc-backref" href="#19">Exports</a></h1>
   <dl class="item">
-    <a href="common.html#AccessorKind"><span class="Identifier">AccessorKind</span></a>, <a href="common.html#MaterialTexture"><span class="Identifier">MaterialTexture</span></a>, <a href="common.html#BufferView"><span class="Identifier">BufferView</span></a>, <a href="common.html#GltfError"><span class="Identifier">GltfError</span></a>, <a href="common.html#Mesh"><span class="Identifier">Mesh</span></a>, <a href="common.html#PbrMetallicRoughness"><span class="Identifier">PbrMetallicRoughness</span></a>, <a href="common.html#Accessor"><span class="Identifier">Accessor</span></a>, <a href="common.html#InnerMaterial"><span class="Identifier">InnerMaterial</span></a>, <a href="common.html#GltfFile"><span class="Identifier">GltfFile</span></a>, <a href="common.html#Sampler"><span class="Identifier">Sampler</span></a>, <a href="common.html#Texture"><span class="Identifier">Texture</span></a>, <a href="common.html#Primitive"><span class="Identifier">Primitive</span></a>, <a href="common.html#PrimitiveAttributes"><span class="Identifier">PrimitiveAttributes</span></a>
+    <a href="common.html#TextureSampler"><span class="Identifier">TextureSampler</span></a>, <a href="common.html#AnimPath"><span class="Identifier">AnimPath</span></a>, <a href="common.html#GltfError"><span class="Identifier">GltfError</span></a>, <a href="common.html#Mesh"><span class="Identifier">Mesh</span></a>, <a href="common.html#Scene"><span class="Identifier">Scene</span></a>, <a href="common.html#GltfFile"><span class="Identifier">GltfFile</span></a>, <a href="common.html#AABounds"><span class="Identifier">AABounds</span></a>, <a href="common.html#TextureTransform"><span class="Identifier">TextureTransform</span></a>, <a href="common.html#Bounds"><span class="Identifier">Bounds</span></a>, <a href="common.html#Node"><span class="Identifier">Node</span></a>, <a href="common.html#AlphaMode"><span class="Identifier">AlphaMode</span></a>, <a href="common.html#Material"><span class="Identifier">Material</span></a>, <a href="common.html#AnimationClip"><span class="Identifier">AnimationClip</span></a>, <a href="common.html#BoundingSphere"><span class="Identifier">BoundingSphere</span></a>, <a href="common.html#Primitive"><span class="Identifier">Primitive</span></a>, <a href="common.html#AnimationChannel"><span class="Identifier">AnimationChannel</span></a>
   </dl>
 </div>
 
@@ -235,7 +235,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-03-28 16:27:23 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-03-28 16:29:31 UTC</small>
       </div>
     </div>
   </div>
