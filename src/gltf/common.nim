@@ -42,16 +42,25 @@ type
 
   JointIds* = array[4, uint16]
 
+  MorphTarget* = ref object
+    positionDeltas*: seq[Vec3]
+    normalDeltas*: seq[Vec3]
+    tangentDeltas*: seq[Vec3]
+
   Primitive* = ref object
     points*: seq[Vec3]
+    basePoints*: seq[Vec3]
     uvs*: seq[Vec2]
     normals*: seq[Vec3]
+    baseNormals*: seq[Vec3]
     tangents*: seq[Vec4]
+    baseTangents*: seq[Vec4]
     colors*: seq[ColorRGBX]
     jointIds*: seq[JointIds]
     jointWeights*: seq[Vec4]
     indices16*: seq[uint16]
     indices32*: seq[uint32]
+    morphTargets*: seq[MorphTarget]
     material*: Material
     mode*: GLenum
 
@@ -69,6 +78,7 @@ type
   Mesh* = ref object
     name*: string
     primitives*: seq[Primitive]
+    targetNames*: seq[string]
 
   Node* = ref object
     name*: string
@@ -88,6 +98,8 @@ type
     animTime*: float32
 
     mesh*: Mesh
+    morphWeights*: seq[float32]
+    baseMorphWeights*: seq[float32]
     skin*: Skin
     camera*: Camera
     nodes*: seq[Node]
@@ -103,7 +115,7 @@ type
     skeleton*: Node
 
   AnimPath* = enum
-    AnimTranslation, AnimRotation, AnimScale, AnimVisibility
+    AnimTranslation, AnimRotation, AnimScale, AnimVisibility, AnimWeights
 
   AnimInterpolation* = enum
     aiStep, aiLinear, aiCubicSpline
@@ -122,6 +134,9 @@ type
     valuesFloat*: seq[float32]
     inTangentsFloat*: seq[float32]
     outTangentsFloat*: seq[float32]
+    valuesWeights*: seq[seq[float32]]
+    inTangentsWeights*: seq[seq[float32]]
+    outTangentsWeights*: seq[seq[float32]]
 
   AnimationClip* = object
     name*: string

@@ -1,7 +1,7 @@
 import
   std/math,
   vmath,
-  common
+  common, models
 
 proc resetToBase*(node: Node) =
   ## Reset the node and its children to the original transform.
@@ -187,6 +187,80 @@ proc sampleQuat(
       times[i1] - times[i0]
     )
 
+proc sampleWeights(
+  interpolation: AnimInterpolation,
+  times: seq[float32],
+  values, inTangents, outTangents: seq[seq[float32]],
+  t: float32
+): seq[float32] =
+  ## Samples one morph weight frame at a time.
+  if values.len == 0 or times.len == 0:
+    return
+  let (i0, i1, u) = sampleSpan(times, t)
+  if i0 < 0:
+    return
+  if i0 == i1:
+    return values[i0]
+  result.setLen(values[i0].len)
+  case interpolation
+  of aiStep:
+    result = values[i0]
+  of aiLinear:
+    for i in 0 ..< result.len:
+      result[i] = values[i0][i] * (1 - u) + values[i1][i] * u
+  of aiCubicSpline:
+    let dt = times[i1] - times[i0]
+    for i in 0 ..< result.len:
+      result[i] = cubicSplineFloat(
+        values[i0][i],
+        outTangents[i0][i],
+        values[i1][i],
+        inTangents[i1][i],
+        u,
+        dt
+      )
+
+proc applyMorphs(node: Node) =
+  ## Applies morph targets to a node mesh on the CPU.
+  if node == nil:
+    return
+  if node.mesh != nil and node.morphWeights.len > 0:
+    for primitive in node.mesh.primitives:
+      primitive.points = primitive.basePoints
+      primitive.normals = primitive.baseNormals
+      primitive.tangents = primitive.baseTangents
+      for i, target in primitive.morphTargets:
+        let weight =
+          if i < node.morphWeights.len:
+            node.morphWeights[i]
+          else:
+            0.0
+        if weight == 0:
+          continue
+        if target.positionDeltas.len == primitive.points.len:
+          for j in 0 ..< primitive.points.len:
+            primitive.points[j] += target.positionDeltas[j] * weight
+        if target.normalDeltas.len == primitive.normals.len:
+          for j in 0 ..< primitive.normals.len:
+            primitive.normals[j] += target.normalDeltas[j] * weight
+        if target.tangentDeltas.len > 0 and
+          target.tangentDeltas.len == primitive.tangents.len:
+          for j in 0 ..< primitive.tangents.len:
+            primitive.tangents[j].x += target.tangentDeltas[j].x * weight
+            primitive.tangents[j].y += target.tangentDeltas[j].y * weight
+            primitive.tangents[j].z += target.tangentDeltas[j].z * weight
+      if primitive.normals.len > 0:
+        for normal in mitems(primitive.normals):
+          normal = normal.normalize()
+      if primitive.tangents.len > 0:
+        for tangent in mitems(primitive.tangents):
+          let dir = vec3(tangent.x, tangent.y, tangent.z).normalize()
+          tangent.x = dir.x
+          tangent.y = dir.y
+          tangent.z = dir.z
+  for child in node.nodes:
+    child.applyMorphs()
+
 proc applyClipAt*(clip: AnimationClip, time: float32) =
   ## Applies an animation clip at a time.
   if clip.channels.len == 0:
@@ -242,6 +316,16 @@ proc applyClipAt*(clip: AnimationClip, time: float32) =
           ch.outTangentsFloat,
           t
         ) >= 0.5
+    of AnimWeights:
+      if ch.valuesWeights.len > 0:
+        ch.target.morphWeights = sampleWeights(
+          ch.interpolation,
+          ch.times,
+          ch.valuesWeights,
+          ch.inTangentsWeights,
+          ch.outTangentsWeights,
+          t
+        )
 
 proc updateAnimation*(node: Node, dt: float32) =
   ## Advances and applies active animation clips.
@@ -256,3 +340,5 @@ proc updateAnimation*(node: Node, dt: float32) =
     for clipIdx in node.activeClips:
       if clipIdx >= 0 and clipIdx < node.animations.len:
         applyClipAt(node.animations[clipIdx], node.animTime)
+  node.applyMorphs()
+  node.updateOnGpu()
