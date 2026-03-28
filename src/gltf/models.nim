@@ -21,7 +21,7 @@ proc shallowCopy*(node: Node): Node =
   result.baseScale = node.baseScale
 
   result.animations = node.animations
-  result.currentClip = node.currentClip
+  result.activeClips = node.activeClips
   result.animTime = node.animTime
 
   result.mesh = node.mesh
@@ -90,93 +90,6 @@ proc primitiveModeName*(mode: GLenum): string =
     "TRIANGLE_FAN"
   else:
     $mode.int
-
-proc resetToBase*(node: Node) =
-  ## Reset the node (and its children) to the original transform.
-  if node == nil:
-    return
-  node.visible = node.baseVisible
-  node.pos = node.basePos
-  node.rot = node.baseRot
-  node.scale = node.baseScale
-  for n in node.nodes:
-    n.resetToBase()
-
-proc sampleFloat(times: seq[float32], values: seq[float32], t: float32): float32 =
-  ## Samples a scalar animation track at a time.
-  if values.len == 0 or times.len == 0:
-    return 0
-  if t <= times[0]:
-    return values[0]
-  for i in 0 ..< times.len - 1:
-    let t0 = times[i]
-    let t1 = times[i + 1]
-    if t <= t1:
-      let u = (t - t0) / (t1 - t0)
-      return values[i] * (1 - u) + values[i + 1] * u
-  return values[^1]
-
-proc sampleVec3(times: seq[float32], values: seq[Vec3], t: float32): Vec3 =
-  ## Samples a vec3 animation track at a time.
-  if values.len == 0 or times.len == 0:
-    return vec3(0, 0, 0)
-  if t <= times[0]:
-    return values[0]
-  for i in 0 ..< times.len - 1:
-    let t0 = times[i]
-    let t1 = times[i + 1]
-    if t <= t1:
-      let u = (t - t0) / (t1 - t0)
-      return values[i] * (1 - u) + values[i + 1] * u
-  return values[^1]
-
-proc sampleQuat(times: seq[float32], values: seq[Quat], t: float32): Quat =
-  ## Samples a quaternion animation track at a time.
-  if values.len == 0 or times.len == 0:
-    return quat(0, 0, 0, 1)
-  if t <= times[0]:
-    return values[0]
-  for i in 0 ..< times.len - 1:
-    let t0 = times[i]
-    let t1 = times[i + 1]
-    if t <= t1:
-      let u = (t - t0) / (t1 - t0)
-      let q =
-        values[i] * (1 - u) +
-        values[i + 1] * u
-      return q.normalize()
-  return values[^1]
-
-proc applyClipAt*(clip: AnimationClip, time: float32) =
-  ## Applies an animation clip at a time.
-  if clip.channels.len == 0:
-    return
-  let t =
-    if clip.duration > 0: time mod clip.duration
-    else: time
-  for ch in clip.channels:
-    case ch.path
-    of AnimTranslation:
-      if ch.valuesVec3.len > 0:
-        ch.target.pos = sampleVec3(ch.times, ch.valuesVec3, t)
-    of AnimScale:
-      if ch.valuesVec3.len > 0:
-        ch.target.scale = sampleVec3(ch.times, ch.valuesVec3, t)
-    of AnimRotation:
-      if ch.valuesQuat.len > 0:
-        ch.target.rot = sampleQuat(ch.times, ch.valuesQuat, t)
-    of AnimVisibility:
-      if ch.valuesFloat.len > 0:
-        ch.target.visible = sampleFloat(ch.times, ch.valuesFloat, t) >= 0.5
-
-proc updateAnimation*(node: Node, dt: float32) =
-  ## Advance and apply the current animation clip.
-  if node == nil:
-    return
-  node.resetToBase()
-  if node.animations.len > 0 and node.currentClip < node.animations.len:
-    node.animTime += dt
-    applyClipAt(node.animations[node.currentClip], node.animTime)
 
 proc updateTransforms*(
   node: Node,

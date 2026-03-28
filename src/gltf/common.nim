@@ -84,7 +84,7 @@ type
     baseScale*: Vec3
 
     animations*: seq[AnimationClip]
-    currentClip*: int
+    activeClips*: seq[int]
     animTime*: float32
 
     mesh*: Mesh
@@ -105,13 +105,23 @@ type
   AnimPath* = enum
     AnimTranslation, AnimRotation, AnimScale, AnimVisibility
 
+  AnimInterpolation* = enum
+    aiStep, aiLinear, aiCubicSpline
+
   AnimationChannel* = object
     target*: Node
     path*: AnimPath
+    interpolation*: AnimInterpolation
     times*: seq[float32]
     valuesVec3*: seq[Vec3]
+    inTangentsVec3*: seq[Vec3]
+    outTangentsVec3*: seq[Vec3]
     valuesQuat*: seq[Quat]
+    inTangentsQuat*: seq[Quat]
+    outTangentsQuat*: seq[Quat]
     valuesFloat*: seq[float32]
+    inTangentsFloat*: seq[float32]
+    outTangentsFloat*: seq[float32]
 
   AnimationClip* = object
     name*: string
