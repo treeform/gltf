@@ -7,6 +7,7 @@ import
 
 const
   envMapSize* = 512 # Size of the environment map.
+  StudioEnvSize = 8
 
   PbrVertSrc = staticRead("../../data/shaders/pbr.vert")
   PbrFragSrc = staticRead("../../data/shaders/pbr.frag")
@@ -211,15 +212,103 @@ proc createSolidCubeTexture(color: ColorRGBX): GLuint =
   glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE)
   textureId
 
+proc studioFaceDirection(face, x, y, size: int): Vec3 =
+  ## Returns a normalized direction for a cubemap texel.
+  let
+    u = ((x.float32 + 0.5'f) / size.float32) * 2.0'f - 1.0'f
+    v = ((y.float32 + 0.5'f) / size.float32) * 2.0'f - 1.0'f
+  case face
+  of 0:
+    normalize(vec3(1.0'f, -v, -u))
+  of 1:
+    normalize(vec3(-1.0'f, -v, u))
+  of 2:
+    normalize(vec3(u, 1.0'f, v))
+  of 3:
+    normalize(vec3(u, -1.0'f, -v))
+  of 4:
+    normalize(vec3(u, -v, 1.0'f))
+  of 5:
+    normalize(vec3(-u, -v, -1.0'f))
+  else:
+    vec3(0, 1, 0)
+
+proc studioColor(dir: Vec3): ColorRGBX =
+  ## Returns a tiny neutral studio-light sample color.
+  let
+    hemi = clamp(dir.y * 0.5'f + 0.5'f, 0.0'f, 1.0'f)
+    keyDir = normalize(vec3(0.35'f, 0.85'f, 0.25'f))
+    fillDir = normalize(vec3(-0.45'f, 0.65'f, -0.35'f))
+    key = pow(max(dot(dir, keyDir), 0.0'f), 24.0'f)
+    fill = pow(max(dot(dir, fillDir), 0.0'f), 8.0'f)
+    cool = vec3(0.18'f, 0.19'f, 0.21'f)
+    neutral = vec3(0.58'f, 0.6'f, 0.63'f)
+    sky = vec3(0.92'f, 0.94'f, 0.97'f)
+  var color = mix(cool, neutral, hemi)
+  color = mix(color, sky, hemi * hemi)
+  color += vec3(0.28'f, 0.27'f, 0.25'f) * key
+  color += vec3(0.10'f, 0.11'f, 0.12'f) * fill
+  rgbx(
+    clamp((color.x * 255.0'f).int, 0, 255).uint8,
+    clamp((color.y * 255.0'f).int, 0, 255).uint8,
+    clamp((color.z * 255.0'f).int, 0, 255).uint8,
+    255
+  )
+
+proc createStudioCubeTexture(): GLuint =
+  ## Creates a tiny procedural cubemap for neutral studio lighting.
+  var textureId: GLuint
+  glGenTextures(1, textureId.addr)
+  glBindTexture(GL_TEXTURE_CUBE_MAP, textureId)
+
+  for face in 0 ..< 6:
+    let image = newImage(StudioEnvSize, StudioEnvSize)
+    for y in 0 ..< StudioEnvSize:
+      for x in 0 ..< StudioEnvSize:
+        image[x, y] = studioColor(
+          studioFaceDirection(face, x, y, StudioEnvSize)
+        )
+    glTexImage2D(
+      (GL_TEXTURE_CUBE_MAP_POSITIVE_X.int + face).GLenum,
+      0,
+      GL_RGBA.GLint,
+      image.width.GLsizei,
+      image.height.GLsizei,
+      0,
+      GL_RGBA,
+      GL_UNSIGNED_BYTE,
+      image.data[0].addr
+    )
+
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+  glTexParameteri(
+    GL_TEXTURE_CUBE_MAP,
+    GL_TEXTURE_MIN_FILTER,
+    GL_LINEAR_MIPMAP_LINEAR
+  )
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE)
+  glGenerateMipmap(GL_TEXTURE_CUBE_MAP)
+  textureId
+
 proc loadEnvironmentMap*(cubeMapPath: string) =
   ## Loads an environment map from a cube texture path.
+  if environmentMapId != 0:
+    glDeleteTextures(1, environmentMapId.addr)
   environmentMapId = loadCubeTexture(cubeMapPath)
 
-proc loadDefaultEnvironmentMap*(color = rgbx(180, 190, 220, 255)) =
-  ## Loads a fallback environment map when no skybox images are available.
+proc loadSolidEnvironmentMap*(color = rgbx(180, 190, 220, 255)) =
+  ## Loads a solid-color cubemap.
   if environmentMapId != 0:
     glDeleteTextures(1, environmentMapId.addr)
   environmentMapId = createSolidCubeTexture(color)
+
+proc loadDefaultEnvironmentMap*() =
+  ## Loads a small procedural studio cubemap.
+  if environmentMapId != 0:
+    glDeleteTextures(1, environmentMapId.addr)
+  environmentMapId = createStudioCubeTexture()
 
 proc drawSkybox*(view, proj: Mat4, lod: float32 = 0.0) =
   ## Draws the skybox using a full-screen quad.
