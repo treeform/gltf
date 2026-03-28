@@ -1,72 +1,140 @@
 import
-  chroma, opengl, vmath,
-  models
+  chroma, opengl, pixie, vmath
 
 type
   GltfError* = object of CatchableError
 
-  BufferView* = object
-    buffer*: int
-    byteOffset*, byteLength*, byteStride*: int
-
-  AccessorKind* = enum
-    atSCALAR, atVEC2, atVEC3, atVEC4, atMAT2, atMAT3, atMAT4
-
-  Accessor* = object
-    bufferView*: int
-    byteOffset*, count*: int
-    componentType*: GLenum
-    kind*: AccessorKind
-
-  Texture* = object
-    source*: int
-    sampler*: int
-
-  Sampler* = object
-    magFilter*, minFilter*, wrapS*, wrapT*: GLint
-
-  MaterialTexture* = object
-    index*: int
+  TextureTransform* = object
     texCoord*: int
     offset*: Vec2
-    uvScale*: Vec2
+    scale*: Vec2
     rotation*: float32
-    scale*: float32
-    strength*: float32
 
-  PbrMetallicRoughness* = object
-    baseColorTexture*: MaterialTexture
+  TextureSampler* = object
+    magFilter*: GLint
+    minFilter*: GLint
+    wrapS*: GLint
+    wrapT*: GLint
+
+  AlphaMode* = enum
+    OpaqueAlphaMode, MaskAlphaMode, BlendAlphaMode
+
+  Primitive* = ref object
+    points*: seq[Vec3]
+    uvs*: seq[Vec2]
+    normals*: seq[Vec3]
+    tangents*: seq[Vec4]
+    colors*: seq[ColorRGBX]
+    indices16*: seq[uint16]
+    indices32*: seq[uint32]
+    material*: Material
+    mode*: GLenum
+
+    uploaded*: bool
+    vertexArrayId*: GLuint
+    pointsId*: GLuint
+    uvsId*: GLuint
+    normalsId*: GLuint
+    tangentsId*: GLuint
+    colorsId*: GLuint
+    indicesId*: GLuint
+
+  Mesh* = ref object
+    name*: string
+    primitives*: seq[Primitive]
+
+  Node* = ref object
+    name*: string
+    visible*: bool
+    pos*: Vec3
+    rot*: Quat
+    scale*: Vec3
+    mat*: Mat4
+
+    baseVisible*: bool
+    basePos*: Vec3
+    baseRot*: Quat
+    baseScale*: Vec3
+
+    animations*: seq[AnimationClip]
+    currentClip*: int
+    animTime*: float32
+
+    mesh*: Mesh
+    nodes*: seq[Node]
+
+  Scene* = ref object
+    name*: string
+    nodes*: seq[Node]
+
+  AnimPath* = enum
+    AnimTranslation, AnimRotation, AnimScale, AnimVisibility
+
+  AnimationChannel* = object
+    target*: Node
+    path*: AnimPath
+    times*: seq[float32]
+    valuesVec3*: seq[Vec3]
+    valuesQuat*: seq[Quat]
+    valuesFloat*: seq[float32]
+
+  AnimationClip* = object
+    name*: string
+    duration*: float32
+    channels*: seq[AnimationChannel]
+
+  Material* = ref object
+    name*: string
+    baseColor*: Image
+    baseColorTransform*: TextureTransform
+    baseColorSampler*: TextureSampler
     baseColorFactor*: Color
-    metallicRoughnessTexture*: MaterialTexture
+    metallicRoughness*: Image
+    metallicRoughnessTransform*: TextureTransform
+    metallicRoughnessSampler*: TextureSampler
     metallicFactor*: float32
     roughnessFactor*: float32
-
-  InnerMaterial* = object
-    name*: string
-    pbrMetallicRoughness*: PbrMetallicRoughness
-    normalTexture*: MaterialTexture
-    occlusionTexture*: MaterialTexture
-    emissiveTexture*: MaterialTexture
+    normal*: Image
+    normalTransform*: TextureTransform
+    normalSampler*: TextureSampler
+    hasNormalTexture*: bool
+    normalScale*: float32
+    occlusion*: Image
+    occlusionTransform*: TextureTransform
+    occlusionSampler*: TextureSampler
+    occlusionStrength*: float32
+    emissive*: Image
+    emissiveTransform*: TextureTransform
+    emissiveSampler*: TextureSampler
     emissiveFactor*: Color
-    alphaMode*: string
+
+    alphaMode*: AlphaMode
     alphaCutoff*: float32
     doubleSided*: bool
     transmissionFactor*: float32
 
-  Mesh* = object
-    name*: string
-    primitives*: seq[int]
+    baseColorId*: GLuint
+    metallicRoughnessId*: GLuint
+    normalId*: GLuint
+    occlusionId*: GLuint
+    emissiveId*: GLuint
 
-  PrimitiveAttributes* = object
-    position*, normal*, color0*, texcoord0*: int
+  AABounds* = object
+    min*, max*: Vec3
 
-  Primitive* = object
-    attributes*: PrimitiveAttributes
-    indices*, material*: int
-    mode*: GLenum
+  Bounds* = object
+    center*: Vec3
+    size*: Vec3
+    radius*: float32
+
+  BoundingSphere* = object
+    center*: Vec3
+    radius*: float
 
   GltfFile* = ref object
     path*: string
     root*: Node
+    scenes*: seq[Scene]
+    scene*: int
     unsupportedUsedExtensions*: seq[string]
 

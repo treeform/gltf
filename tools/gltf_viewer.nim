@@ -211,7 +211,7 @@ proc hasModel(node: Node): bool =
   ## Returns true when the node tree has geometry to draw.
   if node == nil:
     return false
-  if node.points.len > 0:
+  if node.mesh != nil and node.mesh.primitives.len > 0:
     return true
   for child in node.nodes:
     if child.hasModel():

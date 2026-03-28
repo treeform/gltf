@@ -1,7 +1,7 @@
 import
   std/[base64, json, os, strformat, strutils],
   chroma, flatty/binny, opengl, pixie, vmath, webby,
-  common, models
+  common, internal, models
 
 export common
 
@@ -131,43 +131,41 @@ proc defaultMaterialTexture(): MaterialTexture =
     strength: 1
   )
 
-proc readTextureTransform(entry: JsonNode, materialTexture: var MaterialTexture) =
+proc readTextureTransform(entry: JsonNode, texInfo: var MaterialTexture) =
   ## Reads core and KHR_texture_transform texture info.
   if "texCoord" in entry:
-    materialTexture.texCoord = entry["texCoord"].getInt()
+    texInfo.texCoord = entry["texCoord"].getInt()
 
   if "extensions" in entry and
     "KHR_texture_transform" in entry["extensions"]:
     let transform = entry["extensions"]["KHR_texture_transform"]
     if "offset" in transform:
-      materialTexture.offset = vec2(
+      texInfo.offset = vec2(
         transform["offset"][0].getFloat().float32,
         transform["offset"][1].getFloat().float32
       )
     if "scale" in transform:
-      materialTexture.uvScale = vec2(
+      texInfo.uvScale = vec2(
         transform["scale"][0].getFloat().float32,
         transform["scale"][1].getFloat().float32
       )
     if "rotation" in transform:
-      materialTexture.rotation = transform["rotation"].getFloat().float32
+      texInfo.rotation = transform["rotation"].getFloat().float32
     if "texCoord" in transform:
-      materialTexture.texCoord = transform["texCoord"].getInt()
+      texInfo.texCoord = transform["texCoord"].getInt()
 
 proc loadPrimitive(
-  n: Node,
-  mesh: Mesh,
   primitiveIndex: int,
-  primitives: seq[Primitive],
+  primitiveDefs: seq[PrimitiveInfo],
   accessors: seq[Accessor],
   bufferViews: seq[BufferView],
   buffers: seq[string],
   images: seq[Image],
   textures: seq[Texture],
   samplers: seq[Sampler],
-  materials: seq[InnerMaterial]
-) =
-  ## Loads a primitive into a node.
+  materials: seq[MaterialInfo]
+): Primitive =
+  ## Loads one glTF primitive into a runtime primitive.
   proc getTextureSampler(textureIndex: int): TextureSampler =
     result = defaultTextureSampler()
     if textureIndex < 0 or textureIndex >= textures.len:
@@ -181,60 +179,64 @@ proc loadPrimitive(
     result.wrapS = sampler.wrapS
     result.wrapT = sampler.wrapT
 
-  let primitive = primitives[primitiveIndex]
-  n.material = Material()
-  n.material.baseColorSampler = defaultTextureSampler()
-  n.material.metallicRoughnessSampler = defaultTextureSampler()
-  n.material.normalSampler = defaultTextureSampler()
-  n.material.occlusionSampler = defaultTextureSampler()
-  n.material.emissiveSampler = defaultTextureSampler()
-  if primitive.material >= 0:
-    let material = materials[primitive.material]
+  let primInfo = primitiveDefs[primitiveIndex]
+  result = Primitive(mode: primInfo.mode)
+  result.material = Material()
+  result.material.baseColorSampler = defaultTextureSampler()
+  result.material.metallicRoughnessSampler = defaultTextureSampler()
+  result.material.normalSampler = defaultTextureSampler()
+  result.material.occlusionSampler = defaultTextureSampler()
+  result.material.emissiveSampler = defaultTextureSampler()
+  if primInfo.material >= 0:
+    let material = materials[primInfo.material]
 
     let pbr = material.pbrMetallicRoughness
     if pbr.baseColorTexture.index >= 0:
-      n.material.baseColor =
+      result.material.baseColor =
         images[textures[pbr.baseColorTexture.index].source]
-      n.material.baseColorSampler = getTextureSampler(pbr.baseColorTexture.index)
+      result.material.baseColorSampler =
+        getTextureSampler(pbr.baseColorTexture.index)
     else:
-      n.material.baseColor = newImage(1, 1)
-      n.material.baseColor.fill(rgbx(255, 255, 255, 255))
-    n.material.baseColorTransform = TextureTransform(
+      result.material.baseColor = newImage(1, 1)
+      result.material.baseColor.fill(rgbx(255, 255, 255, 255))
+    result.material.baseColorTransform = TextureTransform(
       texCoord: pbr.baseColorTexture.texCoord,
       offset: pbr.baseColorTexture.offset,
       scale: pbr.baseColorTexture.uvScale,
       rotation: pbr.baseColorTexture.rotation
     )
-    n.material.baseColorFactor = pbr.baseColorFactor
+    result.material.baseColorFactor = pbr.baseColorFactor
 
     if pbr.metallicRoughnessTexture.index >= 0:
-      n.material.metallicRoughness =
+      result.material.metallicRoughness =
         images[textures[pbr.metallicRoughnessTexture.index].source]
-      n.material.metallicRoughnessSampler =
+      result.material.metallicRoughnessSampler =
         getTextureSampler(pbr.metallicRoughnessTexture.index)
     else:
-      n.material.metallicRoughness = newImage(1, 1)
-      n.material.metallicRoughness.fill(rgbx(255, 255, 255, 255))
-    n.material.metallicRoughnessTransform = TextureTransform(
+      result.material.metallicRoughness = newImage(1, 1)
+      result.material.metallicRoughness.fill(rgbx(255, 255, 255, 255))
+    result.material.metallicRoughnessTransform = TextureTransform(
       texCoord: pbr.metallicRoughnessTexture.texCoord,
       offset: pbr.metallicRoughnessTexture.offset,
       scale: pbr.metallicRoughnessTexture.uvScale,
       rotation: pbr.metallicRoughnessTexture.rotation
     )
-    n.material.metallicFactor = pbr.metallicFactor
-    n.material.roughnessFactor = pbr.roughnessFactor
+    result.material.metallicFactor = pbr.metallicFactor
+    result.material.roughnessFactor = pbr.roughnessFactor
 
     if material.normalTexture.index >= 0:
-      n.material.normal = images[textures[material.normalTexture.index].source]
-      n.material.normalSampler = getTextureSampler(material.normalTexture.index)
-      n.material.hasNormalTexture = true
-      n.material.normalScale = material.normalTexture.scale
+      result.material.normal =
+        images[textures[material.normalTexture.index].source]
+      result.material.normalSampler =
+        getTextureSampler(material.normalTexture.index)
+      result.material.hasNormalTexture = true
+      result.material.normalScale = material.normalTexture.scale
     else:
-      n.material.normal = newImage(1, 1)
-      n.material.normal.fill(rgbx(128, 128, 255, 255))
-      n.material.hasNormalTexture = false
-      n.material.normalScale = 1.0
-    n.material.normalTransform = TextureTransform(
+      result.material.normal = newImage(1, 1)
+      result.material.normal.fill(rgbx(128, 128, 255, 255))
+      result.material.hasNormalTexture = false
+      result.material.normalScale = 1.0
+    result.material.normalTransform = TextureTransform(
       texCoord: material.normalTexture.texCoord,
       offset: material.normalTexture.offset,
       scale: material.normalTexture.uvScale,
@@ -242,110 +244,111 @@ proc loadPrimitive(
     )
 
     if material.occlusionTexture.index >= 0:
-      n.material.occlusion =
+      result.material.occlusion =
         images[textures[material.occlusionTexture.index].source]
-      n.material.occlusionSampler =
+      result.material.occlusionSampler =
         getTextureSampler(material.occlusionTexture.index)
     else:
-      n.material.occlusion = newImage(1, 1)
-      n.material.occlusion.fill(rgbx(255, 255, 255, 255))
-    n.material.occlusionTransform = TextureTransform(
+      result.material.occlusion = newImage(1, 1)
+      result.material.occlusion.fill(rgbx(255, 255, 255, 255))
+    result.material.occlusionTransform = TextureTransform(
       texCoord: material.occlusionTexture.texCoord,
       offset: material.occlusionTexture.offset,
       scale: material.occlusionTexture.uvScale,
       rotation: material.occlusionTexture.rotation
     )
-    n.material.occlusionStrength = material.occlusionTexture.strength
+    result.material.occlusionStrength = material.occlusionTexture.strength
 
     if material.emissiveTexture.index >= 0:
-      n.material.emissive =
+      result.material.emissive =
         images[textures[material.emissiveTexture.index].source]
-      n.material.emissiveSampler = getTextureSampler(material.emissiveTexture.index)
+      result.material.emissiveSampler =
+        getTextureSampler(material.emissiveTexture.index)
     else:
-      n.material.emissive = newImage(1, 1)
-      n.material.emissive.fill(rgbx(255, 255, 255, 255))
-    n.material.emissiveTransform = TextureTransform(
+      result.material.emissive = newImage(1, 1)
+      result.material.emissive.fill(rgbx(255, 255, 255, 255))
+    result.material.emissiveTransform = TextureTransform(
       texCoord: material.emissiveTexture.texCoord,
       offset: material.emissiveTexture.offset,
       scale: material.emissiveTexture.uvScale,
       rotation: material.emissiveTexture.rotation
     )
-    n.material.emissiveFactor = material.emissiveFactor
-    n.material.transmissionFactor = material.transmissionFactor
+    result.material.emissiveFactor = material.emissiveFactor
+    result.material.transmissionFactor = material.transmissionFactor
 
     case material.alphaMode
     of "OPAQUE":
-      if n.material.transmissionFactor > 0:
-        n.material.alphaMode = BlendAlphaMode
+      if result.material.transmissionFactor > 0:
+        result.material.alphaMode = BlendAlphaMode
       else:
-        n.material.alphaMode = OpaqueAlphaMode
-      n.material.alphaCutoff = -1.0
+        result.material.alphaMode = OpaqueAlphaMode
+      result.material.alphaCutoff = -1.0
     of "MASK":
-      n.material.alphaMode = MaskAlphaMode
-      n.material.alphaCutoff = material.alphaCutoff
+      result.material.alphaMode = MaskAlphaMode
+      result.material.alphaCutoff = material.alphaCutoff
     of "BLEND":
-      n.material.alphaMode = BlendAlphaMode
-      n.material.alphaCutoff = -1.0
+      result.material.alphaMode = BlendAlphaMode
+      result.material.alphaCutoff = -1.0
     else:
       raise newException(GltfError, &"Invalid alpha mode {material.alphaMode}")
 
-    n.material.doubleSided = material.doubleSided
+    result.material.doubleSided = material.doubleSided
 
-  if primitive.indices >= 0:
+  if primInfo.indices >= 0:
     let
-      accessor = accessors[primitive.indices]
+      accessor = accessors[primInfo.indices]
       bufferView = bufferViews[accessor.bufferView]
       buffer = buffers[bufferView.buffer]
       start = bufferView.byteOffset + accessor.byteOffset
     if accessor.componentType == GL_UNSIGNED_BYTE:
       assertRaise accessor.kind == atSCALAR, "Unsupported index kind"
       assertRaise bufferView.byteStride == 0, "Unsupported index byteStride"
-      n.indices16.setLen(accessor.count)
+      result.indices16.setLen(accessor.count)
       for i in 0 ..< accessor.count:
-        n.indices16[i] = buffer[start + i].uint8
+        result.indices16[i] = buffer[start + i].uint8
     elif accessor.componentType == cGL_UNSIGNED_SHORT:
       assertRaise accessor.kind == atSCALAR, "Unsupported index kind"
       assertRaise bufferView.byteStride == 0, "Unsupported index byteStride"
-      n.indices16.setLen(accessor.count)
-      copyMem(n.indices16[0].addr, buffer[start].addr, accessor.count * 2)
+      result.indices16.setLen(accessor.count)
+      copyMem(result.indices16[0].addr, buffer[start].addr, accessor.count * 2)
     elif accessor.componentType == GL_UNSIGNED_INT:
       assertRaise accessor.kind == atSCALAR, "Unsupported index kind"
       assertRaise bufferView.byteStride == 0, "Unsupported index byteStride"
-      n.indices32.setLen(accessor.count)
-      copyMem(n.indices32[0].addr, buffer[start].addr, accessor.count * 4)
+      result.indices32.setLen(accessor.count)
+      copyMem(result.indices32[0].addr, buffer[start].addr, accessor.count * 4)
     else:
       raise newException(
         GltfError,
         "Invalid index component type: " & $accessor.componentType.int
       )
 
-  if primitive.attributes.position >= 0:
+  if primInfo.attributes.position >= 0:
     let
-      accessor = accessors[primitive.attributes.position]
+      accessor = accessors[primInfo.attributes.position]
       bufferView = bufferViews[accessor.bufferView]
       buffer = buffers[bufferView.buffer]
       start = bufferView.byteOffset + accessor.byteOffset
     if accessor.componentType == cGL_FLOAT:
       assertRaise accessor.kind == atVEC3, "Unsupported position kind"
-      n.points.setLen(accessor.count)
+      result.points.setLen(accessor.count)
       if bufferView.byteStride == 0 or bufferView.byteStride == 12:
-        copyMem(n.points[0].addr, buffer[start].addr, accessor.count * 12)
+        copyMem(result.points[0].addr, buffer[start].addr, accessor.count * 12)
       else:
         let stride = bufferView.byteStride
         for i in 0 ..< accessor.count:
-          n.points[i] = vec3(
+          result.points[i] = vec3(
             buffer.readFloat32(start + i * stride),
             buffer.readFloat32(start + i * stride + 4),
             buffer.readFloat32(start + i * stride + 8)
           )
     elif accessor.componentType == GL_UNSIGNED_SHORT:
       assertRaise accessor.kind == atVEC3, "Unsupported position kind"
-      n.points.setLen(accessor.count)
+      result.points.setLen(accessor.count)
       var stride = bufferView.byteStride
       if stride == 0:
         stride = 6
       for i in 0 ..< accessor.count:
-        n.points[i] = vec3(
+        result.points[i] = vec3(
           float32 buffer.readUint16(start + i * stride),
           float32 buffer.readUint16(start + i * stride + 2),
           float32 buffer.readUint16(start + i * stride + 4)
@@ -353,12 +356,12 @@ proc loadPrimitive(
     elif accessor.componentType == GL_UNSIGNED_INT:
       assertRaise accessor.kind == atVEC3, "Unsupported position kind"
       assertRaise bufferView.byteStride == 0, "Unsupported position byteStride"
-      n.points.setLen(accessor.count)
+      result.points.setLen(accessor.count)
       var stride = bufferView.byteStride
       if stride == 0:
         stride = 12
       for i in 0 ..< accessor.count:
-        n.points[i] = vec3(
+        result.points[i] = vec3(
           float32 buffer.readUint32(start + i * stride),
           float32 buffer.readUint32(start + i * stride + 4),
           float32 buffer.readUint32(start + i * stride + 8)
@@ -369,30 +372,30 @@ proc loadPrimitive(
         "Invalid position component type: " & $accessor.componentType.int
       )
 
-  if primitive.attributes.normal >= 0:
+  if primInfo.attributes.normal >= 0:
     let
-      accessor = accessors[primitive.attributes.normal]
+      accessor = accessors[primInfo.attributes.normal]
       bufferView = bufferViews[accessor.bufferView]
       buffer = buffers[bufferView.buffer]
       start = bufferView.byteOffset + accessor.byteOffset
     assertRaise accessor.componentType == cGL_FLOAT,
       "Unsupported normal componentType"
     assertRaise accessor.kind == atVEC3, "Unsupported normal kind"
-    n.normals.setLen(accessor.count)
+    result.normals.setLen(accessor.count)
     if bufferView.byteStride == 0 or bufferView.byteStride == 12:
-      copyMem(n.normals[0].addr, buffer[start].addr, accessor.count * 12)
+      copyMem(result.normals[0].addr, buffer[start].addr, accessor.count * 12)
     else:
       let stride = bufferView.byteStride
       for i in 0 ..< accessor.count:
-        n.normals[i] = vec3(
+        result.normals[i] = vec3(
           buffer.readFloat32(start + i * stride),
           buffer.readFloat32(start + i * stride + 4),
           buffer.readFloat32(start + i * stride + 8)
         )
 
-  if primitive.attributes.color0 >= 0:
+  if primInfo.attributes.color0 >= 0:
     let
-      accessor = accessors[primitive.attributes.color0]
+      accessor = accessors[primInfo.attributes.color0]
       bufferView = bufferViews[accessor.bufferView]
       buffer = buffers[bufferView.buffer]
       start = bufferView.byteOffset + accessor.byteOffset
@@ -402,20 +405,20 @@ proc loadPrimitive(
         if stride == 0:
           stride = 16
         for i in 0 ..< accessor.count:
-          n.colors.add(rgba(
+          result.colors.add(rgba(
             (buffer.readFloat32(start + i * stride) * 255).uint8,
             (buffer.readFloat32(start + i * stride + 4) * 255).uint8,
             (buffer.readFloat32(start + i * stride + 8) * 255).uint8,
             (buffer.readFloat32(start + i * stride + 12) * 255).uint8
           ).rgbx)
       elif accessor.componentType == GL_UNSIGNED_BYTE:
-        n.colors.setLen(accessor.count)
+        result.colors.setLen(accessor.count)
         if bufferView.byteStride == 0 or bufferView.byteStride == 4:
-          copyMem(n.colors[0].addr, buffer[start].addr, accessor.count * 4)
+          copyMem(result.colors[0].addr, buffer[start].addr, accessor.count * 4)
         else:
           let stride = bufferView.byteStride
           for i in 0 ..< accessor.count:
-            n.colors[i] = rgbx(
+            result.colors[i] = rgbx(
               buffer.readUint8(start + i * stride),
               buffer.readUint8(start + i * stride + 1),
               buffer.readUint8(start + i * stride + 2),
@@ -432,26 +435,26 @@ proc loadPrimitive(
         if stride == 0:
           stride = 12
         for i in 0 ..< accessor.count:
-          n.colors.add(rgbx(
+          result.colors.add(rgbx(
             (buffer.readFloat32(start + i * stride) * 255).uint8,
             (buffer.readFloat32(start + i * stride + 4) * 255).uint8,
             (buffer.readFloat32(start + i * stride + 8) * 255).uint8,
             255
           ))
       elif accessor.componentType == GL_UNSIGNED_BYTE:
-        n.colors.setLen(accessor.count)
+        result.colors.setLen(accessor.count)
         var stride = bufferView.byteStride
         if stride == 0:
           stride = 3
         for i in 0 ..< accessor.count:
-          n.colors[i] = rgbx(
+          result.colors[i] = rgbx(
             buffer.readUint8(start + i * stride),
             buffer.readUint8(start + i * stride + 1),
             buffer.readUint8(start + i * stride + 2),
             255
           )
       elif accessor.componentType == GL_UNSIGNED_SHORT:
-        n.colors.setLen(accessor.count)
+        result.colors.setLen(accessor.count)
         var stride = bufferView.byteStride
         if stride == 0:
           stride = 6
@@ -460,7 +463,7 @@ proc loadPrimitive(
           let r = buffer.readUint16(base)
           let g = buffer.readUint16(base + 2)
           let b = buffer.readUint16(base + 4)
-          n.colors[i] = rgbx(
+          result.colors[i] = rgbx(
             (r div 257).uint8,
             (g div 257).uint8,
             (b div 257).uint8,
@@ -472,43 +475,44 @@ proc loadPrimitive(
         "Invalid color kind: " & $accessor.kind
       )
 
-  if primitive.attributes.texcoord0 >= 0:
+  if primInfo.attributes.texcoord0 >= 0:
     let
-      accessor = accessors[primitive.attributes.texcoord0]
+      accessor = accessors[primInfo.attributes.texcoord0]
       bufferView = bufferViews[accessor.bufferView]
       buffer = buffers[bufferView.buffer]
       start = bufferView.byteOffset + accessor.byteOffset
     assertRaise accessor.componentType == cGL_FLOAT,
       "Unsupported texcoord componentType"
     assertRaise accessor.kind == atVEC2, "Unsupported texcoord kind"
-    n.uvs.setLen(accessor.count)
+    result.uvs.setLen(accessor.count)
     if bufferView.byteStride == 0 or bufferView.byteStride == 8:
-      copyMem(n.uvs[0].addr, buffer[start].addr, accessor.count * 8)
+      copyMem(result.uvs[0].addr, buffer[start].addr, accessor.count * 8)
     else:
       let stride = bufferView.byteStride
       for i in 0 ..< accessor.count:
-        n.uvs[i] = vec2(
+        result.uvs[i] = vec2(
           buffer.readFloat32(start + i * stride),
           buffer.readFloat32(start + i * stride + 4)
         )
 
-  if primitive.attributes.normal >= 0 and primitive.attributes.texcoord0 >= 0:
-    n.tangents.setLen(n.normals.len)
+  if primInfo.attributes.normal >= 0 and
+    primInfo.attributes.texcoord0 >= 0:
+    result.tangents.setLen(result.normals.len)
 
     template computeTangents(idx: untyped) =
-      var counts = newSeq[int](n.normals.len)
-      var tmpTangents = newSeq[Vec3](n.normals.len)
+      var counts = newSeq[int](result.normals.len)
+      var tmpTangents = newSeq[Vec3](result.normals.len)
       for i in 0 ..< idx.len div 3:
         let
           i0 = idx[i * 3].int
           i1 = idx[i * 3 + 1].int
           i2 = idx[i * 3 + 2].int
-          v0 = n.points[i0]
-          v1 = n.points[i1]
-          v2 = n.points[i2]
-          uv0 = n.uvs[i0]
-          uv1 = n.uvs[i1]
-          uv2 = n.uvs[i2]
+          v0 = result.points[i0]
+          v1 = result.points[i1]
+          v2 = result.points[i2]
+          uv0 = result.uvs[i0]
+          uv1 = result.uvs[i1]
+          uv2 = result.uvs[i2]
           edge1 = v1 - v0
           edge2 = v2 - v0
           deltaUv1 = uv1 - uv0
@@ -526,25 +530,31 @@ proc loadPrimitive(
         counts[i1] += 1
         counts[i2] += 1
 
-      for i in 0 ..< n.tangents.len:
+      for i in 0 ..< result.tangents.len:
         if counts[i] > 0:
           let tangent = normalize(tmpTangents[i] / counts[i].float32)
           let handedness = 1.0
-          n.tangents[i].x = tangent.x
-          n.tangents[i].y = tangent.y
-          n.tangents[i].z = tangent.z
-          n.tangents[i].w = handedness
+          result.tangents[i].x = tangent.x
+          result.tangents[i].y = tangent.y
+          result.tangents[i].z = tangent.z
+          result.tangents[i].w = handedness
 
-    if n.indices16.len > 0:
-      computeTangents(n.indices16)
-    if n.indices32.len > 0:
-      computeTangents(n.indices32)
+    if result.indices16.len > 0:
+      computeTangents(result.indices16)
+    if result.indices32.len > 0:
+      computeTangents(result.indices32)
 
-proc loadModelJson*(
+type
+  LoadResult = object
+    root: Node
+    scenes: seq[Scene]
+    sceneId: int
+
+proc loadModelJsonInternal(
   jsonRoot: JsonNode,
   modelDir: string,
   externalBuffers: seq[string]
-): Node =
+): LoadResult =
   ## Loads a 3D model from a parsed glTF json tree.
   if "extensionsRequired" in jsonRoot:
     for extension in jsonRoot["extensionsRequired"]:
@@ -680,10 +690,10 @@ proc loadModelJson*(
         sampler.wrapT = GL_REPEAT
       samplers.add(sampler)
 
-  var materials: seq[InnerMaterial]
+  var materials: seq[MaterialInfo]
   if "materials" in jsonRoot:
     for entry in jsonRoot["materials"]:
-      var material = InnerMaterial()
+      var material = MaterialInfo()
       material.pbrMetallicRoughness.baseColorTexture = defaultMaterialTexture()
       material.pbrMetallicRoughness.metallicRoughnessTexture =
         defaultMaterialTexture()
@@ -815,15 +825,15 @@ proc loadModelJson*(
       materials.add(material)
 
   var
-    meshes: seq[Mesh]
-    primitives: seq[Primitive]
+    meshDefs: seq[MeshInfo]
+    primitiveDefs: seq[PrimitiveInfo]
   for entry in jsonRoot["meshes"]:
-    var mesh = Mesh()
+    var mesh = MeshInfo()
     if "name" in entry:
       mesh.name = entry["name"].getStr()
     mesh.primitives = @[]
     for primitive in entry["primitives"]:
-      var prim = Primitive()
+      var prim = PrimitiveInfo()
       assertRaise "attributes" in primitive, "Missing primitive attributes"
       let attributes = primitive["attributes"]
       if "POSITION" in attributes:
@@ -854,9 +864,9 @@ proc loadModelJson*(
         prim.mode = primitive["mode"].getInt().GLenum
       else:
         prim.mode = GL_TRIANGLES
-      primitives.add(prim)
-      mesh.primitives.add(primitives.len - 1)
-    meshes.add(mesh)
+      primitiveDefs.add(prim)
+      mesh.primitives.add(primitiveDefs.len - 1)
+    meshDefs.add(mesh)
 
   var
     nodes: seq[Node]
@@ -1034,11 +1044,16 @@ proc loadModelJson*(
 
           if "extensions" in target and
              "KHR_animation_pointer" in target["extensions"]:
-            let pointer = target["extensions"]["KHR_animation_pointer"]["pointer"].getStr()
+            let pointer =
+              target["extensions"]["KHR_animation_pointer"]["pointer"].getStr()
             if pointer.startsWith("/nodes/") and
                pointer.endsWith("/extensions/KHR_node_visibility/visible"):
               let suffix = "/extensions/KHR_node_visibility/visible"
-              let remainder = pointer.substr("/nodes/".len, pointer.len - suffix.len - 1)
+              let remainder =
+                pointer.substr(
+                  "/nodes/".len,
+                  pointer.len - suffix.len - 1
+                )
               try:
                 nodeIdx = parseInt(remainder)
                 path = AnimVisibility
@@ -1125,29 +1140,31 @@ proc loadModelJson*(
       if clip.channels.len > 0:
         clips.add(clip)
 
-  var scenes: seq[Mesh]
+  var sceneRoots: seq[seq[int]]
+  var scenes: seq[Scene]
   var sceneId = 0
   if "scene" in jsonRoot:
     sceneId = jsonRoot["scene"].getInt()
   for entry in jsonRoot["scenes"]:
-    var scene = Mesh()
+    var scene = Scene()
     if "name" in entry:
       scene.name = entry["name"].getStr()
+    var roots: seq[int]
     for n in entry["nodes"]:
-      scene.primitives.add(n.getInt())
+      roots.add(n.getInt())
     scenes.add(scene)
+    sceneRoots.add(roots)
 
   proc processNode(nodeId: int): Node =
     var n = nodes[nodeId]
     let meshId = nodeMeshes[nodeId]
     if meshId >= 0:
-      let mesh = meshes[meshId]
-      if mesh.primitives.len == 1:
-        loadPrimitive(
-          n,
-          mesh,
-          mesh.primitives[0],
-          primitives,
+      let meshInfo = meshDefs[meshId]
+      let runtimeMesh = Mesh(name: meshInfo.name)
+      for primitiveIndex in meshInfo.primitives:
+        runtimeMesh.primitives.add(loadPrimitive(
+          primitiveIndex,
+          primitiveDefs,
           accessors,
           bufferViews,
           buffers,
@@ -1155,55 +1172,49 @@ proc loadModelJson*(
           textures,
           samplers,
           materials
-        )
-      else:
-        for primitiveIndex in mesh.primitives:
-          var child = Node()
-          child.name = mesh.name
-          child.visible = true
-          child.pos = vec3(0, 0, 0)
-          child.rot = quat(0, 0, 0, 1)
-          child.scale = vec3(1, 1, 1)
-          child.baseVisible = child.visible
-          child.basePos = child.pos
-          child.baseRot = child.rot
-          child.baseScale = child.scale
-          child.mat = n.mat
-          loadPrimitive(
-            child,
-            mesh,
-            primitiveIndex,
-            primitives,
-            accessors,
-            bufferViews,
-            buffers,
-            images,
-            textures,
-            samplers,
-            materials
-          )
-          n.nodes.add(child)
+        ))
+      n.mesh = runtimeMesh
 
     for childId in nodeChildren[nodeId]:
       n.nodes.add(processNode(childId))
 
     return n
 
-  result = Node()
-  result.visible = true
-  result.name = "Root"
-  result.pos = vec3(0, 0, 0)
-  result.rot = quat(0, 0, 0, 1)
-  result.scale = vec3(1, 1, 1)
-  result.baseVisible = result.visible
-  result.basePos = result.pos
-  result.baseRot = result.rot
-  result.baseScale = result.scale
-  for nodeId in scenes[sceneId].primitives:
-    result.nodes.add(processNode(nodeId))
-  result.animations = clips
-  result.currentClip = 0
-  result.animTime = 0
+  # Keep one convenience tree for the selected scene.
+  result.root = Node()
+  result.root.visible = true
+  result.root.name = "Root"
+  result.root.pos = vec3(0, 0, 0)
+  result.root.rot = quat(0, 0, 0, 1)
+  result.root.scale = vec3(1, 1, 1)
+  result.root.baseVisible = result.root.visible
+  result.root.basePos = result.root.pos
+  result.root.baseRot = result.root.rot
+  result.root.baseScale = result.root.scale
+  for i, scene in scenes:
+    for nodeId in sceneRoots[i]:
+      scene.nodes.add(processNode(nodeId))
+  if scenes.len > 0:
+    let selectedScene = max(0, min(sceneId, scenes.high))
+    for sceneNode in scenes[selectedScene].nodes:
+      result.root.nodes.add(sceneNode)
+  result.root.animations = clips
+  result.root.currentClip = 0
+  result.root.animTime = 0
+  result.scenes = scenes
+  result.sceneId =
+    if scenes.len > 0:
+      max(0, min(sceneId, scenes.high))
+    else:
+      0
+
+proc loadModelJson*(
+  jsonRoot: JsonNode,
+  modelDir: string,
+  externalBuffers: seq[string]
+): Node =
+  ## Loads a 3D model from a parsed glTF json tree.
+  loadModelJsonInternal(jsonRoot, modelDir, externalBuffers).root
 
 proc loadModelJsonFile*(file: string): Node =
   ## Loads a 3D model from a json glTF file.
@@ -1255,9 +1266,12 @@ proc readGltfJsonFile*(file: string): GltfFile =
   let
     jsonRoot = parseJson(readFile(file))
     modelDir = splitPath(file)[0]
+    loaded = loadModelJsonInternal(jsonRoot, modelDir, @[])
   GltfFile(
     path: file,
-    root: loadModelJson(jsonRoot, modelDir, @[]),
+    root: loaded.root,
+    scenes: loaded.scenes,
+    scene: loaded.sceneId,
     unsupportedUsedExtensions: unsupportedUsedExtensions(jsonRoot)
   )
 
@@ -1291,9 +1305,12 @@ proc readGltfBinaryFile*(file: string): GltfFile =
       buffers.add(chunkData)
 
   let jsonRoot = parseJson(jsonData)
+  let loaded = loadModelJsonInternal(jsonRoot, modelDir, buffers)
   GltfFile(
     path: file,
-    root: loadModelJson(jsonRoot, modelDir, buffers),
+    root: loaded.root,
+    scenes: loaded.scenes,
+    scene: loaded.sceneId,
     unsupportedUsedExtensions: unsupportedUsedExtensions(jsonRoot)
   )
 

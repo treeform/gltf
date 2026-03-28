@@ -267,6 +267,7 @@ type
 
   BlendEntry = object
     node: Node
+    primitive: Primitive
     transform: Mat4
 
 proc setTextureTransformUniform(shader: GLuint, prefix: string, transform: TextureTransform) =
@@ -289,6 +290,202 @@ proc setTextureTransformUniform(shader: GLuint, prefix: string, transform: Textu
     glGetUniformLocation(shader, rotationName),
     transform.rotation
   )
+
+proc renderPbrPrimitive(
+  primitive: Primitive,
+  transform, view, proj: Mat4,
+  tint: Color,
+  ambientLightColor: Color,
+  sunLightDirection: Vec3,
+  sunLightColor: Color,
+  rimLightDirection: Vec3,
+  rimLightColor: Color,
+  debugView: DebugView,
+  cameraPosition: Vec3,
+  useShadow: bool,
+  lightSpace: Mat4,
+  shadowTex: GLuint,
+  deferBlend: bool,
+  blended: var seq[BlendEntry],
+  owner: Node
+) =
+  if primitive == nil:
+    return
+
+  let isBlend =
+    primitive.material != nil and
+    primitive.material.alphaMode == BlendAlphaMode
+  if deferBlend and isBlend:
+    blended.add(BlendEntry(node: owner, primitive: primitive, transform: transform))
+    return
+
+  glUseProgram(pbrShader)
+
+  let
+    modelUniform = glGetUniformLocation(pbrShader, "model")
+    viewUniform = glGetUniformLocation(pbrShader, "view")
+    projUniform = glGetUniformLocation(pbrShader, "proj")
+    lightSpaceUniform = glGetUniformLocation(pbrShader, "lightSpace")
+
+  var
+    modelArray = transform
+    viewArray = view
+    projArray = proj
+    lightSpaceArray = lightSpace
+  glUniformMatrix4fv(modelUniform, 1, GL_FALSE, cast[ptr float32](modelArray.addr))
+  glUniformMatrix4fv(viewUniform, 1, GL_FALSE, cast[ptr float32](viewArray.addr))
+  glUniformMatrix4fv(projUniform, 1, GL_FALSE, cast[ptr float32](projArray.addr))
+  glUniformMatrix4fv(lightSpaceUniform, 1, GL_FALSE, cast[ptr float32](lightSpaceArray.addr))
+
+  if not primitive.uploaded:
+    primitive.uploadToGpu()
+  glBindVertexArray(primitive.vertexArrayId)
+
+  if primitive.material != nil:
+    let useNormalTexture =
+      primitive.material.hasNormalTexture and
+      primitive.normals.len > 0 and
+      primitive.tangents.len > 0
+
+    glActiveTexture(GL_TEXTURE0)
+    glUniform1i(glGetUniformLocation(pbrShader, "baseColorTexture"), 0)
+    glBindTexture(GL_TEXTURE_2D, primitive.material.baseColorId)
+
+    glUniform4f(
+      glGetUniformLocation(pbrShader, "baseColorFactor"),
+      primitive.material.baseColorFactor.r,
+      primitive.material.baseColorFactor.g,
+      primitive.material.baseColorFactor.b,
+      primitive.material.baseColorFactor.a
+    )
+    setTextureTransformUniform(pbrShader, "baseColor", primitive.material.baseColorTransform)
+
+    glActiveTexture(GL_TEXTURE1)
+    glUniform1i(glGetUniformLocation(pbrShader, "metallicRoughnessTexture"), 1)
+    glBindTexture(GL_TEXTURE_2D, primitive.material.metallicRoughnessId)
+    glUniform1f(glGetUniformLocation(pbrShader, "metallicFactor"), primitive.material.metallicFactor)
+    glUniform1f(glGetUniformLocation(pbrShader, "roughnessFactor"), primitive.material.roughnessFactor)
+    glUniform1f(glGetUniformLocation(pbrShader, "transmissionFactor"), primitive.material.transmissionFactor)
+    setTextureTransformUniform(
+      pbrShader,
+      "metallicRoughness",
+      primitive.material.metallicRoughnessTransform
+    )
+
+    glActiveTexture(GL_TEXTURE2)
+    glUniform1i(glGetUniformLocation(pbrShader, "normalTexture"), 2)
+    glBindTexture(GL_TEXTURE_2D, primitive.material.normalId)
+    glUniform1f(glGetUniformLocation(pbrShader, "normalScale"), primitive.material.normalScale)
+    setTextureTransformUniform(pbrShader, "normal", primitive.material.normalTransform)
+    glUniform1i(glGetUniformLocation(pbrShader, "useNormalTexture"), useNormalTexture.ord.GLint)
+
+    glActiveTexture(GL_TEXTURE3)
+    glUniform1i(glGetUniformLocation(pbrShader, "occlusionTexture"), 3)
+    glBindTexture(GL_TEXTURE_2D, primitive.material.occlusionId)
+    glUniform1f(glGetUniformLocation(pbrShader, "occlusionStrength"), primitive.material.occlusionStrength)
+    setTextureTransformUniform(pbrShader, "occlusion", primitive.material.occlusionTransform)
+
+    glActiveTexture(GL_TEXTURE4)
+    glUniform1i(glGetUniformLocation(pbrShader, "emissiveTexture"), 4)
+    glBindTexture(GL_TEXTURE_2D, primitive.material.emissiveId)
+    glUniform3f(
+      glGetUniformLocation(pbrShader, "emissiveFactor"),
+      primitive.material.emissiveFactor.r,
+      primitive.material.emissiveFactor.g,
+      primitive.material.emissiveFactor.b
+    )
+    setTextureTransformUniform(pbrShader, "emissive", primitive.material.emissiveTransform)
+
+    glActiveTexture(GL_TEXTURE5)
+    glUniform1i(glGetUniformLocation(pbrShader, "environmentMap"), 5)
+    glBindTexture(GL_TEXTURE_CUBE_MAP, environmentMapId)
+
+    if useShadow:
+      glActiveTexture(GL_TEXTURE6)
+      glUniform1i(glGetUniformLocation(pbrShader, "shadowMap"), 6)
+      glBindTexture(GL_TEXTURE_2D, shadowTex)
+
+    var cutoff = primitive.material.alphaCutoff
+    case primitive.material.alphaMode
+    of MaskAlphaMode:
+      glDisable(GL_BLEND)
+      glDepthMask(GL_TRUE)
+      cutoff = primitive.material.alphaCutoff
+    of BlendAlphaMode:
+      glEnable(GL_BLEND)
+      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+      glDepthMask(GL_FALSE)
+      cutoff = -1.0
+    else:
+      glDisable(GL_BLEND)
+      glDepthMask(GL_TRUE)
+      cutoff = -1.0
+    glUniform1f(glGetUniformLocation(pbrShader, "alphaCutoff"), cutoff)
+
+    if primitive.material.doubleSided:
+      glDisable(GL_CULL_FACE)
+    else:
+      glEnable(GL_CULL_FACE)
+  else:
+    glBindTexture(GL_TEXTURE_2D, 0)
+
+  glUniform4f(
+    glGetUniformLocation(pbrShader, "ambientLightColor"),
+    ambientLightColor.r,
+    ambientLightColor.g,
+    ambientLightColor.b,
+    ambientLightColor.a
+  )
+  glUniform3f(
+    glGetUniformLocation(pbrShader, "sunLightDirection"),
+    sunLightDirection.x,
+    sunLightDirection.y,
+    sunLightDirection.z
+  )
+  glUniform4f(
+    glGetUniformLocation(pbrShader, "sunLightColor"),
+    sunLightColor.r,
+    sunLightColor.g,
+    sunLightColor.b,
+    sunLightColor.a
+  )
+  glUniform3f(
+    glGetUniformLocation(pbrShader, "rimLightDirection"),
+    rimLightDirection.x,
+    rimLightDirection.y,
+    rimLightDirection.z
+  )
+  glUniform4f(
+    glGetUniformLocation(pbrShader, "rimLightColor"),
+    rimLightColor.r,
+    rimLightColor.g,
+    rimLightColor.b,
+    rimLightColor.a
+  )
+  glUniform1i(glGetUniformLocation(pbrShader, "debugViewMode"), debugView.int.GLint)
+  glUniform3f(
+    glGetUniformLocation(pbrShader, "cameraPosition"),
+    cameraPosition.x,
+    cameraPosition.y,
+    cameraPosition.z
+  )
+  glUniform4f(glGetUniformLocation(pbrShader, "tint"), tint.r, tint.g, tint.b, tint.a)
+  glUniform1i(glGetUniformLocation(pbrShader, "useShadow"), useShadow.Glint)
+
+  if primitive.indices16.len == 0 and primitive.indices32.len == 0:
+    glDrawArrays(GL_TRIANGLES, 0, primitive.points.len.cint)
+  else:
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, primitive.indicesId)
+    if primitive.indices16.len > 0:
+      glDrawElements(GL_TRIANGLES, primitive.indices16.len.GLint, GL_UNSIGNED_SHORT, nil)
+    elif primitive.indices32.len > 0:
+      glDrawElements(GL_TRIANGLES, primitive.indices32.len.GLint, GL_UNSIGNED_INT, nil)
+    else:
+      raise newException(GltfError, "Invalid indices")
+
+  glDisable(GL_BLEND)
+  glDepthMask(GL_TRUE)
+  glEnable(GL_CULL_FACE)
 
 proc renderPbrNode(
   node: Node,
@@ -313,291 +510,34 @@ proc renderPbrNode(
   if not node.visible:
     return
 
-  glUseProgram(pbrShader)
-
-  let currentTransform =
+  node.mat =
     if applyTrs:
       transform * node.trs
     else:
       transform
-  node.mat = currentTransform
 
-  let
-    modelUniform = glGetUniformLocation(pbrShader, "model")
-    viewUniform = glGetUniformLocation(pbrShader, "view")
-    projUniform = glGetUniformLocation(pbrShader, "proj")
-    lightSpaceUniform = glGetUniformLocation(pbrShader, "lightSpace")
-
-  var
-    modelArray = node.mat
-    viewArray = view
-    projArray = proj
-    lightSpaceArray = lightSpace
-  glUniformMatrix4fv(
-    modelUniform,
-    1,
-    GL_FALSE,
-    cast[ptr float32](modelArray.addr)
-  )
-  glUniformMatrix4fv(
-    viewUniform,
-    1,
-    GL_FALSE,
-    cast[ptr float32](viewArray.addr)
-  )
-  glUniformMatrix4fv(
-    projUniform,
-    1,
-    GL_FALSE,
-    cast[ptr float32](projArray.addr)
-  )
-  glUniformMatrix4fv(
-    lightSpaceUniform,
-    1,
-    GL_FALSE,
-    cast[ptr float32](lightSpaceArray.addr)
-  )
-
-  if not node.uploaded:
-    node.uploadToGpu()
-
-  glBindVertexArray(node.vertexArrayId)
-
-  let isBlend = node.material != nil and node.material.alphaMode == BlendAlphaMode
-
-  if deferBlend and isBlend:
-    if drawChildren:
-      for n in node.nodes:
-        n.renderPbrNode(
-          transform,
-          view,
-          proj,
-          tint,
-          ambientLightColor,
-          sunLightDirection,
-          sunLightColor,
-          rimLightDirection,
-          rimLightColor,
-          debugView,
-          cameraPosition,
-          useShadow,
-          lightSpace,
-          shadowTex,
-          deferBlend,
-          blended,
-          drawChildren=true,
-          applyTrs=true
-        )
-    blended.add(BlendEntry(node: node, transform: node.mat))
-    return
-
-  if node.material != nil and (not (deferBlend and isBlend)):
-    let useNormalTexture =
-      node.material.hasNormalTexture and
-      node.normals.len > 0 and
-      node.tangents.len > 0
-
-    glActiveTexture(GL_TEXTURE0)
-    glUniform1i(glGetUniformLocation(pbrShader, "baseColorTexture"), 0)
-    glBindTexture(GL_TEXTURE_2D, node.material.baseColorId)
-
-    glUniform4f(
-      glGetUniformLocation(pbrShader, "baseColorFactor"),
-      node.material.baseColorFactor.r,
-      node.material.baseColorFactor.g,
-      node.material.baseColorFactor.b,
-      node.material.baseColorFactor.a
-    )
-    setTextureTransformUniform(
-      pbrShader,
-      "baseColor",
-      node.material.baseColorTransform
-    )
-
-    glActiveTexture(GL_TEXTURE1)
-    glUniform1i(glGetUniformLocation(pbrShader, "metallicRoughnessTexture"), 1)
-    glBindTexture(GL_TEXTURE_2D, node.material.metallicRoughnessId)
-
-    glUniform1f(
-      glGetUniformLocation(pbrShader, "metallicFactor"),
-      node.material.metallicFactor
-    )
-    glUniform1f(
-      glGetUniformLocation(pbrShader, "roughnessFactor"),
-      node.material.roughnessFactor
-    )
-    glUniform1f(
-      glGetUniformLocation(pbrShader, "transmissionFactor"),
-      node.material.transmissionFactor
-    )
-    setTextureTransformUniform(
-      pbrShader,
-      "metallicRoughness",
-      node.material.metallicRoughnessTransform
-    )
-
-    glActiveTexture(GL_TEXTURE2)
-    glUniform1i(glGetUniformLocation(pbrShader, "normalTexture"), 2)
-    glBindTexture(GL_TEXTURE_2D, node.material.normalId)
-
-    glUniform1f(
-      glGetUniformLocation(pbrShader, "normalScale"),
-      node.material.normalScale
-    )
-    setTextureTransformUniform(
-      pbrShader,
-      "normal",
-      node.material.normalTransform
-    )
-    glUniform1i(
-      glGetUniformLocation(pbrShader, "useNormalTexture"),
-      useNormalTexture.ord.GLint
-    )
-
-    glActiveTexture(GL_TEXTURE3)
-    glUniform1i(glGetUniformLocation(pbrShader, "occlusionTexture"), 3)
-    glBindTexture(GL_TEXTURE_2D, node.material.occlusionId)
-
-    glUniform1f(
-      glGetUniformLocation(pbrShader, "occlusionStrength"),
-      node.material.occlusionStrength
-    )
-    setTextureTransformUniform(
-      pbrShader,
-      "occlusion",
-      node.material.occlusionTransform
-    )
-
-    glActiveTexture(GL_TEXTURE4)
-    glUniform1i(glGetUniformLocation(pbrShader, "emissiveTexture"), 4)
-    glBindTexture(GL_TEXTURE_2D, node.material.emissiveId)
-
-    glUniform3f(
-      glGetUniformLocation(pbrShader, "emissiveFactor"),
-      node.material.emissiveFactor.r,
-      node.material.emissiveFactor.g,
-      node.material.emissiveFactor.b,
-    )
-    setTextureTransformUniform(
-      pbrShader,
-      "emissive",
-      node.material.emissiveTransform
-    )
-
-    glActiveTexture(GL_TEXTURE5)
-    glUniform1i(glGetUniformLocation(pbrShader, "environmentMap"), 5)
-    glBindTexture(GL_TEXTURE_CUBE_MAP, environmentMapId)
-
-    if useShadow:
-      glActiveTexture(GL_TEXTURE6)
-      glUniform1i(glGetUniformLocation(pbrShader, "shadowMap"), 6)
-      glBindTexture(GL_TEXTURE_2D, shadowTex)
-
-    # Set up alpha mode.
-    var cutoff = node.material.alphaCutoff
-    case node.material.alphaMode
-    of MaskAlphaMode:
-      glDisable(GL_BLEND)
-      glDepthMask(GL_TRUE)
-      cutoff = node.material.alphaCutoff
-    of BlendAlphaMode:
-      glEnable(GL_BLEND)
-      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-      glDepthMask(GL_FALSE)
-      cutoff = -1.0
-    else:
-      glDisable(GL_BLEND)
-      glDepthMask(GL_TRUE)
-      cutoff = -1.0
-    glUniform1f(
-      glGetUniformLocation(pbrShader, "alphaCutoff"),
-      cutoff
-    )
-
-    # Set up double sided rendering.
-    if node.material.doubleSided:
-      glDisable(GL_CULL_FACE)
-    else:
-      glEnable(GL_CULL_FACE)
-
-    # Add lights.
-    glUniform4f(
-      glGetUniformLocation(pbrShader, "ambientLightColor"),
-      ambientLightColor.r,
-      ambientLightColor.g,
-      ambientLightColor.b,
-      ambientLightColor.a
-    )
-    glUniform3f(
-      glGetUniformLocation(pbrShader, "sunLightDirection"),
-      sunLightDirection.x,
-      sunLightDirection.y,
-      sunLightDirection.z
-    )
-    glUniform4f(
-      glGetUniformLocation(pbrShader, "sunLightColor"),
-      sunLightColor.r,
-      sunLightColor.g,
-      sunLightColor.b,
-      sunLightColor.a
-    )
-    glUniform3f(
-      glGetUniformLocation(pbrShader, "rimLightDirection"),
-      rimLightDirection.x,
-      rimLightDirection.y,
-      rimLightDirection.z
-    )
-    glUniform4f(
-      glGetUniformLocation(pbrShader, "rimLightColor"),
-      rimLightColor.r,
-      rimLightColor.g,
-      rimLightColor.b,
-      rimLightColor.a
-    )
-    glUniform1i(
-      glGetUniformLocation(pbrShader, "debugViewMode"),
-      debugView.int.GLint
-    )
-
-    # Add the camera position.
-    glUniform3f(
-      glGetUniformLocation(pbrShader, "cameraPosition"),
-      cameraPosition.x, cameraPosition.y, cameraPosition.z
-    )
-
-  else:
-    glBindTexture(GL_TEXTURE_2D, 0)
-
-  let colorTintUniform = glGetUniformLocation(pbrShader, "tint")
-  glUniform4f(colorTintUniform, tint.r, tint.g, tint.b, tint.a)
-  glUniform1i(glGetUniformLocation(pbrShader, "useShadow"), useShadow.Glint)
-
-  if node.indices16.len == 0 and node.indices32.len == 0:
-    glDrawArrays(GL_TRIANGLES, 0, node.points.len.cint)
-  else:
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, node.indicesId)
-    if node.indices16.len > 0:
-      glDrawElements(
-        GL_TRIANGLES,
-        node.indices16.len.GLint,
-        GL_UNSIGNED_SHORT,
-        nil
+  if node.mesh != nil:
+    for primitive in node.mesh.primitives:
+      renderPbrPrimitive(
+        primitive,
+        node.mat,
+        view,
+        proj,
+        tint,
+        ambientLightColor,
+        sunLightDirection,
+        sunLightColor,
+        rimLightDirection,
+        rimLightColor,
+        debugView,
+        cameraPosition,
+        useShadow,
+        lightSpace,
+        shadowTex,
+        deferBlend,
+        blended,
+        node
       )
-    elif node.indices32.len > 0:
-      glDrawElements(
-        GL_TRIANGLES,
-        node.indices32.len.GLint,
-        GL_UNSIGNED_INT,
-        nil
-      )
-    else:
-      raise newException(GltfError, "Invalid indices")
-
-  # Remove material settings.
-  if node.material != nil and (not (deferBlend and isBlend)):
-    glDisable(GL_BLEND)
-    glDepthMask(GL_TRUE)
-    glEnable(GL_CULL_FACE)
 
   if drawChildren:
     for n in node.nodes:
@@ -621,9 +561,6 @@ proc renderPbrNode(
         drawChildren=true,
         applyTrs=true
       )
-
-  if deferBlend and isBlend and drawChildren:
-    blended.add(BlendEntry(node: node, transform: node.mat))
 
 proc drawPbr*(
   node: Node,
@@ -677,7 +614,8 @@ proc drawPbr*(
     )
     for entry in sorted:
       var dummy: seq[BlendEntry]
-      entry.node.renderPbrNode(
+      renderPbrPrimitive(
+        entry.primitive,
         entry.transform,
         view,
         proj,
@@ -694,8 +632,7 @@ proc drawPbr*(
         shadowTex=0,
         deferBlend=false,
         blended=dummy,
-        drawChildren=false,
-        applyTrs=false
+        owner=entry.node
       )
     glDepthMask(GL_TRUE)
 
@@ -808,7 +745,8 @@ proc drawPbrWithShadow*(
     )
     for entry in sorted:
       var dummy: seq[BlendEntry]
-      entry.node.renderPbrNode(
+      renderPbrPrimitive(
+        entry.primitive,
         entry.transform,
         view,
         proj,
@@ -825,7 +763,6 @@ proc drawPbrWithShadow*(
         shadowTex=0,
         deferBlend=false,
         blended=dummy,
-        drawChildren=false,
-        applyTrs=false
+        owner=entry.node
       )
     glDepthMask(GL_TRUE)
