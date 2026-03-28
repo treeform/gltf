@@ -1,6 +1,6 @@
 import
   std/[algorithm, os, strformat, strutils, times],
-  chroma, opengl, pixie, pixie/fileformats/png, windy, vmath,
+  chroma, opengl, pixie, windy, vmath,
   gltf
 
 const
@@ -9,12 +9,16 @@ const
   FitPadding = 1.25'f
   OrbitYaw = -20.0'f
   OrbitPitch = -20.0'f
+  MaxXrayScore = 2.0'f
 
 type
   AssetResult = object
     modelPath: string
     screenshotPath: string
+    baselinePath: string
+    xrayPath: string
     status: string
+    score: float32
     exceptionName: string
     message: string
 
@@ -54,22 +58,32 @@ proc defaultModelsDir(): string =
     joinPath(getCurrentDir(), "glTF-Sample-Assets", "Models")
   ]
   for candidate in candidates:
-    let fullPath = expandFilename(candidate)
-    if dirExists(fullPath):
-      return fullPath
-  expandFilename(candidates[0])
+    if dirExists(candidate):
+      return candidate
+  candidates[0]
 
-proc defaultScreenshotsDir(): string =
-  ## Returns the default screenshot output directory.
+proc defaultTmpDir(): string =
+  ## Returns the default temporary output directory.
+  let candidates = [
+    joinPath(getCurrentDir(), "tests", "tmp"),
+    joinPath(getCurrentDir(), "tmp")
+  ]
+  for candidate in candidates:
+    let parentDir = candidate.parentDir()
+    if dirExists(parentDir):
+      return candidate
+  candidates[0]
+
+proc defaultMasterScreenshotsDir(): string =
+  ## Returns the committed screenshot baseline directory.
   let candidates = [
     joinPath(getCurrentDir(), "tests", "screenshots"),
     joinPath(getCurrentDir(), "screenshots")
   ]
   for candidate in candidates:
-    let parentDir = candidate.parentDir()
-    if dirExists(parentDir):
-      return expandFilename(candidate)
-  expandFilename(candidates[0])
+    if dirExists(candidate):
+      return candidate
+  candidates[0]
 
 proc resolvePath(path: string): string =
   ## Resolves a path relative to the current directory.
@@ -115,8 +129,8 @@ proc screenshotPath(
   let safeName = sanitizeFileName(relativeModelPath)
   joinPath(screenshotsDir, safeName & ".png")
 
-proc saveScreenshot(path: string, width, height: int) =
-  ## Reads the back buffer and writes it as a PNG.
+proc captureScreenshot(width, height: int): Image =
+  ## Reads the back buffer into an image.
   var pixels = newSeq[uint8](width * height * 4)
   glPixelStorei(GL_PACK_ALIGNMENT, 1)
   glReadBuffer(GL_BACK)
@@ -130,20 +144,35 @@ proc saveScreenshot(path: string, width, height: int) =
     cast[pointer](pixels[0].addr)
   )
 
-  var image = newImage(width, height)
+  result = newImage(width, height)
   for y in 0 ..< height:
     let srcY = height - 1 - y
     for x in 0 ..< width:
       let
         src = (srcY * width + x) * 4
         dst = y * width + x
-      image.data[dst] = rgbx(
+      result.data[dst] = rgbx(
         pixels[src + 0],
         pixels[src + 1],
         pixels[src + 2],
         pixels[src + 3]
       )
-  writeFile(path, image.encodePng())
+
+proc xray(
+  image: Image,
+  baselinePath: string,
+  generatedPath: string,
+  xrayPath: string
+): float32 =
+  ## Writes the generated image and xray, then returns the diff score.
+  createDir(generatedPath.parentDir())
+  createDir(xrayPath.parentDir())
+  image.writeFile(generatedPath)
+  let
+    baseline = readImage(baselinePath)
+    (score, xray) = diff(baseline, image)
+  xray.writeFile(xrayPath)
+  score
 
 proc renderScene(window: Window, model: Node) =
   ## Renders one frame for a loaded model.
@@ -192,14 +221,22 @@ proc renderScene(window: Window, model: Node) =
 proc testModel(
   window: Window,
   modelsPath: string,
-  screenshotsDir: string,
+  generatedDir: string,
+  masterScreenshotsDir: string,
+  xrayDir: string,
   modelPath: string,
   index: int
 ): AssetResult =
   ## Loads one model, renders it, and saves a screenshot.
   result.modelPath = modelPath
-  let outPath = screenshotPath(screenshotsDir, modelsPath, modelPath, index)
+  result.score = -1
+  let
+    outPath = screenshotPath(generatedDir, modelsPath, modelPath, index)
+    baselinePath = screenshotPath(masterScreenshotsDir, modelsPath, modelPath, index)
+    xrayPath = screenshotPath(xrayDir, modelsPath, modelPath, index)
   result.screenshotPath = outPath
+  result.baselinePath = baselinePath
+  result.xrayPath = xrayPath
 
   var
     model: Node
@@ -226,17 +263,30 @@ proc testModel(
       renderScene(window, model)
       if frame == 1:
         echo "  phase: screenshot"
-        saveScreenshot(
-          outPath,
+        let image = captureScreenshot(
           window.size.x.int,
           window.size.y.int
         )
+        if fileExists(baselinePath):
+          echo "  phase: xray"
+          result.score = xray(image, baselinePath, outPath, xrayPath)
+          if result.score > MaxXrayScore:
+            result.status = "diff_error"
+            result.message = &"Rendered, but xray score {result.score:0.3f} exceeded {MaxXrayScore:0.3f}."
+          else:
+            result.status = "ok"
+            result.message = &"Rendered with xray score {result.score:0.3f}."
+        else:
+          createDir(outPath.parentDir())
+          image.writeFile(outPath)
+          result.status = "ok"
+          result.message = "Rendered successfully; baseline screenshot not found."
       window.swapBuffers()
     let renderElapsed = epochTime() - renderStart
     echo &"  rendered in {renderElapsed:>7.3f}s"
-
-    result.status = "ok"
-    result.message = "Rendered and captured successfully."
+    if result.status.len == 0:
+      result.status = "ok"
+      result.message = "Rendered and captured successfully."
   except GltfError:
     result.status = "gltf_error"
     result.exceptionName = "GltfError"
@@ -258,8 +308,9 @@ proc writeSummary(path: string, results: seq[AssetResult]) =
   var lines: seq[string]
   for result in results:
     lines.add(
-      &"{result.status}\t{result.exceptionName}\t{result.modelPath}\t" &
-      &"{result.screenshotPath}\t{result.message}"
+      &"{result.status}\t{result.score:0.3f}\t{result.exceptionName}\t" &
+      &"{result.modelPath}\t{result.screenshotPath}\t{result.baselinePath}\t" &
+      &"{result.xrayPath}\t{result.message}"
     )
   writeFile(path, lines.join("\n") & "\n")
 
@@ -270,16 +321,26 @@ let
       resolvePath(params[0])
     else:
       defaultModelsDir()
-  screenshotsDir =
+  tmpDir =
     if params.len > 1:
       resolvePath(params[1])
     else:
-      defaultScreenshotsDir()
+      defaultTmpDir()
+  masterScreenshotsDir =
+    if params.len > 2:
+      resolvePath(params[2])
+    else:
+      defaultMasterScreenshotsDir()
 
 if not dirExists(modelsPath) and not fileExists(modelsPath):
   quit("Sample assets path not found: " & modelsPath, 1)
 
-createDir(screenshotsDir)
+let
+  generatedDir = joinPath(tmpDir, "generated")
+  xrayDir = joinPath(tmpDir, "xray")
+createDir(tmpDir)
+createDir(generatedDir)
+createDir(xrayDir)
 
 let modelPaths = discoverModels(modelsPath)
 if modelPaths.len == 0:
@@ -287,7 +348,11 @@ if modelPaths.len == 0:
 
 echo "Found ", modelPaths.len, " sample assets."
 echo "Models path: ", modelsPath
-echo "Screenshots dir: ", screenshotsDir
+echo "Temp dir: ", tmpDir
+echo "Generated dir: ", generatedDir
+echo "Xray dir: ", xrayDir
+echo "Baseline dir: ", masterScreenshotsDir
+echo &"Max xray score: {MaxXrayScore:0.3f}"
 
 var window = newWindow(
   "glTF Sample Assets",
@@ -309,7 +374,9 @@ for i, modelPath in modelPaths:
   let result = testModel(
     window,
     modelsPath,
-    screenshotsDir,
+    generatedDir,
+    masterScreenshotsDir,
+    xrayDir,
     modelPath,
     i
   )
@@ -317,7 +384,16 @@ for i, modelPath in modelPaths:
   echo "  ", result.status, ": ", result.message
   if result.status == "ok":
     echo "  screenshot: ", result.screenshotPath
+    if result.score >= 0:
+      echo &"  xray score: {result.score:0.3f}"
 
-writeSummary(joinPath(screenshotsDir, "summary.txt"), results)
-echo "Wrote summary: ", joinPath(screenshotsDir, "summary.txt")
+let summaryPath = joinPath(tmpDir, "summary.txt")
+writeSummary(summaryPath, results)
+echo "Wrote summary: ", summaryPath
+var hasFailure = false
+for result in results:
+  if result.status notin ["ok", "skip"]:
+    hasFailure = true
 echo "done"
+if hasFailure:
+  quit(1)
