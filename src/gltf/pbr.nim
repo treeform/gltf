@@ -579,14 +579,27 @@ proc renderPbrPrimitive(
   glUniform4f(glGetUniformLocation(pbrShader, "tint"), tint.r, tint.g, tint.b, tint.a)
   glUniform1i(glGetUniformLocation(pbrShader, "useShadow"), useShadow.Glint)
 
+  if primitive.mode == GL_POINTS:
+    glPointSize(1.0)
+
   if primitive.indices16.len == 0 and primitive.indices32.len == 0:
-    glDrawArrays(GL_TRIANGLES, 0, primitive.points.len.cint)
+    glDrawArrays(primitive.mode, 0, primitive.points.len.cint)
   else:
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, primitive.indicesId)
     if primitive.indices16.len > 0:
-      glDrawElements(GL_TRIANGLES, primitive.indices16.len.GLint, GL_UNSIGNED_SHORT, nil)
+      glDrawElements(
+        primitive.mode,
+        primitive.indices16.len.GLint,
+        GL_UNSIGNED_SHORT,
+        nil
+      )
     elif primitive.indices32.len > 0:
-      glDrawElements(GL_TRIANGLES, primitive.indices32.len.GLint, GL_UNSIGNED_INT, nil)
+      glDrawElements(
+        primitive.mode,
+        primitive.indices32.len.GLint,
+        GL_UNSIGNED_INT,
+        nil
+      )
     else:
       raise newException(GltfError, "Invalid indices")
 

@@ -198,3 +198,61 @@ doAssert perspectiveNode.camera.kind == ckPerspective
 doAssert orthoNode.camera.kind == ckOrthographic
 doAssert abs(perspectiveNode.camera.perspective.yfov - 0.7853982) < 0.0001
 doAssert abs(orthoNode.camera.orthographic.xmag - 2.0) < 0.0001
+
+echo "Testing primitive mode parsing."
+let primitiveModeBuffer =
+  "\0\0\0\0" &
+  "\0\0\0\0" &
+  "\0\0\0\0" &
+  "\0\0\x80\x3f" &
+  "\0\0\0\0" &
+  "\0\0\0\0"
+let primitiveModeModel = loadModelJson(
+  %*{
+    "asset": {"version": "2.0"},
+    "buffers": [
+      {
+        "byteLength": 24
+      }
+    ],
+    "bufferViews": [
+      {"buffer": 0, "byteOffset": 0, "byteLength": 24}
+    ],
+    "accessors": [
+      {"bufferView": 0, "componentType": 5126, "count": 2, "type": "VEC3"}
+    ],
+    "images": [],
+    "textures": [],
+    "samplers": [],
+    "materials": [],
+    "meshes": [
+      {
+        "name": "LineStripMesh",
+        "primitives": [
+          {
+            "attributes": {
+              "POSITION": 0
+            },
+            "mode": 3
+          }
+        ]
+      }
+    ],
+    "nodes": [
+      {
+        "name": "LineStripNode",
+        "mesh": 0
+      }
+    ],
+    "scenes": [{"nodes": [0]}],
+    "scene": 0,
+    "animations": []
+  },
+  ".",
+  @[primitiveModeBuffer]
+)
+let lineStripNode = primitiveModeModel["LineStripNode"]
+doAssert lineStripNode != nil
+doAssert lineStripNode.mesh != nil
+doAssert lineStripNode.mesh.primitives.len == 1
+doAssert lineStripNode.mesh.primitives[0].mode.int == 3
