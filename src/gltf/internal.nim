@@ -70,15 +70,21 @@ type
   MeshInfo* = object
     name*: string
     primitives*: seq[int]
+    weights*: seq[float32]
+    targetNames*: seq[string]
 
   PrimitiveAttributes* = object
     position*, normal*, color0*, texcoord0*: int
     joints0*, weights0*: int
 
+  MorphTargetInfo* = object
+    position*, normal*, tangent*: int
+
   PrimitiveInfo* = object
     attributes*: PrimitiveAttributes
     indices*, material*: int
     mode*: GLenum
+    morphTargets*: seq[MorphTargetInfo]
 
   SkinInfo* = object
     name*: string

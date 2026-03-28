@@ -195,6 +195,32 @@ proc assertRaise(test: bool, msg: string) =
   if not test:
     raise newException(GltfError, msg)
 
+proc readWeightFrames(
+  accessorIdx: int,
+  accessors: seq[Accessor],
+  bufferViews: seq[BufferView],
+  buffers: seq[string],
+  weightCount: int
+): seq[seq[float32]] =
+  ## Reads morph target weights as frames of float arrays.
+  if weightCount <= 0:
+    return
+  let values = readAccessorFloats(
+    accessorIdx,
+    accessors,
+    bufferViews,
+    buffers
+  )
+  assertRaise(
+    values.len mod weightCount == 0,
+    "Invalid morph weight frame data"
+  )
+  result.setLen(values.len div weightCount)
+  for i in 0 ..< result.len:
+    result[i].setLen(weightCount)
+    for j in 0 ..< weightCount:
+      result[i][j] = values[i * weightCount + j]
+
 proc readAccessorVec2(
   accessorIdx: int,
   accessors: seq[Accessor],
@@ -852,6 +878,35 @@ proc loadPrimitive(
       buffers
     )
 
+  for morphInfo in primInfo.morphTargets:
+    var morphTarget = MorphTarget()
+    if morphInfo.position >= 0:
+      morphTarget.positionDeltas = readAccessorVec3(
+        morphInfo.position,
+        accessors,
+        bufferViews,
+        buffers
+      )
+    if morphInfo.normal >= 0:
+      morphTarget.normalDeltas = readAccessorVec3(
+        morphInfo.normal,
+        accessors,
+        bufferViews,
+        buffers
+      )
+    if morphInfo.tangent >= 0:
+      morphTarget.tangentDeltas = readAccessorVec3(
+        morphInfo.tangent,
+        accessors,
+        bufferViews,
+        buffers
+      )
+    result.morphTargets.add(morphTarget)
+
+  result.basePoints = result.points
+  result.baseNormals = result.normals
+  result.baseTangents = result.tangents
+
   if primInfo.attributes.normal >= 0 and
     primInfo.attributes.texcoord0 >= 0:
     result.tangents.setLen(result.normals.len)
@@ -1245,6 +1300,12 @@ proc loadModelJsonInternal(
     var mesh = MeshInfo()
     if "name" in entry:
       mesh.name = entry["name"].getStr()
+    if "weights" in entry:
+      for weight in entry["weights"]:
+        mesh.weights.add(weight.getFloat().float32)
+    if "extras" in entry and "targetNames" in entry["extras"]:
+      for name in entry["extras"]["targetNames"]:
+        mesh.targetNames.add(name.getStr())
     mesh.primitives = @[]
     for primitive in entry["primitives"]:
       var prim = PrimitiveInfo()
@@ -1286,6 +1347,13 @@ proc loadModelJsonInternal(
         prim.mode = primitive["mode"].getInt().GLenum
       else:
         prim.mode = GL_TRIANGLES
+      if "targets" in primitive:
+        for target in primitive["targets"]:
+          var morphTarget = MorphTargetInfo()
+          morphTarget.position = target{"POSITION"}.getInt()
+          morphTarget.normal = target{"NORMAL"}.getInt()
+          morphTarget.tangent = target{"TANGENT"}.getInt()
+          prim.morphTargets.add(morphTarget)
       primitiveDefs.add(prim)
       mesh.primitives.add(primitiveDefs.len - 1)
     meshDefs.add(mesh)
@@ -1561,6 +1629,8 @@ proc loadModelJsonInternal(
               path = AnimRotation
             of "scale":
               path = AnimScale
+            of "weights":
+              path = AnimWeights
             else:
               isPath = false
 
@@ -1613,6 +1683,24 @@ proc loadModelJsonInternal(
                 bufferViews,
                 buffers
               )
+          of AnimWeights:
+            let
+              meshId = nodeMeshes[nodeIdx]
+              weightCount =
+                if meshId >= 0 and meshId < meshDefs.len:
+                  meshDefs[meshId].weights.len
+                else:
+                  0
+            if weightCount == 0:
+              echo "[gltf] animation target weights missing morph weights"
+              continue
+            channel.valuesWeights = readWeightFrames(
+              sampler.output,
+              accessors,
+              bufferViews,
+              buffers,
+              weightCount
+            )
 
           if channel.times.len == 0:
             continue
@@ -1633,9 +1721,22 @@ proc loadModelJsonInternal(
                 echo "[gltf] animation sampler length mismatch"
                 continue
               splitCubicFloat(channel)
+            of AnimWeights:
+              if channel.valuesWeights.len != channel.times.len * 3:
+                echo "[gltf] animation sampler length mismatch"
+                continue
+              let triplets = channel.valuesWeights
+              channel.valuesWeights.setLen(channel.times.len)
+              channel.inTangentsWeights.setLen(channel.times.len)
+              channel.outTangentsWeights.setLen(channel.times.len)
+              for i in 0 ..< channel.times.len:
+                channel.inTangentsWeights[i] = triplets[i * 3]
+                channel.valuesWeights[i] = triplets[i * 3 + 1]
+                channel.outTangentsWeights[i] = triplets[i * 3 + 2]
           elif channel.times.len != channel.valuesVec3.len and
              channel.times.len != channel.valuesQuat.len and
-             channel.times.len != channel.valuesFloat.len:
+             channel.times.len != channel.valuesFloat.len and
+             channel.times.len != channel.valuesWeights.len:
             echo "[gltf] animation sampler length mismatch"
             continue
 
@@ -1669,6 +1770,7 @@ proc loadModelJsonInternal(
     if meshId >= 0:
       let meshInfo = meshDefs[meshId]
       let runtimeMesh = Mesh(name: meshInfo.name)
+      runtimeMesh.targetNames = meshInfo.targetNames
       for primitiveIndex in meshInfo.primitives:
         runtimeMesh.primitives.add(loadPrimitive(
           primitiveIndex,
@@ -1682,6 +1784,8 @@ proc loadModelJsonInternal(
           materials
         ))
       n.mesh = runtimeMesh
+      n.morphWeights = meshInfo.weights
+      n.baseMorphWeights = meshInfo.weights
     if skinId >= 0:
       n.skin = skins[skinId]
     if cameraId >= 0:
