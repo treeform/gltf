@@ -17,6 +17,12 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: treeform/setup-nim-action@v6
-      - run: nimby install
+      - run: nimby install chroma -g
+      - run: nimby install flatty -g
+      - run: nimby install opengl -g
+      - run: nimby install pixie -g
+      - run: nimby install vmath -g
+      - run: nimby install webby -g
+      - run: nimby install windy -g
       - run: nim check src/gltf.nim
       - run: nim r tests/tests.nim
