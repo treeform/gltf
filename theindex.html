@@ -181,8 +181,8 @@
      useTrs = true)</a></li>
           <li><a class="reference external"
           data-doc-search-tag="models: proc draw(node: Node; shader: GLuint; transform, view, proj: Mat4; tint: Color;
-     useTrs = true; skipBlend = false)" href="gltf/models.html#draw%2CNode%2CGLuint%2CMat4%2CMat4%2CMat4%2CColor">models: proc draw(node: Node; shader: GLuint; transform, view, proj: Mat4; tint: Color;
-     useTrs = true; skipBlend = false)</a></li>
+     useTrs = true; skipBlend = false; root: Node = nil)" href="gltf/models.html#draw%2CNode%2CGLuint%2CMat4%2CMat4%2CMat4%2CColor%2CNode">models: proc draw(node: Node; shader: GLuint; transform, view, proj: Mat4; tint: Color;
+     useTrs = true; skipBlend = false; root: Node = nil)</a></li>
           </ul></dd>
 <dt><a name="drawPbr" href="#drawPbr"><span>drawPbr:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -292,9 +292,13 @@
           <li><a class="reference external"
           data-doc-search-tag="models: proc hasGeometry(primitive: Primitive): bool" href="gltf/models.html#hasGeometry%2CPrimitive">models: proc hasGeometry(primitive: Primitive): bool</a></li>
           </ul></dd>
+<dt><a name="JointIds" href="#JointIds"><span>JointIds:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: type JointIds" href="gltf/common.html#JointIds">common: type JointIds</a></li>
+          </ul></dd>
 <dt><a name="loadDefaultEnvironmentMap" href="#loadDefaultEnvironmentMap"><span>loadDefaultEnvironmentMap:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="pbr: proc loadDefaultEnvironmentMap(color = rgbx(180, 190, 220, 255))" href="gltf/pbr.html#loadDefaultEnvironmentMap">pbr: proc loadDefaultEnvironmentMap(color = rgbx(180, 190, 220, 255))</a></li>
+          data-doc-search-tag="pbr: proc loadDefaultEnvironmentMap()" href="gltf/pbr.html#loadDefaultEnvironmentMap">pbr: proc loadDefaultEnvironmentMap()</a></li>
           </ul></dd>
 <dt><a name="loadEnvironmentMap" href="#loadEnvironmentMap"><span>loadEnvironmentMap:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -315,6 +319,10 @@
 <dt><a name="loadModelJsonFile" href="#loadModelJsonFile"><span>loadModelJsonFile:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="reader: proc loadModelJsonFile(file: string): Node" href="gltf/reader.html#loadModelJsonFile%2Cstring">reader: proc loadModelJsonFile(file: string): Node</a></li>
+          </ul></dd>
+<dt><a name="loadSolidEnvironmentMap" href="#loadSolidEnvironmentMap"><span>loadSolidEnvironmentMap:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="pbr: proc loadSolidEnvironmentMap(color = rgbx(180, 190, 220, 255))" href="gltf/pbr.html#loadSolidEnvironmentMap">pbr: proc loadSolidEnvironmentMap(color = rgbx(180, 190, 220, 255))</a></li>
           </ul></dd>
 <dt><a name="MaskAlphaMode" href="#MaskAlphaMode"><span>MaskAlphaMode:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -434,6 +442,18 @@
 <li><a class="reference external"
           data-doc-search-tag="models: proc shallowCopy(node: Node): Node" href="gltf/models.html#shallowCopy%2CNode">models: proc shallowCopy(node: Node): Node</a></li>
           </ul></dd>
+<dt><a name="Skin" href="#Skin"><span>Skin:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: type Skin" href="gltf/common.html#Skin">common: type Skin</a></li>
+          </ul></dd>
+<dt><a name="SkinInfo" href="#SkinInfo"><span>SkinInfo:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="internal: object SkinInfo" href="gltf/internal.html#SkinInfo">internal: object SkinInfo</a></li>
+          </ul></dd>
+<dt><a name="skinMatrices" href="#skinMatrices"><span>skinMatrices:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="models: proc skinMatrices(root, node: Node): seq[Mat4]" href="gltf/models.html#skinMatrices%2CNode%2CNode">models: proc skinMatrices(root, node: Node): seq[Mat4]</a></li>
+          </ul></dd>
 <dt><a name="skyboxShader" href="#skyboxShader"><span>skyboxShader:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="pbr: var skyboxShader" href="gltf/pbr.html#skyboxShader">pbr: var skyboxShader</a></li>
@@ -478,6 +498,10 @@
           <li><a class="reference external"
           data-doc-search-tag="models: proc updateOnGpu(primitive: Primitive)" href="gltf/models.html#updateOnGpu%2CPrimitive">models: proc updateOnGpu(primitive: Primitive)</a></li>
           </ul></dd>
+<dt><a name="updateTransforms" href="#updateTransforms"><span>updateTransforms:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="models: proc updateTransforms(node: Node; transform = mat4(); applyTrs = true)" href="gltf/models.html#updateTransforms%2CNode">models: proc updateTransforms(node: Node; transform = mat4(); applyTrs = true)</a></li>
+          </ul></dd>
 <dt><a name="uploadToGpu" href="#uploadToGpu"><span>uploadToGpu:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="models: proc uploadToGpu(mesh: Mesh)" href="gltf/models.html#uploadToGpu%2CMesh">models: proc uploadToGpu(mesh: Mesh)</a></li>
@@ -498,7 +522,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-03-28 17:03:05 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-03-28 17:56:44 UTC</small>
       </div>
     </div>
   </div>

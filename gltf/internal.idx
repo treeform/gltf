@@ -9,11 +9,12 @@ nim	atMAT3	gltf/internal.html#atMAT3	AccessorKind.atMAT3		9
 nim	atMAT4	gltf/internal.html#atMAT4	AccessorKind.atMAT4		9
 nim	AccessorKind	gltf/internal.html#AccessorKind	enum AccessorKind		9
 nim	Accessor	gltf/internal.html#Accessor	object Accessor		12
-nim	Texture	gltf/internal.html#Texture	object Texture		18
-nim	Sampler	gltf/internal.html#Sampler	object Sampler		22
-nim	MaterialTexture	gltf/internal.html#MaterialTexture	object MaterialTexture		25
-nim	PbrMetallicRoughness	gltf/internal.html#PbrMetallicRoughness	object PbrMetallicRoughness		34
-nim	MaterialInfo	gltf/internal.html#MaterialInfo	object MaterialInfo		41
-nim	MeshInfo	gltf/internal.html#MeshInfo	object MeshInfo		53
-nim	PrimitiveAttributes	gltf/internal.html#PrimitiveAttributes	object PrimitiveAttributes		57
-nim	PrimitiveInfo	gltf/internal.html#PrimitiveInfo	object PrimitiveInfo		60
+nim	Texture	gltf/internal.html#Texture	object Texture		19
+nim	Sampler	gltf/internal.html#Sampler	object Sampler		23
+nim	MaterialTexture	gltf/internal.html#MaterialTexture	object MaterialTexture		26
+nim	PbrMetallicRoughness	gltf/internal.html#PbrMetallicRoughness	object PbrMetallicRoughness		35
+nim	MaterialInfo	gltf/internal.html#MaterialInfo	object MaterialInfo		42
+nim	MeshInfo	gltf/internal.html#MeshInfo	object MeshInfo		54
+nim	PrimitiveAttributes	gltf/internal.html#PrimitiveAttributes	object PrimitiveAttributes		58
+nim	PrimitiveInfo	gltf/internal.html#PrimitiveInfo	object PrimitiveInfo		62
+nim	SkinInfo	gltf/internal.html#SkinInfo	object SkinInfo		67

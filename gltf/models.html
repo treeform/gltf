@@ -96,9 +96,9 @@
   <li><a class="reference" href="#draw%2CNode%2CGLuint%2CDMat4%2CDMat4%2CDMat4%2CColor" title="draw(node: Node; shader: GLuint; transform, view, proj: DMat4; tint: Color;
      useTrs = true)">draw(node: Node; shader: GLuint; transform, view, proj: DMat4; tint: Color;
      useTrs = true)</a></li>
-<li><a class="reference" href="#draw%2CNode%2CGLuint%2CMat4%2CMat4%2CMat4%2CColor" title="draw(node: Node; shader: GLuint; transform, view, proj: Mat4; tint: Color;
-     useTrs = true; skipBlend = false)">draw(node: Node; shader: GLuint; transform, view, proj: Mat4; tint: Color;
-     useTrs = true; skipBlend = false)</a></li>
+<li><a class="reference" href="#draw%2CNode%2CGLuint%2CMat4%2CMat4%2CMat4%2CColor%2CNode" title="draw(node: Node; shader: GLuint; transform, view, proj: Mat4; tint: Color;
+     useTrs = true; skipBlend = false; root: Node = nil)">draw(node: Node; shader: GLuint; transform, view, proj: Mat4; tint: Color;
+     useTrs = true; skipBlend = false; root: Node = nil)</a></li>
 
 </ul>
 <ul class="simple nested-toc-section">dumpTree
@@ -148,6 +148,10 @@
   <li><a class="reference" href="#shallowCopy%2CNode" title="shallowCopy(node: Node): Node">shallowCopy(node: Node): Node</a></li>
 
 </ul>
+<ul class="simple nested-toc-section">skinMatrices
+  <li><a class="reference" href="#skinMatrices%2CNode%2CNode" title="skinMatrices(root, node: Node): seq[Mat4]">skinMatrices(root, node: Node): seq[Mat4]</a></li>
+
+</ul>
 <ul class="simple nested-toc-section">trs
   <li><a class="reference" href="#trs%2CNode" title="trs(node: Node): Mat4">trs(node: Node): Mat4</a></li>
 
@@ -160,6 +164,10 @@
   <li><a class="reference" href="#updateOnGpu%2CMesh" title="updateOnGpu(mesh: Mesh)">updateOnGpu(mesh: Mesh)</a></li>
 <li><a class="reference" href="#updateOnGpu%2CNode" title="updateOnGpu(node: Node)">updateOnGpu(node: Node)</a></li>
 <li><a class="reference" href="#updateOnGpu%2CPrimitive" title="updateOnGpu(primitive: Primitive)">updateOnGpu(primitive: Primitive)</a></li>
+
+</ul>
+<ul class="simple nested-toc-section">updateTransforms
+  <li><a class="reference" href="#updateTransforms%2CNode" title="updateTransforms(node: Node; transform = mat4(); applyTrs = true)">updateTransforms(node: Node; transform = mat4(); applyTrs = true)</a></li>
 
 </ul>
 <ul class="simple nested-toc-section">uploadToGpu
@@ -214,8 +222,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L65" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L65" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L68" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L68" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -227,8 +235,8 @@
   <dd>
     
     Get a child node by name.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L852" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L852" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L974" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L974" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -241,8 +249,8 @@
   <dd>
     
     Applies an animation clip at a time.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L127" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L127" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L130" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L130" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -254,8 +262,8 @@
   <dd>
     
     Get the center of the axis-aligned bounding box.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L748" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L748" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L870" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L870" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -267,8 +275,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L473" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L473" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L546" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L546" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -277,8 +285,8 @@
   <dd>
     
     Clear the node subtree from the GPU.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L493" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L493" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L566" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L566" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -288,8 +296,8 @@
   <dd>
     
     Clear primitive data from the GPU.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L368" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L368" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L417" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L417" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -301,8 +309,8 @@
   <dd>
     
     Clear the vertex data from the GPU for the whole tree.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L509" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L509" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L582" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L582" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -315,8 +323,8 @@
   <dd>
     
     Computes a stable center, size, and radius for a node tree.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L790" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L790" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L912" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L912" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -328,8 +336,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L29" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L29" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L32" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L32" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -338,24 +346,25 @@
 <div id="draw-procs-all">
   <div id="draw,Node,GLuint,DMat4,DMat4,DMat4,Color">
   <dt><pre><span class="Keyword">proc</span> <a href="#draw%2CNode%2CGLuint%2CDMat4%2CDMat4%2CDMat4%2CColor"><span class="Identifier">draw</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a><span class="Other">;</span> <span class="Identifier">shader</span><span class="Other">:</span> <span class="Identifier">GLuint</span><span class="Other">;</span> <span class="Identifier">transform</span><span class="Other">,</span> <span class="Identifier">view</span><span class="Other">,</span> <span class="Identifier">proj</span><span class="Other">:</span> <span class="Identifier">DMat4</span><span class="Other">;</span> <span class="Identifier">tint</span><span class="Other">:</span> <span class="Identifier">Color</span><span class="Other">;</span>
-          <span class="Identifier">useTrs</span> <span class="Other">=</span> <span class="Identifier">true</span><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+          <span class="Identifier">useTrs</span> <span class="Other">=</span> <span class="Identifier">true</span><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">GLerror</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span><span class="Other">,</span>
+                           <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     Draw the node using a double precision transformation matrix.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L858" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L858" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L980" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L980" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
-<div id="draw,Node,GLuint,Mat4,Mat4,Mat4,Color">
-  <dt><pre><span class="Keyword">proc</span> <a href="#draw%2CNode%2CGLuint%2CMat4%2CMat4%2CMat4%2CColor"><span class="Identifier">draw</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a><span class="Other">;</span> <span class="Identifier">shader</span><span class="Other">:</span> <span class="Identifier">GLuint</span><span class="Other">;</span> <span class="Identifier">transform</span><span class="Other">,</span> <span class="Identifier">view</span><span class="Other">,</span> <span class="Identifier">proj</span><span class="Other">:</span> <span class="Identifier">Mat4</span><span class="Other">;</span> <span class="Identifier">tint</span><span class="Other">:</span> <span class="Identifier">Color</span><span class="Other">;</span>
-          <span class="Identifier">useTrs</span> <span class="Other">=</span> <span class="Identifier">true</span><span class="Other">;</span> <span class="Identifier">skipBlend</span> <span class="Other">=</span> <span class="Identifier">false</span><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
-    <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+<div id="draw,Node,GLuint,Mat4,Mat4,Mat4,Color,Node">
+  <dt><pre><span class="Keyword">proc</span> <a href="#draw%2CNode%2CGLuint%2CMat4%2CMat4%2CMat4%2CColor%2CNode"><span class="Identifier">draw</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a><span class="Other">;</span> <span class="Identifier">shader</span><span class="Other">:</span> <span class="Identifier">GLuint</span><span class="Other">;</span> <span class="Identifier">transform</span><span class="Other">,</span> <span class="Identifier">view</span><span class="Other">,</span> <span class="Identifier">proj</span><span class="Other">:</span> <span class="Identifier">Mat4</span><span class="Other">;</span> <span class="Identifier">tint</span><span class="Other">:</span> <span class="Identifier">Color</span><span class="Other">;</span>
+          <span class="Identifier">useTrs</span> <span class="Other">=</span> <span class="Identifier">true</span><span class="Other">;</span> <span class="Identifier">skipBlend</span> <span class="Other">=</span> <span class="Identifier">false</span><span class="Other">;</span> <span class="Identifier">root</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a> <span class="Other">=</span> <span class="Keyword">nil</span><span class="Other">)</span> {.
+    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">GLerror</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     Draws the node with a float32 transform.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L620" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L620" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L707" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L707" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -368,8 +377,8 @@
   <dd>
     
     Prints the node tree for debugging.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L672" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L672" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L794" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L794" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -382,8 +391,8 @@
   <dd>
     
     Finds the world transform for a node in a tree.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L517" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L517" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L590" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L590" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -396,8 +405,8 @@
   <dd>
     
     Get the axis-aligned bounding box of the node and its children.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L783" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L783" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L905" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L905" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -410,8 +419,8 @@
   <dd>
     
     Get the axis-aligned bounding box of the node.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L771" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L771" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L893" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L893" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -424,8 +433,8 @@
   <dd>
     
     Get the bounding sphere of the node and its children.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L828" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L828" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L950" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L950" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -438,8 +447,8 @@
   <dd>
     
     Get the bounding sphere of the node.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L809" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L809" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L931" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L931" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -451,8 +460,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L161" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L161" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L180" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L180" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -461,8 +470,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L169" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L169" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L188" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L188" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -471,8 +480,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L158" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L158" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L177" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L177" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -484,8 +493,8 @@
   <dd>
     
     Merge two axis-aligned bounding boxes.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L756" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L756" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L878" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L878" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -495,8 +504,8 @@
   <dd>
     
     Merge two bounding spheres.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L761" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L761" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L883" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L883" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -508,8 +517,8 @@
   <dd>
     
     Get the radius of the axis-aligned bounding box.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L752" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L752" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L874" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L874" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -521,8 +530,8 @@
   <dd>
     
     Reset the node (and its children) to the original transform.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L71" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L71" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L74" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L74" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -534,8 +543,22 @@
   <dd>
     
     Creates a shallow copy of a node.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L6" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L6" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L8" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L8" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="skinMatrices-procs-all">
+  <div id="skinMatrices,Node,Node">
+  <dt><pre><span class="Keyword">proc</span> <a href="#skinMatrices%2CNode%2CNode"><span class="Identifier">skinMatrices</span></a><span class="Other">(</span><span class="Identifier">root</span><span class="Other">,</span> <span class="Identifier">node</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">Mat4</span><span class="Other">]</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Computes joint matrices for a skinned node.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L607" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L607" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -546,9 +569,9 @@
   <dt><pre><span class="Keyword">proc</span> <a href="#trs%2CNode"><span class="Identifier">trs</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Mat4</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
-    Get the transformation matrix of a node.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L513" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L513" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L6" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L6" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -561,8 +584,8 @@
   <dd>
     
     Advance and apply the current animation clip.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L149" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L149" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L152" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L152" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -574,8 +597,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L479" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L479" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L552" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L552" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -584,8 +607,8 @@
   <dd>
     
     Update the node subtree on the GPU.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L501" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L501" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L574" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L574" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -595,8 +618,22 @@
   <dd>
     
     Update primitive data on the GPU.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L396" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L396" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L451" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L451" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="updateTransforms-procs-all">
+  <div id="updateTransforms,Node">
+  <dt><pre><span class="Keyword">proc</span> <a href="#updateTransforms%2CNode"><span class="Identifier">updateTransforms</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a><span class="Other">;</span> <span class="Identifier">transform</span> <span class="Other">=</span> <span class="Identifier">mat4</span><span class="Other">(</span><span class="Other">)</span><span class="Other">;</span> <span class="Identifier">applyTrs</span> <span class="Other">=</span> <span class="Identifier">true</span><span class="Other">)</span> {.
+    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Updates world transforms for a node tree.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L161" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L161" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -608,8 +645,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L467" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L467" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L540" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L540" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -618,8 +655,8 @@
   <dd>
     
     Upload the node subtree to the GPU.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L485" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L485" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L558" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L558" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -629,8 +666,8 @@
   <dd>
     
     Upload the primitive data to the GPU.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L275" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L275" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L294" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L294" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -642,8 +679,8 @@
   <dd>
     
     Walk the nodes tree and return a flat list of nodes.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L740" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L740" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L862" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L862" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -662,8 +699,8 @@
   <dd>
     
     Triangles iterator for a node.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L835" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L835" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/models.nim#L957" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/models.nim#L957" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -679,7 +716,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-03-28 17:03:04 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-03-28 17:56:43 UTC</small>
       </div>
     </div>
   </div>
