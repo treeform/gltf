@@ -96,6 +96,7 @@ proc writeGLB*(root: Node, path: string) =
     materials: seq[JsonNode]
     meshes: seq[JsonNode]
     nodesJson: seq[JsonNode]
+    usesNodeVisibility = false
 
   samplers.add(Sampler(
     magFilter: GL_LINEAR,
@@ -322,6 +323,13 @@ proc writeGLB*(root: Node, path: string) =
     nodeObj["translation"] = %*[n.pos.x, n.pos.y, n.pos.z]
     nodeObj["rotation"] = %*[n.rot.x, n.rot.y, n.rot.z, n.rot.w]
     nodeObj["scale"] = %*[n.scale.x, n.scale.y, n.scale.z]
+    if not n.visible:
+      usesNodeVisibility = true
+      nodeObj["extensions"] = %*{
+        "KHR_node_visibility": {
+          "visible": false
+        }
+      }
 
     let meshIdx = addMeshForNode(n)
     if meshIdx >= 0:
@@ -340,6 +348,9 @@ proc writeGLB*(root: Node, path: string) =
 
   var jsonRoot = newJObject()
   jsonRoot["asset"] = %*{"version": "2.0"}
+  if usesNodeVisibility:
+    jsonRoot["extensionsUsed"] = %*["KHR_node_visibility"]
+    jsonRoot["extensionsRequired"] = %*["KHR_node_visibility"]
   jsonRoot["buffers"] = %*[{"byteLength": data.len}]
 
   jsonRoot["bufferViews"] = newJArray()
