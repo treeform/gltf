@@ -350,7 +350,6 @@ proc writeGLB*(root: Node, path: string) =
   jsonRoot["asset"] = %*{"version": "2.0"}
   if usesNodeVisibility:
     jsonRoot["extensionsUsed"] = %*["KHR_node_visibility"]
-    jsonRoot["extensionsRequired"] = %*["KHR_node_visibility"]
   jsonRoot["buffers"] = %*[{"byteLength": data.len}]
 
   jsonRoot["bufferViews"] = newJArray()
