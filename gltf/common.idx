@@ -32,7 +32,7 @@ nim	AnimInterpolation	gltf/common.html#AnimInterpolation	enum AnimInterpolation	
 nim	AnimationChannel	gltf/common.html#AnimationChannel	object AnimationChannel		125
 nim	AnimationClip	gltf/common.html#AnimationClip	object AnimationClip		143
 nim	Material	gltf/common.html#Material	type Material		148
-nim	AABounds	gltf/common.html#AABounds	object AABounds		184
-nim	Bounds	gltf/common.html#Bounds	object Bounds		187
-nim	BoundingSphere	gltf/common.html#BoundingSphere	object BoundingSphere		192
-nim	GltfFile	gltf/common.html#GltfFile	type GltfFile		196
+nim	AABounds	gltf/common.html#AABounds	object AABounds		189
+nim	Bounds	gltf/common.html#Bounds	object Bounds		192
+nim	BoundingSphere	gltf/common.html#BoundingSphere	object BoundingSphere		197
+nim	GltfFile	gltf/common.html#GltfFile	type GltfFile		201
