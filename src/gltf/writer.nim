@@ -1,9 +1,13 @@
 import
-  std/[json, tables],
+  std/[json, os, strutils, tables, uri],
   flatty/binny, opengl, pixie, pixie/fileformats/png, vmath,
   common, internal
 
 export common
+
+type
+  ImageWriteMode* = enum
+    iwmEmbedded, iwmExternal
 
 proc pad4(data: var string) =
   ## Pads a string to a 4-byte boundary.
@@ -69,22 +73,71 @@ proc addAccessor(
   accessors.add(accessor)
   accessors.len - 1
 
+proc normalizeImageFileName(name, fallbackStem: string): string =
+  ## Converts an internal image name into a sidecar PNG file name.
+  let fileName = extractFilename(name.strip())
+  let parts = splitFile(fileName)
+  let stem =
+    if parts.name.len > 0:
+      parts.name
+    elif fileName.len > 0:
+      fileName
+    else:
+      fallbackStem
+  stem & ".png"
+
+proc uniqueImageFileName(
+  name, fallbackStem: string,
+  usedImageFileNames: var Table[string, int]
+): string =
+  ## Returns a stable unique sidecar image file name.
+  let preferred = normalizeImageFileName(name, fallbackStem)
+  let seen = usedImageFileNames.getOrDefault(preferred, 0)
+  if seen == 0:
+    result = preferred
+  else:
+    let parts = splitFile(preferred)
+    result = parts.name & "_" & $seen & parts.ext
+  usedImageFileNames[preferred] = seen + 1
+
 proc writeImagePng(
   images: var seq[JsonNode],
   bufferViews: var seq[BufferView],
   data: var string,
-  img: Image
-) =
-  ## Encodes and appends an image as PNG data.
+  img: Image,
+  imageName: string,
+  imageWriteMode: ImageWriteMode,
+  outputDir: string,
+  usedImageFileNames: var Table[string, int]
+): int =
+  ## Encodes an image as PNG and writes it embedded or as a sidecar file.
   let pngData = img.encodePng()
-  bufferViews.add(addView(data, pngData))
-  let viewIdx = bufferViews.len - 1
   var node = newJObject()
-  node["bufferView"] = newJInt(viewIdx)
-  node["mimeType"] = newJString("image/png")
+  case imageWriteMode
+  of iwmEmbedded:
+    bufferViews.add(addView(data, pngData))
+    let viewIdx = bufferViews.len - 1
+    let fileName = normalizeImageFileName(imageName, "image_" & $images.len)
+    node["name"] = newJString(fileName)
+    node["bufferView"] = newJInt(viewIdx)
+    node["mimeType"] = newJString("image/png")
+  of iwmExternal:
+    let fileName = uniqueImageFileName(
+      imageName,
+      "image_" & $images.len,
+      usedImageFileNames
+    )
+    node["name"] = newJString(fileName)
+    node["uri"] = newJString(encodeUrl(fileName, usePlus = false))
+    writeFile(joinPath(outputDir, fileName), pngData)
   images.add(node)
+  images.len - 1
 
-proc writeGLB*(root: Node, path: string) =
+proc writeGLB*(
+  root: Node,
+  path: string,
+  imageWriteMode = iwmEmbedded
+) =
   ## Writes a node hierarchy to a binary glTF file.
   var
     data = newString(0)
@@ -97,6 +150,8 @@ proc writeGLB*(root: Node, path: string) =
     meshes: seq[JsonNode]
     nodesJson: seq[JsonNode]
     usesNodeVisibility = false
+    outputDir = path.parentDir()
+    usedImageFileNames = initTable[string, int]()
 
   samplers.add(Sampler(
     magFilter: GL_LINEAR,
@@ -106,6 +161,37 @@ proc writeGLB*(root: Node, path: string) =
   ))
 
   var materialIds = initTable[pointer, int]()
+  var imageIds = initTable[pointer, int]()
+  var textureIds = initTable[pointer, int]()
+
+  proc textureIndex(img: Image, imageName: string): int =
+    ## Returns the output texture index for a PNG image.
+    if img == nil:
+      return -1
+    let key = cast[pointer](img)
+    if key in textureIds:
+      return textureIds[key]
+
+    var imgIdx: int
+    if key in imageIds:
+      imgIdx = imageIds[key]
+    else:
+      imgIdx = writeImagePng(
+        images,
+        bufferViews,
+        data,
+        img,
+        imageName,
+        imageWriteMode,
+        outputDir,
+        usedImageFileNames
+      )
+      imageIds[key] = imgIdx
+
+    textures.add(%*{"source": imgIdx, "sampler": 0})
+    let idx = textures.len - 1
+    textureIds[key] = idx
+    idx
 
   proc materialIndex(mat: Material): int =
     ## Returns the output material index for a material.
@@ -128,10 +214,7 @@ proc writeGLB*(root: Node, path: string) =
     pbr["roughnessFactor"] = newJFloat(mat.roughnessFactor)
 
     if mat.baseColor != nil:
-      writeImagePng(images, bufferViews, data, mat.baseColor)
-      let imgIdx = images.len - 1
-      textures.add(%*{"source": imgIdx, "sampler": 0})
-      let texIdx = textures.len - 1
+      let texIdx = textureIndex(mat.baseColor, mat.baseColorName)
       pbr["baseColorTexture"] = %*{"index": texIdx}
 
     matNode["pbrMetallicRoughness"] = pbr

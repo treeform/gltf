@@ -148,24 +148,29 @@ type
   Material* = ref object
     name*: string
     baseColor*: Image
+    baseColorName*: string
     baseColorTransform*: TextureTransform
     baseColorSampler*: TextureSampler
     baseColorFactor*: Color
     metallicRoughness*: Image
+    metallicRoughnessName*: string
     metallicRoughnessTransform*: TextureTransform
     metallicRoughnessSampler*: TextureSampler
     metallicFactor*: float32
     roughnessFactor*: float32
     normal*: Image
+    normalName*: string
     normalTransform*: TextureTransform
     normalSampler*: TextureSampler
     hasNormalTexture*: bool
     normalScale*: float32
     occlusion*: Image
+    occlusionName*: string
     occlusionTransform*: TextureTransform
     occlusionSampler*: TextureSampler
     occlusionStrength*: float32
     emissive*: Image
+    emissiveName*: string
     emissiveTransform*: TextureTransform
     emissiveSampler*: TextureSampler
     emissiveFactor*: Color
