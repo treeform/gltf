@@ -1,6 +1,7 @@
 import
-  std/json,
+  std/[json, os],
   gltf,
+  pixie,
   vmath
 
 echo "Testing empty glTF file."
@@ -259,3 +260,53 @@ doAssert lineStripNode != nil
 doAssert lineStripNode.mesh != nil
 doAssert lineStripNode.mesh.primitives.len == 1
 doAssert lineStripNode.mesh.primitives[0].mode.int == 3
+
+echo "Testing GLB image write modes."
+let
+  outDir = "tests/out_image_modes"
+  externalPath = joinPath(outDir, "external.glb")
+  embeddedPath = joinPath(outDir, "embedded.glb")
+  externalImagePath = joinPath(outDir, "named_diffuse.png")
+if dirExists(outDir):
+  removeDir(outDir)
+createDir(outDir)
+
+var image = newImage(1, 1)
+image[0, 0] = rgbx(255, 0, 0, 255)
+
+let material = Material(
+  name: "TestMaterial",
+  baseColor: image,
+  baseColorName: "named_diffuse.png"
+)
+let primitive = Primitive(
+  points: @[vec3(0, 0, 0)],
+  material: material
+)
+let mesh = Mesh(
+  name: "TestMesh",
+  primitives: @[primitive]
+)
+let rootNode = Node(
+  name: "Root",
+  visible: true,
+  pos: vec3(0, 0, 0),
+  rot: quat(0, 0, 0, 1),
+  scale: vec3(1, 1, 1),
+  mesh: mesh
+)
+
+writeGLB(rootNode, externalPath, iwmExternal)
+doAssert fileExists(externalPath)
+doAssert fileExists(externalImagePath)
+let externalModel = readGltfFile(externalPath)
+doAssert externalModel.root.nodes.len == 1
+let externalPrimitive = externalModel.root.nodes[0].mesh.primitives[0]
+doAssert externalPrimitive.material.baseColorName == "named_diffuse.png"
+
+writeGLB(rootNode, embeddedPath, iwmEmbedded)
+doAssert fileExists(embeddedPath)
+let embeddedModel = readGltfFile(embeddedPath)
+doAssert embeddedModel.root.nodes.len == 1
+let embeddedPrimitive = embeddedModel.root.nodes[0].mesh.primitives[0]
+doAssert embeddedPrimitive.material.baseColorName == "named_diffuse.png"

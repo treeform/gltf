@@ -600,6 +600,7 @@ proc loadPrimitive(
   bufferViews: seq[BufferView],
   buffers: seq[string],
   images: seq[Image],
+  imageNames: seq[string],
   textures: seq[Texture],
   samplers: seq[Sampler],
   materials: seq[MaterialInfo]
@@ -626,8 +627,10 @@ proc loadPrimitive(
 
     let pbr = material.pbrMetallicRoughness
     if pbr.baseColorTexture.index >= 0:
+      let imageIndex = textures[pbr.baseColorTexture.index].source
       result.material.baseColor =
-        images[textures[pbr.baseColorTexture.index].source]
+        images[imageIndex]
+      result.material.baseColorName = imageNames[imageIndex]
       result.material.baseColorSampler =
         getTextureSampler(pbr.baseColorTexture.index)
     else:
@@ -642,8 +645,10 @@ proc loadPrimitive(
     result.material.baseColorFactor = pbr.baseColorFactor
 
     if pbr.metallicRoughnessTexture.index >= 0:
+      let imageIndex = textures[pbr.metallicRoughnessTexture.index].source
       result.material.metallicRoughness =
-        images[textures[pbr.metallicRoughnessTexture.index].source]
+        images[imageIndex]
+      result.material.metallicRoughnessName = imageNames[imageIndex]
       result.material.metallicRoughnessSampler =
         getTextureSampler(pbr.metallicRoughnessTexture.index)
     else:
@@ -659,8 +664,10 @@ proc loadPrimitive(
     result.material.roughnessFactor = pbr.roughnessFactor
 
     if material.normalTexture.index >= 0:
+      let imageIndex = textures[material.normalTexture.index].source
       result.material.normal =
-        images[textures[material.normalTexture.index].source]
+        images[imageIndex]
+      result.material.normalName = imageNames[imageIndex]
       result.material.normalSampler =
         getTextureSampler(material.normalTexture.index)
       result.material.hasNormalTexture = true
@@ -678,8 +685,10 @@ proc loadPrimitive(
     )
 
     if material.occlusionTexture.index >= 0:
+      let imageIndex = textures[material.occlusionTexture.index].source
       result.material.occlusion =
-        images[textures[material.occlusionTexture.index].source]
+        images[imageIndex]
+      result.material.occlusionName = imageNames[imageIndex]
       result.material.occlusionSampler =
         getTextureSampler(material.occlusionTexture.index)
     else:
@@ -694,8 +703,10 @@ proc loadPrimitive(
     result.material.occlusionStrength = material.occlusionTexture.strength
 
     if material.emissiveTexture.index >= 0:
+      let imageIndex = textures[material.emissiveTexture.index].source
       result.material.emissive =
-        images[textures[material.emissiveTexture.index].source]
+        images[imageIndex]
+      result.material.emissiveName = imageNames[imageIndex]
       result.material.emissiveSampler =
         getTextureSampler(material.emissiveTexture.index)
     else:
@@ -1129,11 +1140,16 @@ proc loadModelJsonInternal(
       textures.add(texture)
 
   var images: seq[Image]
+  var imageNames: seq[string]
   if "images" in jsonRoot:
     for entry in jsonRoot["images"]:
-      var image: Image
+      var
+        image: Image
+        imageName = entry{"name"}.getStr()
       if "uri" in entry:
         let uri = entry["uri"].getStr().decodeUriComponent()
+        if imageName.len == 0:
+          imageName = extractFilename(uri)
         if uri.startsWith("data:image/png") or
            uri.startsWith("data:image/jpeg"):
           image = decodeImage(decode(uri.split(',')[1]))
@@ -1153,6 +1169,7 @@ proc loadModelJsonInternal(
       else:
         raise newException(GltfError, "Unsupported image type")
       images.add(image)
+      imageNames.add(imageName)
 
   var samplers: seq[Sampler]
   if "samplers" in jsonRoot:
@@ -1844,6 +1861,7 @@ proc loadModelJsonInternal(
           bufferViews,
           buffers,
           images,
+          imageNames,
           textures,
           samplers,
           materials
