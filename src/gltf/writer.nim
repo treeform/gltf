@@ -1,5 +1,5 @@
 import
-  std/[json, os, strutils, tables, uri],
+  std/[json, os, osproc, strutils, tables, uri],
   flatty/binny, opengl, pixie, pixie/fileformats/png, vmath,
   common, internal
 
@@ -7,7 +7,10 @@ export common
 
 type
   ImageWriteMode* = enum
-    iwmEmbedded, iwmExternal
+    iwmEmbedded, iwmExternal, iwmExternalKtx2
+
+  TextureSemantic = enum
+    tsColor, tsData, tsNormal
 
 proc pad4(data: var string) =
   ## Pads a string to a 4-byte boundary.
@@ -73,8 +76,11 @@ proc addAccessor(
   accessors.add(accessor)
   accessors.len - 1
 
-proc normalizeImageFileName(name, fallbackStem: string): string =
-  ## Converts an internal image name into a sidecar PNG file name.
+proc normalizeImageFileName(
+  name, fallbackStem: string,
+  ext = ".png"
+): string =
+  ## Converts an internal image name into a sidecar image file name.
   let fileName = extractFilename(name.strip())
   let parts = splitFile(fileName)
   let stem =
@@ -84,14 +90,15 @@ proc normalizeImageFileName(name, fallbackStem: string): string =
       fileName
     else:
       fallbackStem
-  stem & ".png"
+  stem & ext
 
 proc uniqueImageFileName(
   name, fallbackStem: string,
-  usedImageFileNames: var Table[string, int]
+  usedImageFileNames: var Table[string, int],
+  ext = ".png"
 ): string =
   ## Returns a stable unique sidecar image file name.
-  let preferred = normalizeImageFileName(name, fallbackStem)
+  let preferred = normalizeImageFileName(name, fallbackStem, ext)
   let seen = usedImageFileNames.getOrDefault(preferred, 0)
   if seen == 0:
     result = preferred
@@ -99,6 +106,123 @@ proc uniqueImageFileName(
     let parts = splitFile(preferred)
     result = parts.name & "_" & $seen & parts.ext
   usedImageFileNames[preferred] = seen + 1
+
+proc resolveImageFileName(
+  name, fallbackStem, outputDir: string,
+  usedImageFileNames: var Table[string, int],
+  ext = ".png"
+): string =
+  ## Reuses an existing sidecar file when present, otherwise creates a unique name.
+  let preferred = normalizeImageFileName(name, fallbackStem, ext)
+  if fileExists(joinPath(outputDir, preferred)):
+    usedImageFileNames[preferred] = max(usedImageFileNames.getOrDefault(preferred, 0), 1)
+    return preferred
+  uniqueImageFileName(name, fallbackStem, usedImageFileNames, ext)
+
+proc findKtxExe(): string =
+  result = findExe("ktx")
+  if result.len == 0:
+    raise newException(
+      GltfError,
+      "KTX2 writing requires `ktx` on PATH"
+    )
+
+proc writeImageKtx2(
+  images: var seq[JsonNode],
+  img: Image,
+  imageName: string,
+  semantic: TextureSemantic,
+  outputDir: string,
+  usedImageFileNames: var Table[string, int]
+): int =
+  ## Encodes an image as external KTX2 with settings based on texture semantic.
+  let
+    fileName = resolveImageFileName(
+      imageName,
+      "image_" & $images.len,
+      outputDir,
+      usedImageFileNames,
+      ".ktx2"
+    )
+    outPath = joinPath(outputDir, fileName)
+    tempPngPath = joinPath(outputDir, fileName & ".tmp.png")
+    tempEncodedPath = joinPath(outputDir, fileName & ".encoded.ktx2")
+    ktxExe = findKtxExe()
+
+  if not fileExists(outPath):
+    writeFile(tempPngPath, img.encodePng())
+    try:
+      var createArgs = @[
+        "create",
+        "--generate-mipmap"
+      ]
+      var transcodeTarget = "bc3"
+      case semantic
+      of tsColor:
+        createArgs.add(@[
+          "--format", "R8G8B8A8_SRGB",
+          "--encode", "basis-lz"
+        ])
+        transcodeTarget = "bc3"
+      of tsData:
+        createArgs.add(@[
+          "--format", "R8G8B8A8_UNORM",
+          "--assign-oetf", "linear",
+          "--assign-primaries", "none",
+          "--encode", "uastc",
+          "--uastc-quality", "3"
+        ])
+        transcodeTarget = "bc3"
+      of tsNormal:
+        createArgs.add(@[
+          "--format", "R8G8B8A8_UNORM",
+          "--assign-oetf", "linear",
+          "--assign-primaries", "none",
+          "--encode", "uastc",
+          "--uastc-quality", "4",
+          "--normal-mode"
+        ])
+        transcodeTarget = "bc5"
+      createArgs.add(@[tempPngPath, tempEncodedPath])
+
+      var process = startProcess(
+        ktxExe,
+        args = createArgs,
+        options = {poUsePath}
+      )
+      var exitCode = waitForExit(process)
+      close(process)
+      if exitCode != 0 or not fileExists(tempEncodedPath):
+        raise newException(
+          GltfError,
+          "ktx.exe failed to create encoded " & fileName & " (exit " & $exitCode & ")"
+        )
+
+      process = startProcess(
+        ktxExe,
+        args = @["transcode", "--target", transcodeTarget, tempEncodedPath, outPath],
+        options = {poUsePath}
+      )
+      exitCode = waitForExit(process)
+      close(process)
+      if exitCode != 0 or not fileExists(outPath):
+        raise newException(
+          GltfError,
+          "ktx.exe failed to transcode " & fileName & " to " & transcodeTarget &
+            " (exit " & $exitCode & ")"
+        )
+    finally:
+      if fileExists(tempPngPath):
+        removeFile(tempPngPath)
+      if fileExists(tempEncodedPath):
+        removeFile(tempEncodedPath)
+
+  var node = newJObject()
+  node["name"] = newJString(fileName)
+  node["uri"] = newJString(encodeUrl(fileName, usePlus = false))
+  node["mimeType"] = newJString("image/ktx2")
+  images.add(node)
+  images.len - 1
 
 proc writeImagePng(
   images: var seq[JsonNode],
@@ -122,14 +246,22 @@ proc writeImagePng(
     node["bufferView"] = newJInt(viewIdx)
     node["mimeType"] = newJString("image/png")
   of iwmExternal:
-    let fileName = uniqueImageFileName(
+    let fileName = resolveImageFileName(
       imageName,
       "image_" & $images.len,
+      outputDir,
       usedImageFileNames
     )
+    let outPath = joinPath(outputDir, fileName)
     node["name"] = newJString(fileName)
     node["uri"] = newJString(encodeUrl(fileName, usePlus = false))
-    writeFile(joinPath(outputDir, fileName), pngData)
+    if not fileExists(outPath):
+      writeFile(outPath, pngData)
+  of iwmExternalKtx2:
+    raise newException(
+      GltfError,
+      "writeImagePng called with iwmExternalKtx2; use writeImageKtx2 instead"
+    )
   images.add(node)
   images.len - 1
 
@@ -150,6 +282,7 @@ proc writeGLB*(
     meshes: seq[JsonNode]
     nodesJson: seq[JsonNode]
     usesNodeVisibility = false
+    usesKhrTextureBasisu = false
     outputDir = path.parentDir()
     usedImageFileNames = initTable[string, int]()
 
@@ -161,14 +294,14 @@ proc writeGLB*(
   ))
 
   var materialIds = initTable[pointer, int]()
-  var imageIds = initTable[pointer, int]()
-  var textureIds = initTable[pointer, int]()
+  var imageIds = initTable[(pointer, TextureSemantic), int]()
+  var textureIds = initTable[(pointer, TextureSemantic), int]()
 
-  proc textureIndex(img: Image, imageName: string): int =
-    ## Returns the output texture index for a PNG image.
+  proc textureIndex(img: Image, imageName: string, semantic: TextureSemantic): int =
+    ## Returns the output texture index for an exported image.
     if img == nil:
       return -1
-    let key = cast[pointer](img)
+    let key = (cast[pointer](img), semantic)
     if key in textureIds:
       return textureIds[key]
 
@@ -176,19 +309,52 @@ proc writeGLB*(
     if key in imageIds:
       imgIdx = imageIds[key]
     else:
-      imgIdx = writeImagePng(
-        images,
-        bufferViews,
-        data,
-        img,
-        imageName,
-        imageWriteMode,
-        outputDir,
-        usedImageFileNames
-      )
+      case imageWriteMode
+      of iwmEmbedded:
+        imgIdx = writeImagePng(
+          images,
+          bufferViews,
+          data,
+          img,
+          imageName,
+          imageWriteMode,
+          outputDir,
+          usedImageFileNames
+        )
+      of iwmExternal:
+        imgIdx = writeImagePng(
+          images,
+          bufferViews,
+          data,
+          img,
+          imageName,
+          imageWriteMode,
+          outputDir,
+          usedImageFileNames
+        )
+      of iwmExternalKtx2:
+        imgIdx = writeImageKtx2(
+          images,
+          img,
+          imageName,
+          semantic,
+          outputDir,
+          usedImageFileNames
+        )
       imageIds[key] = imgIdx
 
-    textures.add(%*{"source": imgIdx, "sampler": 0})
+    if imageWriteMode == iwmExternalKtx2:
+      usesKhrTextureBasisu = true
+      textures.add(%*{
+        "sampler": 0,
+        "extensions": {
+          "KHR_texture_basisu": {
+            "source": imgIdx
+          }
+        }
+      })
+    else:
+      textures.add(%*{"source": imgIdx, "sampler": 0})
     let idx = textures.len - 1
     textureIds[key] = idx
     idx
@@ -213,12 +379,44 @@ proc writeGLB*(
     pbr["metallicFactor"] = newJFloat(mat.metallicFactor)
     pbr["roughnessFactor"] = newJFloat(mat.roughnessFactor)
 
-    if mat.baseColor != nil:
-      let texIdx = textureIndex(mat.baseColor, mat.baseColorName)
+    if mat.baseColor != nil and mat.baseColorName.len > 0:
+      let texIdx = textureIndex(mat.baseColor, mat.baseColorName, tsColor)
       pbr["baseColorTexture"] = %*{"index": texIdx}
+
+    if mat.metallicRoughness != nil and mat.metallicRoughnessName.len > 0:
+      let texIdx = textureIndex(
+        mat.metallicRoughness,
+        mat.metallicRoughnessName,
+        tsData
+      )
+      pbr["metallicRoughnessTexture"] = %*{"index": texIdx}
 
     matNode["pbrMetallicRoughness"] = pbr
     matNode["doubleSided"] = newJBool(mat.doubleSided)
+
+    if mat.normal != nil and mat.normalName.len > 0 and mat.hasNormalTexture:
+      let texIdx = textureIndex(mat.normal, mat.normalName, tsNormal)
+      matNode["normalTexture"] = %*{
+        "index": texIdx,
+        "scale": mat.normalScale
+      }
+
+    if mat.occlusion != nil and mat.occlusionName.len > 0:
+      let texIdx = textureIndex(mat.occlusion, mat.occlusionName, tsData)
+      matNode["occlusionTexture"] = %*{
+        "index": texIdx,
+        "strength": mat.occlusionStrength
+      }
+
+    if mat.emissive != nil and mat.emissiveName.len > 0:
+      let texIdx = textureIndex(mat.emissive, mat.emissiveName, tsColor)
+      matNode["emissiveTexture"] = %*{"index": texIdx}
+      matNode["emissiveFactor"] = %*[
+        mat.emissiveFactor.r,
+        mat.emissiveFactor.g,
+        mat.emissiveFactor.b
+      ]
+
     case mat.alphaMode
     of OpaqueAlphaMode:
       matNode["alphaMode"] = newJString("OPAQUE")
@@ -431,8 +629,17 @@ proc writeGLB*(
 
   var jsonRoot = newJObject()
   jsonRoot["asset"] = %*{"version": "2.0"}
+  var extensionsUsed: seq[string]
+  var extensionsRequired: seq[string]
   if usesNodeVisibility:
-    jsonRoot["extensionsUsed"] = %*["KHR_node_visibility"]
+    extensionsUsed.add("KHR_node_visibility")
+  if usesKhrTextureBasisu:
+    extensionsUsed.add("KHR_texture_basisu")
+    extensionsRequired.add("KHR_texture_basisu")
+  if extensionsUsed.len > 0:
+    jsonRoot["extensionsUsed"] = %*extensionsUsed
+  if extensionsRequired.len > 0:
+    jsonRoot["extensionsRequired"] = %*extensionsRequired
   jsonRoot["buffers"] = %*[{"byteLength": data.len}]
 
   jsonRoot["bufferViews"] = newJArray()

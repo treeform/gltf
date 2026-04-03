@@ -1,7 +1,7 @@
 import
   std/[base64, json, os, strformat, strutils],
   chroma, flatty/binny, opengl, pixie, vmath, webby,
-  common, internal, models
+  common, internal, ktx2, models
 
 export common
 
@@ -9,7 +9,8 @@ const SupportedExtensions = [
   "KHR_texture_transform",
   "KHR_materials_transmission",
   "KHR_node_visibility",
-  "KHR_animation_pointer"
+  "KHR_animation_pointer",
+  "KHR_texture_basisu"
 ]
 
 proc unsupportedUsedExtensions(jsonRoot: JsonNode): seq[string] =
@@ -603,7 +604,8 @@ proc loadPrimitive(
   imageNames: seq[string],
   textures: seq[Texture],
   samplers: seq[Sampler],
-  materials: seq[MaterialInfo]
+  materials: seq[MaterialInfo],
+  imageTextureIds: seq[GLuint]
 ): Primitive =
   ## Loads one glTF primitive into a runtime primitive.
   proc getTextureSampler(textureIndex: int): TextureSampler =
@@ -628,8 +630,8 @@ proc loadPrimitive(
     let pbr = material.pbrMetallicRoughness
     if pbr.baseColorTexture.index >= 0:
       let imageIndex = textures[pbr.baseColorTexture.index].source
-      result.material.baseColor =
-        images[imageIndex]
+      result.material.baseColor = images[imageIndex]
+      result.material.baseColorId = imageTextureIds[imageIndex]
       result.material.baseColorName = imageNames[imageIndex]
       result.material.baseColorSampler =
         getTextureSampler(pbr.baseColorTexture.index)
@@ -646,8 +648,8 @@ proc loadPrimitive(
 
     if pbr.metallicRoughnessTexture.index >= 0:
       let imageIndex = textures[pbr.metallicRoughnessTexture.index].source
-      result.material.metallicRoughness =
-        images[imageIndex]
+      result.material.metallicRoughness = images[imageIndex]
+      result.material.metallicRoughnessId = imageTextureIds[imageIndex]
       result.material.metallicRoughnessName = imageNames[imageIndex]
       result.material.metallicRoughnessSampler =
         getTextureSampler(pbr.metallicRoughnessTexture.index)
@@ -665,8 +667,8 @@ proc loadPrimitive(
 
     if material.normalTexture.index >= 0:
       let imageIndex = textures[material.normalTexture.index].source
-      result.material.normal =
-        images[imageIndex]
+      result.material.normal = images[imageIndex]
+      result.material.normalId = imageTextureIds[imageIndex]
       result.material.normalName = imageNames[imageIndex]
       result.material.normalSampler =
         getTextureSampler(material.normalTexture.index)
@@ -686,8 +688,8 @@ proc loadPrimitive(
 
     if material.occlusionTexture.index >= 0:
       let imageIndex = textures[material.occlusionTexture.index].source
-      result.material.occlusion =
-        images[imageIndex]
+      result.material.occlusion = images[imageIndex]
+      result.material.occlusionId = imageTextureIds[imageIndex]
       result.material.occlusionName = imageNames[imageIndex]
       result.material.occlusionSampler =
         getTextureSampler(material.occlusionTexture.index)
@@ -704,8 +706,8 @@ proc loadPrimitive(
 
     if material.emissiveTexture.index >= 0:
       let imageIndex = textures[material.emissiveTexture.index].source
-      result.material.emissive =
-        images[imageIndex]
+      result.material.emissive = images[imageIndex]
+      result.material.emissiveId = imageTextureIds[imageIndex]
       result.material.emissiveName = imageNames[imageIndex]
       result.material.emissiveSampler =
         getTextureSampler(material.emissiveTexture.index)
@@ -1041,7 +1043,7 @@ proc loadModelJsonInternal(
   if "extensionsRequired" in jsonRoot:
     for extension in jsonRoot["extensionsRequired"]:
       case extension.getStr()
-      of "KHR_texture_transform", "KHR_node_visibility":
+      of "KHR_texture_transform", "KHR_node_visibility", "KHR_texture_basisu":
         discard
       else:
         raise newException(
@@ -1132,7 +1134,15 @@ proc loadModelJsonInternal(
   if "textures" in jsonRoot:
     for entry in jsonRoot["textures"]:
       var texture = Texture()
-      texture.source = entry["source"].getInt()
+      texture.source = -1
+      if "extensions" in entry and
+         "KHR_texture_basisu" in entry["extensions"]:
+        texture.source =
+          entry["extensions"]["KHR_texture_basisu"]["source"].getInt()
+      elif "source" in entry:
+        texture.source = entry["source"].getInt()
+      else:
+        raise newException(GltfError, "Texture is missing a source image")
       if "sampler" in entry:
         texture.sampler = entry["sampler"].getInt()
       else:
@@ -1141,11 +1151,13 @@ proc loadModelJsonInternal(
 
   var images: seq[Image]
   var imageNames: seq[string]
+  var imageTextureIds: seq[GLuint]
   if "images" in jsonRoot:
     for entry in jsonRoot["images"]:
       var
         image: Image
         imageName = entry{"name"}.getStr()
+        textureId: GLuint
       if "uri" in entry:
         let uri = entry["uri"].getStr().decodeUriComponent()
         if imageName.len == 0:
@@ -1153,10 +1165,14 @@ proc loadModelJsonInternal(
         if uri.startsWith("data:image/png") or
            uri.startsWith("data:image/jpeg"):
           image = decodeImage(decode(uri.split(',')[1]))
+        elif uri.startsWith("data:image/ktx2"):
+          textureId = loadKtx2Texture(decode(uri.split(',')[1]))
         elif uri.endsWith(".png") or
              uri.endsWith(".jpg") or
              uri.endsWith(".jpeg"):
           image = readImage(joinPath(modelDir, uri))
+        elif uri.endsWith(".ktx2"):
+          textureId = loadKtx2TextureFile(joinPath(modelDir, uri))
         else:
           raise newException(GltfError, &"Unsupported file extension {uri}")
       elif "bufferView" in entry:
@@ -1165,11 +1181,16 @@ proc loadModelJsonInternal(
           bv = bufferViews[bufferViewIndex]
           ib = buffers[bv.buffer]
           imageData = ib[bv.byteOffset ..< bv.byteOffset + bv.byteLength]
-        image = decodeImage(imageData)
+        let mimeType = entry{"mimeType"}.getStr()
+        if mimeType == "image/ktx2":
+          textureId = loadKtx2Texture(imageData)
+        else:
+          image = decodeImage(imageData)
       else:
         raise newException(GltfError, "Unsupported image type")
       images.add(image)
       imageNames.add(imageName)
+      imageTextureIds.add(textureId)
 
   var samplers: seq[Sampler]
   if "samplers" in jsonRoot:
@@ -1864,7 +1885,8 @@ proc loadModelJsonInternal(
           imageNames,
           textures,
           samplers,
-          materials
+          materials,
+          imageTextureIds
         ))
       n.mesh = runtimeMesh
       n.morphWeights = meshInfo.weights
