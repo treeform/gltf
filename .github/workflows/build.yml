@@ -55,7 +55,7 @@ jobs:
         if: runner.os == 'Windows'
         uses: f3d-app/install-mesa-windows-action@v1
         with:
-          path: ${{ github.workspace }}\gltf\tmp
+          path: ${{ github.workspace }}
       - run: nim check src/gltf.nim
       - name: Run tests (Linux)
         if: runner.os == 'Linux'
@@ -64,6 +64,5 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force tmp | Out-Null
-          nim c -o:tmp/tests.exe tests/tests.nim
-          .\tmp\tests.exe
+          nim c -o:tests.exe tests/tests.nim
+          .\tests.exe
