@@ -88,10 +88,40 @@ The table below reflects the current code, not the full glTF 2.0 spec.
 | `KHR_animation_pointer` | Partial | Partial | No | Only the visibility target path is supported. |
 | `KHR_draco_mesh_compression` | No | No | No | Not supported yet. |
 | `KHR_mesh_quantization` | No | No | No | Not supported yet. |
-| `KHR_texture_basisu` | No | No | No | Not supported yet. |
+| `KHR_texture_basisu` | Yes | Yes | Yes | KTX2 textures; see [KHR_texture_basisu and KTX2](#khr_texture_basisu-and-ktx2). Writing needs [KTX-Software](#writing-ktx2-with-ktx-software) `ktx` on `PATH`. |
 | `KHR_lights_punctual` | No | No | No | Not supported yet. |
 | `KHR_materials_unlit` | No | No | No | Not supported yet. |
 | `EXT_texture_webp` | No | No | No | Not supported yet. |
+
+## KHR_texture_basisu and KTX2
+
+The library declares support for the glTF extension **`KHR_texture_basisu`**, which lets materials reference **KTX 2.0** (`.ktx2`) images instead of PNG or JPEG. That path is aimed at **runtime performance** (smaller on-disk size and direct compressed uploads to the GPU), not at general authoring workflows.
+
+### Extension
+
+- Textures can use `extensions.KHR_texture_basisu.source` to point at an image that carries KTX2 payload (`mimeType: image/ktx2`), including sidecar `.ktx2` URIs, `data:image/ktx2` data URIs, and buffer views with `mimeType: image/ktx2`.
+
+### Supported KTX2 inputs (reader)
+
+The embedded KTX2 reader loads textures into **OpenGL compressed 2D** textures. Supported inputs match what the code accepts today:
+
+| Aspect | Supported |
+| --- | --- |
+| Container | **KTX 2.0** (identifier `KTX 20`) |
+| Supercompression | **None** only (`supercompressionScheme == 0`). Basis, LZ4, Zstandard, etc. are rejected. |
+| Shape | **2D** textures: width and height &gt; 0; `depth` 0 or 1; **single** layer (`layerCount` 0 or 1); **one** face (not cubemaps). |
+| Mipmaps | At least **one** mip level; full mip chains are uploaded. |
+| Block formats | **BC1–BC5** only (Vulkan block formats `VK_FORMAT_BC1_*` … `VK_FORMAT_BC5_*`), i.e. DXT1/3/5 and BC4/5-style compressed data as exposed by OpenGL’s `GL_COMPRESSED_*` enums. |
+
+Anything outside that (3D/volume KTX2, texture arrays beyond a single layer, cubemaps, supercompressed payloads, or other `vkFormat` values) is not supported and will fail with a clear error.
+
+### Writing KTX2 with KTX Software
+
+Exporting glTF that uses **`KHR_texture_basisu`** and external `.ktx2` sidecars does **not** reimplement encoding inside Nim. The writer shells out to the official **[KTX-Software](https://github.com/KhronosGroup/KTX-Software)** command-line tool: the **`ktx`** executable must be on **`PATH`** (see `findExe("ktx")` in the writer). If it is missing, writing KTX2 images raises an error explaining that requirement.
+
+That pipeline is **for optimization and shipping builds**, not something most users should hand-roll as their default content workflow. Typical authoring still uses PNG or JPEG; you then convert to KTX2 when you care about **load time and size** in a game or similar runtime. As a **developer** of this library or of tools built on it, you will usually want KTX-Software installed so tests and `writeGLB` paths that emit KTX2 can run locally and in CI.
+
+**Why use KTX2 at all?** The practical reason in this context is **faster loads and smaller packages for texture-heavy games**: GPU-native block formats avoid decoding PNG/JPEG at runtime and map cleanly to compressed texture uploads.
 
 ## Usage
 
