@@ -21,6 +21,12 @@ jobs:
       - uses: treeform/setup-nim-action@v6
       - run: nimby install gltf/gltf.nimble
         working-directory: ${{ github.workspace }}/..
+      - name: Install OpenGL test dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y xvfb libgl1-mesa-dri libglx-mesa0 mesa-utils
       - name: Install KTX tools (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -45,5 +51,19 @@ jobs:
             throw "KTX installer failed with exit code $($process.ExitCode)"
           }
           "$installRoot\\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Install Mesa OpenGL (Windows)
+        if: runner.os == 'Windows'
+        uses: f3d-app/install-mesa-windows-action@v1
+        with:
+          path: ${{ github.workspace }}\gltf\tmp
       - run: nim check src/gltf.nim
-      - run: nim r tests/tests.nim
+      - name: Run tests (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -s "-screen 0 1024x768x24" env LIBGL_ALWAYS_SOFTWARE=1 nim r tests/tests.nim
+      - name: Run tests (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force tmp | Out-Null
+          nim c -o:tmp/tests.exe tests/tests.nim
+          .\tmp\tests.exe
