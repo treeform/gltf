@@ -1,6 +1,7 @@
 import
   gltf/animations,
   gltf/common,
+  gltf/ktx2,
   gltf/models,
   gltf/pbr,
   gltf/reader,
@@ -10,6 +11,7 @@ import
 export
   animations,
   common,
+  ktx2,
   models,
   pbr,
   reader,
