@@ -25,7 +25,7 @@
   <div class="document" id="documentId">
     <div class="container">
       <h1 class="title">Index</h1>
-      Modules: <a href="gltf.html">gltf</a>, <a href="gltf/animations.html">gltf/animations</a>, <a href="gltf/common.html">gltf/common</a>, <a href="gltf/internal.html">gltf/internal</a>, <a href="gltf/models.html">gltf/models</a>, <a href="gltf/pbr.html">gltf/pbr</a>, <a href="gltf/reader.html">gltf/reader</a>, <a href="gltf/shaders.html">gltf/shaders</a>, <a href="gltf/writer.html">gltf/writer</a>.<br/><p /><h2>API symbols</h2>
+      Modules: <a href="gltf.html">gltf</a>, <a href="gltf/animations.html">gltf/animations</a>, <a href="gltf/common.html">gltf/common</a>, <a href="gltf/internal.html">gltf/internal</a>, <a href="gltf/ktx2.html">gltf/ktx2</a>, <a href="gltf/models.html">gltf/models</a>, <a href="gltf/pbr.html">gltf/pbr</a>, <a href="gltf/reader.html">gltf/reader</a>, <a href="gltf/shaders.html">gltf/shaders</a>, <a href="gltf/writer.html">gltf/writer</a>.<br/><p /><h2>API symbols</h2>
 <dl><dt><a name="%60%24%60" href="#%60%24%60"><span>`$`:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="models: proc `$`(sampler: TextureSampler): string" href="gltf/models.html#%24%2CTextureSampler">models: proc `$`(sampler: TextureSampler): string</a></li>
@@ -296,6 +296,10 @@
 <li><a class="reference external"
           data-doc-search-tag="models: proc getBoundingSphereNode(node: Node; trs = mat4()): BoundingSphere" href="gltf/models.html#getBoundingSphereNode%2CNode">models: proc getBoundingSphereNode(node: Node; trs = mat4()): BoundingSphere</a></li>
           </ul></dd>
+<dt><a name="glInternalFormatForVkFormat" href="#glInternalFormatForVkFormat"><span>glInternalFormatForVkFormat:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ktx2: proc glInternalFormatForVkFormat(vkFormat: uint32): GLenum" href="gltf/ktx2.html#glInternalFormatForVkFormat%2Cuint32">ktx2: proc glInternalFormatForVkFormat(vkFormat: uint32): GLenum</a></li>
+          </ul></dd>
 <dt><a name="GltfError" href="#GltfError"><span>GltfError:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="common: object GltfError" href="gltf/common.html#GltfError">common: object GltfError</a></li>
@@ -316,6 +320,10 @@
 <li><a class="reference external"
           data-doc-search-tag="writer: enum ImageWriteMode" href="gltf/writer.html#ImageWriteMode">writer: enum ImageWriteMode</a></li>
           </ul></dd>
+<dt><a name="isSupportedVkFormat" href="#isSupportedVkFormat"><span>isSupportedVkFormat:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ktx2: proc isSupportedVkFormat(vkFormat: uint32): bool" href="gltf/ktx2.html#isSupportedVkFormat%2Cuint32">ktx2: proc isSupportedVkFormat(vkFormat: uint32): bool</a></li>
+          </ul></dd>
 <dt><a name="iwmEmbedded" href="#iwmEmbedded"><span>iwmEmbedded:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="writer: ImageWriteMode.iwmEmbedded" href="gltf/writer.html#iwmEmbedded">writer: ImageWriteMode.iwmEmbedded</a></li>
@@ -324,9 +332,21 @@
 <li><a class="reference external"
           data-doc-search-tag="writer: ImageWriteMode.iwmExternal" href="gltf/writer.html#iwmExternal">writer: ImageWriteMode.iwmExternal</a></li>
           </ul></dd>
+<dt><a name="iwmExternalKtx2" href="#iwmExternalKtx2"><span>iwmExternalKtx2:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="writer: ImageWriteMode.iwmExternalKtx2" href="gltf/writer.html#iwmExternalKtx2">writer: ImageWriteMode.iwmExternalKtx2</a></li>
+          </ul></dd>
 <dt><a name="JointIds" href="#JointIds"><span>JointIds:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="common: type JointIds" href="gltf/common.html#JointIds">common: type JointIds</a></li>
+          </ul></dd>
+<dt><a name="Ktx2LevelInfo" href="#Ktx2LevelInfo"><span>Ktx2LevelInfo:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ktx2: object Ktx2LevelInfo" href="gltf/ktx2.html#Ktx2LevelInfo">ktx2: object Ktx2LevelInfo</a></li>
+          </ul></dd>
+<dt><a name="Ktx2TextureInfo" href="#Ktx2TextureInfo"><span>Ktx2TextureInfo:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ktx2: object Ktx2TextureInfo" href="gltf/ktx2.html#Ktx2TextureInfo">ktx2: object Ktx2TextureInfo</a></li>
           </ul></dd>
 <dt><a name="loadDefaultEnvironmentMap" href="#loadDefaultEnvironmentMap"><span>loadDefaultEnvironmentMap:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -335,6 +355,14 @@
 <dt><a name="loadEnvironmentMap" href="#loadEnvironmentMap"><span>loadEnvironmentMap:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="pbr: proc loadEnvironmentMap(cubeMapPath: string)" href="gltf/pbr.html#loadEnvironmentMap%2Cstring">pbr: proc loadEnvironmentMap(cubeMapPath: string)</a></li>
+          </ul></dd>
+<dt><a name="loadKtx2Texture" href="#loadKtx2Texture"><span>loadKtx2Texture:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ktx2: proc loadKtx2Texture(data: string; sampler = defaultKtx2Sampler()): GLuint" href="gltf/ktx2.html#loadKtx2Texture%2Cstring">ktx2: proc loadKtx2Texture(data: string; sampler = defaultKtx2Sampler()): GLuint</a></li>
+          </ul></dd>
+<dt><a name="loadKtx2TextureFile" href="#loadKtx2TextureFile"><span>loadKtx2TextureFile:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ktx2: proc loadKtx2TextureFile(file: string; sampler = defaultKtx2Sampler()): GLuint" href="gltf/ktx2.html#loadKtx2TextureFile%2Cstring">ktx2: proc loadKtx2TextureFile(file: string; sampler = defaultKtx2Sampler()): GLuint</a></li>
           </ul></dd>
 <dt><a name="loadModel" href="#loadModel"><span>loadModel:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -406,6 +434,10 @@
 <li><a class="reference external"
           data-doc-search-tag="common: object OrthographicCamera" href="gltf/common.html#OrthographicCamera">common: object OrthographicCamera</a></li>
           </ul></dd>
+<dt><a name="parseKtx2" href="#parseKtx2"><span>parseKtx2:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ktx2: proc parseKtx2(data: string): Ktx2TextureInfo" href="gltf/ktx2.html#parseKtx2%2Cstring">ktx2: proc parseKtx2(data: string): Ktx2TextureInfo</a></li>
+          </ul></dd>
 <dt><a name="PbrMetallicRoughness" href="#PbrMetallicRoughness"><span>PbrMetallicRoughness:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="internal: object PbrMetallicRoughness" href="gltf/internal.html#PbrMetallicRoughness">internal: object PbrMetallicRoughness</a></li>
@@ -453,6 +485,10 @@
 <dt><a name="readGltfJsonFile" href="#readGltfJsonFile"><span>readGltfJsonFile:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="reader: proc readGltfJsonFile(file: string): GltfFile" href="gltf/reader.html#readGltfJsonFile%2Cstring">reader: proc readGltfJsonFile(file: string): GltfFile</a></li>
+          </ul></dd>
+<dt><a name="readKtx2File" href="#readKtx2File"><span>readKtx2File:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ktx2: proc readKtx2File(file: string): Ktx2TextureInfo" href="gltf/ktx2.html#readKtx2File%2Cstring">ktx2: proc readKtx2File(file: string): Ktx2TextureInfo</a></li>
           </ul></dd>
 <dt><a name="resetToBase" href="#resetToBase"><span>resetToBase:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -558,6 +594,10 @@
 <li><a class="reference external"
           data-doc-search-tag="models: proc updateTransforms(node: Node; transform = mat4(); applyTrs = true)" href="gltf/models.html#updateTransforms%2CNode">models: proc updateTransforms(node: Node; transform = mat4(); applyTrs = true)</a></li>
           </ul></dd>
+<dt><a name="uploadKtx2" href="#uploadKtx2"><span>uploadKtx2:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ktx2: proc uploadKtx2(info: Ktx2TextureInfo; data: string; sampler = defaultKtx2Sampler()): GLuint" href="gltf/ktx2.html#uploadKtx2%2CKtx2TextureInfo%2Cstring">ktx2: proc uploadKtx2(info: Ktx2TextureInfo; data: string; sampler = defaultKtx2Sampler()): GLuint</a></li>
+          </ul></dd>
 <dt><a name="uploadToGpu" href="#uploadToGpu"><span>uploadToGpu:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="models: proc uploadToGpu(mesh: Mesh)" href="gltf/models.html#uploadToGpu%2CMesh">models: proc uploadToGpu(mesh: Mesh)</a></li>
@@ -565,6 +605,10 @@
           data-doc-search-tag="models: proc uploadToGpu(node: Node)" href="gltf/models.html#uploadToGpu%2CNode">models: proc uploadToGpu(node: Node)</a></li>
           <li><a class="reference external"
           data-doc-search-tag="models: proc uploadToGpu(primitive: Primitive)" href="gltf/models.html#uploadToGpu%2CPrimitive">models: proc uploadToGpu(primitive: Primitive)</a></li>
+          </ul></dd>
+<dt><a name="vkFormatName" href="#vkFormatName"><span>vkFormatName:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ktx2: proc vkFormatName(vkFormat: uint32): string" href="gltf/ktx2.html#vkFormatName%2Cuint32">ktx2: proc vkFormatName(vkFormat: uint32): string</a></li>
           </ul></dd>
 <dt><a name="walkNodes" href="#walkNodes"><span>walkNodes:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -578,7 +622,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-04-02 15:11:48 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-04-03 03:01:25 UTC</small>
       </div>
     </div>
   </div>

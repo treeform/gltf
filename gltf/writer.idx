@@ -1,5 +1,6 @@
 nimTitle	writer	gltf/writer.html	module gltf/writer		0
 nim	iwmEmbedded	gltf/writer.html#iwmEmbedded	ImageWriteMode.iwmEmbedded		9
 nim	iwmExternal	gltf/writer.html#iwmExternal	ImageWriteMode.iwmExternal		9
+nim	iwmExternalKtx2	gltf/writer.html#iwmExternalKtx2	ImageWriteMode.iwmExternalKtx2		9
 nim	ImageWriteMode	gltf/writer.html#ImageWriteMode	enum ImageWriteMode		9
-nim	writeGLB	gltf/writer.html#writeGLB,Node,string	proc writeGLB(root: Node; path: string; imageWriteMode = iwmEmbedded)		136
+nim	writeGLB	gltf/writer.html#writeGLB,Node,string	proc writeGLB(root: Node; path: string; imageWriteMode = iwmEmbedded)		268

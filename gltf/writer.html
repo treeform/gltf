@@ -59,7 +59,7 @@
     <summary><a class="reference reference-toplevel" href="#7" id="57">Types</a></summary>
     <ul class="simple simple-toc-section">
       <li><a class="reference" href="#ImageWriteMode" title="ImageWriteMode = enum
-  iwmEmbedded, iwmExternal">ImageWriteMode</a></li>
+  iwmEmbedded, iwmExternal, iwmExternalKtx2">ImageWriteMode</a></li>
 
     </ul>
   </details>
@@ -101,7 +101,7 @@
   <dl class="item">
     <div id="ImageWriteMode">
   <dt><pre><a href="writer.html#ImageWriteMode"><span class="Identifier">ImageWriteMode</span></a> <span class="Other">=</span> <span class="Keyword">enum</span>
-  <span class="Identifier">iwmEmbedded</span><span class="Other">,</span> <span class="Identifier">iwmExternal</span></pre></dt>
+  <span class="Identifier">iwmEmbedded</span><span class="Other">,</span> <span class="Identifier">iwmExternal</span><span class="Other">,</span> <span class="Identifier">iwmExternalKtx2</span></pre></dt>
   <dd>
     
     
@@ -119,12 +119,14 @@
     <div id="writeGLB-procs-all">
   <div id="writeGLB,Node,string">
   <dt><pre><span class="Keyword">proc</span> <a href="#writeGLB%2CNode%2Cstring"><span class="Identifier">writeGLB</span></a><span class="Other">(</span><span class="Identifier">root</span><span class="Other">:</span> <a href="common.html#Node"><span class="Identifier">Node</span></a><span class="Other">;</span> <span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">imageWriteMode</span> <span class="Other">=</span> <span class="Identifier">iwmEmbedded</span><span class="Other">)</span> {.
-    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">KeyError</span><span class="Other">,</span> <span class="Identifier">PixieError</span><span class="Other">,</span> <span class="Identifier">IOError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">WriteIOEffect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">KeyError</span><span class="Other">,</span> <span class="Identifier">PixieError</span><span class="Other">,</span> <span class="Identifier">IOError</span><span class="Other">,</span> <span class="Identifier">GltfError</span><span class="Other">,</span> <span class="Identifier">OSError</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span>
+    <span class="Identifier">ReadDirEffect</span><span class="Other">,</span> <span class="Identifier">WriteIOEffect</span><span class="Other">,</span> <span class="Identifier">ReadEnvEffect</span><span class="Other">,</span> <span class="Identifier">ReadIOEffect</span><span class="Other">,</span> <span class="Identifier">ExecIOEffect</span><span class="Other">,</span>
+    <span class="Identifier">RootEffect</span><span class="Other">,</span> <span class="Identifier">TimeEffect</span><span class="Other">,</span> <span class="Identifier">WriteDirEffect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     Writes a node hierarchy to a binary glTF file.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/writer.nim#L136" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/writer.nim#L136" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/writer.nim#L268" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/writer.nim#L268" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -146,7 +148,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-04-02 15:11:48 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-04-03 03:01:25 UTC</small>
       </div>
     </div>
   </div>

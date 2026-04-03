@@ -1,0 +1,11 @@
+nimTitle	ktx2	gltf/ktx2.html	module gltf/ktx2		0
+nim	Ktx2LevelInfo	gltf/ktx2.html#Ktx2LevelInfo	object Ktx2LevelInfo		44
+nim	Ktx2TextureInfo	gltf/ktx2.html#Ktx2TextureInfo	object Ktx2TextureInfo		49
+nim	vkFormatName	gltf/ktx2.html#vkFormatName,uint32	proc vkFormatName(vkFormat: uint32): string		72
+nim	isSupportedVkFormat	gltf/ktx2.html#isSupportedVkFormat,uint32	proc isSupportedVkFormat(vkFormat: uint32): bool		101
+nim	glInternalFormatForVkFormat	gltf/ktx2.html#glInternalFormatForVkFormat,uint32	proc glInternalFormatForVkFormat(vkFormat: uint32): GLenum		120
+nim	parseKtx2	gltf/ktx2.html#parseKtx2,string	proc parseKtx2(data: string): Ktx2TextureInfo		152
+nim	readKtx2File	gltf/ktx2.html#readKtx2File,string	proc readKtx2File(file: string): Ktx2TextureInfo		202
+nim	uploadKtx2	gltf/ktx2.html#uploadKtx2,Ktx2TextureInfo,string	proc uploadKtx2(info: Ktx2TextureInfo; data: string; sampler = defaultKtx2Sampler()): GLuint		209
+nim	loadKtx2Texture	gltf/ktx2.html#loadKtx2Texture,string	proc loadKtx2Texture(data: string; sampler = defaultKtx2Sampler()): GLuint		245
+nim	loadKtx2TextureFile	gltf/ktx2.html#loadKtx2TextureFile,string	proc loadKtx2TextureFile(file: string; sampler = defaultKtx2Sampler()): GLuint		249
