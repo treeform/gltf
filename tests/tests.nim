@@ -263,9 +263,14 @@ doAssert lineStripNode.mesh != nil
 doAssert lineStripNode.mesh.primitives.len == 1
 doAssert lineStripNode.mesh.primitives[0].mode.int == 3
 
+let tmpDir = "tmp"
+if dirExists(tmpDir):
+  removeDir(tmpDir)
+createDir(tmpDir)
+
 echo "Testing GLB image write modes."
 let
-  outDir = "tests/out_image_modes"
+  outDir = joinPath(tmpDir, "out_image_modes")
   externalPath = joinPath(outDir, "external.glb")
   embeddedPath = joinPath(outDir, "embedded.glb")
   externalImagePath = joinPath(outDir, "named_diffuse.png")
@@ -383,7 +388,7 @@ proc textureLevelParam(textureId: GLuint, pname: GLenum): GLint =
   glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, pname, result.addr)
 
 let ktxExe = findKtxExe()
-let ktxOutDir = "tests/out_ktx2"
+let ktxOutDir = joinPath(tmpDir, "out_ktx2")
 if dirExists(ktxOutDir):
   removeDir(ktxOutDir)
 createDir(ktxOutDir)
