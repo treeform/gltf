@@ -46,6 +46,7 @@ uniform vec2 emissiveUvScale;
 uniform float emissiveUvRotation;
 uniform samplerCube environmentMap;
 uniform sampler2DShadow shadowMap;
+uniform vec4 tint;
 
 uniform mat4 lightSpace;
 uniform bool useShadow = false;
@@ -231,7 +232,8 @@ void main() {
   vec3 envColor = textureLod(environmentMap, reflectDir, mipLevel).rgb;
 
   if (debugViewMode == 1) {
-    fragColor.rgb = albedo;
+    fragColor.rgb = albedo * tint.rgb;
+    fragColor.a *= tint.a;
     return;
   }
 
@@ -281,5 +283,8 @@ void main() {
 
   // Emissive
   fragColor.rgb += emissiveValue;
+
+  // Apply the caller-provided color/brightness tint to the final output.
+  fragColor *= tint;
 
 }
