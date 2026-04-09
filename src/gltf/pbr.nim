@@ -128,6 +128,14 @@ proc setupPbr*() =
   glReadBuffer(GL_NONE)
   glBindFramebuffer(GL_FRAMEBUFFER, 0)
 
+  # Bind shadow map to texture unit 6 so the sampler2DShadow uniform always
+  # points to a valid depth texture, even when shadows are disabled.
+  glUseProgram(pbrShader)
+  glUniform1i(glGetUniformLocation(pbrShader, "shadowMap"), 6)
+  glActiveTexture(GL_TEXTURE6)
+  glBindTexture(GL_TEXTURE_2D, shadowMapTex)
+  glUseProgram(0)
+
   # Full-screen triangle data.
   var skyboxVertices = [
     -1.0f32, -1.0f32,
