@@ -128,6 +128,55 @@ proc hasGeometry*(node: Node): bool =
       return true
   false
 
+proc computeSmoothNormals*(prim: Primitive) =
+  ## Generates smooth normals by accumulating face normals per vertex.
+  if prim.normals.len > 0 or prim.points.len == 0:
+    return
+  prim.normals = newSeq[Vec3](prim.points.len)
+  template accumulateTri(ia, ib, ic: int) =
+    let
+      a = prim.points[ia]
+      b = prim.points[ib]
+      c = prim.points[ic]
+      n = cross(b - a, c - a)
+    prim.normals[ia] += n
+    prim.normals[ib] += n
+    prim.normals[ic] += n
+  if prim.indices32.len > 0:
+    for i in countup(0, prim.indices32.len - 3, 3):
+      accumulateTri(
+        prim.indices32[i + 0].int,
+        prim.indices32[i + 1].int,
+        prim.indices32[i + 2].int
+      )
+  elif prim.indices16.len > 0:
+    for i in countup(0, prim.indices16.len - 3, 3):
+      accumulateTri(
+        prim.indices16[i + 0].int,
+        prim.indices16[i + 1].int,
+        prim.indices16[i + 2].int
+      )
+  else:
+    for i in countup(0, prim.points.len - 3, 3):
+      accumulateTri(i, i + 1, i + 2)
+  for i in 0 ..< prim.normals.len:
+    let len = length(prim.normals[i])
+    prim.normals[i] =
+      if len <= 0.000001'f:
+        vec3(0, 1, 0)
+      else:
+        prim.normals[i] / len
+
+proc ensureNormals*(node: Node) =
+  ## Generates smooth normals for any primitive in the tree that lacks them.
+  if node == nil:
+    return
+  if node.mesh != nil:
+    for prim in node.mesh.primitives:
+      prim.computeSmoothNormals()
+  for child in node.nodes:
+    child.ensureNormals()
+
 proc uploadTextureToGpu(
   textureId: var GLuint,
   image: Image,

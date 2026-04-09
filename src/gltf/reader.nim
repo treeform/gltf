@@ -1939,7 +1939,8 @@ proc loadModelJson*(
   externalBuffers: seq[string]
 ): Node =
   ## Loads a 3D model from a parsed glTF json tree.
-  loadModelJsonInternal(jsonRoot, modelDir, externalBuffers).root
+  result = loadModelJsonInternal(jsonRoot, modelDir, externalBuffers).root
+  result.ensureNormals()
 
 proc loadModelJsonFile*(file: string): Node =
   ## Loads a 3D model from a json glTF file.

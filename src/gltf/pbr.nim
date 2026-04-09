@@ -128,6 +128,14 @@ proc setupPbr*() =
   glReadBuffer(GL_NONE)
   glBindFramebuffer(GL_FRAMEBUFFER, 0)
 
+  # Bind shadow map to texture unit 6 so the sampler2DShadow uniform always
+  # points to a valid depth texture, even when shadows are disabled.
+  glUseProgram(pbrShader)
+  glUniform1i(glGetUniformLocation(pbrShader, "shadowMap"), 6)
+  glActiveTexture(GL_TEXTURE6)
+  glBindTexture(GL_TEXTURE_2D, shadowMapTex)
+  glUseProgram(0)
+
   # Full-screen triangle data.
   var skyboxVertices = [
     -1.0f32, -1.0f32,
@@ -774,6 +782,26 @@ proc drawPbr*(
       )
     glDepthMask(GL_TRUE)
 
+proc shadowLookAt(eye, center, up: Vec3): Mat4 =
+  ## Standard OpenGL lookAt (z-backward) for shadow mapping.
+  let
+    f = normalize(center - eye)
+    s = normalize(cross(f, up))
+    u = cross(s, f)
+  result[0, 0] = s.x
+  result[1, 0] = s.y
+  result[2, 0] = s.z
+  result[3, 0] = -dot(s, eye)
+  result[0, 1] = u.x
+  result[1, 1] = u.y
+  result[2, 1] = u.z
+  result[3, 1] = -dot(u, eye)
+  result[0, 2] = -f.x
+  result[1, 2] = -f.y
+  result[2, 2] = -f.z
+  result[3, 2] = dot(f, eye)
+  result[3, 3] = 1.0'f32
+
 proc getShadowMatrices(node: Node, transform: Mat4, lightDir: Vec3): (Mat4, Mat4, Mat4, Vec3) =
   ## Compute light view/projection for the node tree.
   let
@@ -785,8 +813,7 @@ proc getShadowMatrices(node: Node, transform: Mat4, lightDir: Vec3): (Mat4, Mat4
     nearPlane = max(0.1'f, radius * 0.1'f)
     farPlane = radius * 4.0'f
     orthoSize = radius * 1.5'f
-    lightAngles = toAngles(lightPos, center)
-    lightView = inverse(translate(lightPos) * fromAngles(lightAngles))
+    lightView = shadowLookAt(lightPos, center, vec3(0, 1, 0))
     lightProj = ortho(
       -orthoSize,
       orthoSize,
