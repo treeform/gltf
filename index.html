@@ -268,6 +268,10 @@
 <li><a class="reference external"
           data-doc-search-tag="pbr: DebugView.dvUnlit" href="gltf/pbr.html#dvUnlit">pbr: DebugView.dvUnlit</a></li>
           </ul></dd>
+<dt><a name="encodeKtx2" href="#encodeKtx2"><span>encodeKtx2:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ktx2: proc encodeKtx2(vkFormat: uint32; width, height: int; levelsData: openArray[string]): string" href="gltf/ktx2.html#encodeKtx2%2Cuint32%2Cint%2Cint%2CopenArray%5Bstring%5D">ktx2: proc encodeKtx2(vkFormat: uint32; width, height: int; levelsData: openArray[string]): string</a></li>
+          </ul></dd>
 <dt><a name="ensureNormals" href="#ensureNormals"><span>ensureNormals:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="models: proc ensureNormals(node: Node)" href="gltf/models.html#ensureNormals%2CNode">models: proc ensureNormals(node: Node)</a></li>
@@ -327,6 +331,10 @@
 <dt><a name="ImageWriteMode" href="#ImageWriteMode"><span>ImageWriteMode:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="writer: enum ImageWriteMode" href="gltf/writer.html#ImageWriteMode">writer: enum ImageWriteMode</a></li>
+          </ul></dd>
+<dt><a name="isCompressedVkFormat" href="#isCompressedVkFormat"><span>isCompressedVkFormat:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ktx2: proc isCompressedVkFormat(vkFormat: uint32): bool" href="gltf/ktx2.html#isCompressedVkFormat%2Cuint32">ktx2: proc isCompressedVkFormat(vkFormat: uint32): bool</a></li>
           </ul></dd>
 <dt><a name="isSupportedVkFormat" href="#isSupportedVkFormat"><span>isSupportedVkFormat:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -614,9 +622,65 @@
           <li><a class="reference external"
           data-doc-search-tag="models: proc uploadToGpu(primitive: Primitive)" href="gltf/models.html#uploadToGpu%2CPrimitive">models: proc uploadToGpu(primitive: Primitive)</a></li>
           </ul></dd>
+<dt><a name="VkFormatBc1RgbaSrgbBlock" href="#VkFormatBc1RgbaSrgbBlock"><span>VkFormatBc1RgbaSrgbBlock:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ktx2: const VkFormatBc1RgbaSrgbBlock" href="gltf/ktx2.html#VkFormatBc1RgbaSrgbBlock">ktx2: const VkFormatBc1RgbaSrgbBlock</a></li>
+          </ul></dd>
+<dt><a name="VkFormatBc1RgbaUnormBlock" href="#VkFormatBc1RgbaUnormBlock"><span>VkFormatBc1RgbaUnormBlock:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ktx2: const VkFormatBc1RgbaUnormBlock" href="gltf/ktx2.html#VkFormatBc1RgbaUnormBlock">ktx2: const VkFormatBc1RgbaUnormBlock</a></li>
+          </ul></dd>
+<dt><a name="VkFormatBc1RgbSrgbBlock" href="#VkFormatBc1RgbSrgbBlock"><span>VkFormatBc1RgbSrgbBlock:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ktx2: const VkFormatBc1RgbSrgbBlock" href="gltf/ktx2.html#VkFormatBc1RgbSrgbBlock">ktx2: const VkFormatBc1RgbSrgbBlock</a></li>
+          </ul></dd>
+<dt><a name="VkFormatBc1RgbUnormBlock" href="#VkFormatBc1RgbUnormBlock"><span>VkFormatBc1RgbUnormBlock:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ktx2: const VkFormatBc1RgbUnormBlock" href="gltf/ktx2.html#VkFormatBc1RgbUnormBlock">ktx2: const VkFormatBc1RgbUnormBlock</a></li>
+          </ul></dd>
+<dt><a name="VkFormatBc2SrgbBlock" href="#VkFormatBc2SrgbBlock"><span>VkFormatBc2SrgbBlock:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ktx2: const VkFormatBc2SrgbBlock" href="gltf/ktx2.html#VkFormatBc2SrgbBlock">ktx2: const VkFormatBc2SrgbBlock</a></li>
+          </ul></dd>
+<dt><a name="VkFormatBc2UnormBlock" href="#VkFormatBc2UnormBlock"><span>VkFormatBc2UnormBlock:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ktx2: const VkFormatBc2UnormBlock" href="gltf/ktx2.html#VkFormatBc2UnormBlock">ktx2: const VkFormatBc2UnormBlock</a></li>
+          </ul></dd>
+<dt><a name="VkFormatBc3SrgbBlock" href="#VkFormatBc3SrgbBlock"><span>VkFormatBc3SrgbBlock:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ktx2: const VkFormatBc3SrgbBlock" href="gltf/ktx2.html#VkFormatBc3SrgbBlock">ktx2: const VkFormatBc3SrgbBlock</a></li>
+          </ul></dd>
+<dt><a name="VkFormatBc3UnormBlock" href="#VkFormatBc3UnormBlock"><span>VkFormatBc3UnormBlock:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ktx2: const VkFormatBc3UnormBlock" href="gltf/ktx2.html#VkFormatBc3UnormBlock">ktx2: const VkFormatBc3UnormBlock</a></li>
+          </ul></dd>
+<dt><a name="VkFormatBc4SnormBlock" href="#VkFormatBc4SnormBlock"><span>VkFormatBc4SnormBlock:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ktx2: const VkFormatBc4SnormBlock" href="gltf/ktx2.html#VkFormatBc4SnormBlock">ktx2: const VkFormatBc4SnormBlock</a></li>
+          </ul></dd>
+<dt><a name="VkFormatBc4UnormBlock" href="#VkFormatBc4UnormBlock"><span>VkFormatBc4UnormBlock:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ktx2: const VkFormatBc4UnormBlock" href="gltf/ktx2.html#VkFormatBc4UnormBlock">ktx2: const VkFormatBc4UnormBlock</a></li>
+          </ul></dd>
+<dt><a name="VkFormatBc5SnormBlock" href="#VkFormatBc5SnormBlock"><span>VkFormatBc5SnormBlock:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ktx2: const VkFormatBc5SnormBlock" href="gltf/ktx2.html#VkFormatBc5SnormBlock">ktx2: const VkFormatBc5SnormBlock</a></li>
+          </ul></dd>
+<dt><a name="VkFormatBc5UnormBlock" href="#VkFormatBc5UnormBlock"><span>VkFormatBc5UnormBlock:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ktx2: const VkFormatBc5UnormBlock" href="gltf/ktx2.html#VkFormatBc5UnormBlock">ktx2: const VkFormatBc5UnormBlock</a></li>
+          </ul></dd>
+<dt><a name="vkFormatForGlInternalFormat" href="#vkFormatForGlInternalFormat"><span>vkFormatForGlInternalFormat:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ktx2: proc vkFormatForGlInternalFormat(glInternalFormat: GLenum): uint32" href="gltf/ktx2.html#vkFormatForGlInternalFormat%2CGLenum">ktx2: proc vkFormatForGlInternalFormat(glInternalFormat: GLenum): uint32</a></li>
+          </ul></dd>
 <dt><a name="vkFormatName" href="#vkFormatName"><span>vkFormatName:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="ktx2: proc vkFormatName(vkFormat: uint32): string" href="gltf/ktx2.html#vkFormatName%2Cuint32">ktx2: proc vkFormatName(vkFormat: uint32): string</a></li>
+          </ul></dd>
+<dt><a name="VkFormatR32Sfloat" href="#VkFormatR32Sfloat"><span>VkFormatR32Sfloat:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ktx2: const VkFormatR32Sfloat" href="gltf/ktx2.html#VkFormatR32Sfloat">ktx2: const VkFormatR32Sfloat</a></li>
           </ul></dd>
 <dt><a name="walkNodes" href="#walkNodes"><span>walkNodes:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -626,11 +690,19 @@
 <li><a class="reference external"
           data-doc-search-tag="writer: proc writeGLB(root: Node; path: string; imageWriteMode = iwmEmbedded)" href="gltf/writer.html#writeGLB%2CNode%2Cstring">writer: proc writeGLB(root: Node; path: string; imageWriteMode = iwmEmbedded)</a></li>
           </ul></dd>
+<dt><a name="writeKtx2TextureFile" href="#writeKtx2TextureFile"><span>writeKtx2TextureFile:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ktx2: proc writeKtx2TextureFile(target: GLenum; texture: GLuint; file: string;
+                     vkFormat: uint32 = 0'u32; sourceFormat: GLenum = 0.GLenum;
+                     sourceType: GLenum = 0.GLenum; levelCount = -1)" href="gltf/ktx2.html#writeKtx2TextureFile%2CGLenum%2CGLuint%2Cstring%2Cuint32%2CGLenum%2CGLenum%2Cint">ktx2: proc writeKtx2TextureFile(target: GLenum; texture: GLuint; file: string;
+                     vkFormat: uint32 = 0'u32; sourceFormat: GLenum = 0.GLenum;
+                     sourceType: GLenum = 0.GLenum; levelCount = -1)</a></li>
+          </ul></dd>
 </dl>
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-04-09 23:42:47 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-04-10 16:06:20 UTC</small>
       </div>
     </div>
   </div>
