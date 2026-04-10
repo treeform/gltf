@@ -328,6 +328,7 @@ const
   GlTextureCompressed = 0x86A1.GLenum
 
   GlCompressedRgbS3tcDxt1Ext = 0x83F0.GLenum
+  GlCompressedSrgbS3tcDxt1Ext = 0x8C4C.GLenum
   GlCompressedRgbaS3tcDxt3Ext = 0x83F2.GLenum
   GlCompressedRgbaS3tcDxt5Ext = 0x83F3.GLenum
   GlCompressedRedRgtc1 = 0x8DBB.GLenum
@@ -386,6 +387,17 @@ proc createKtx2Fixture(
 proc textureLevelParam(textureId: GLuint, pname: GLenum): GLint =
   glBindTexture(GL_TEXTURE_2D, textureId)
   glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, pname, result.addr)
+
+proc readTextureFloats(textureId: GLuint, width, height: int): seq[float32] =
+  result.setLen(width * height)
+  glBindTexture(GL_TEXTURE_2D, textureId)
+  glGetTexImage(
+    GL_TEXTURE_2D,
+    0,
+    GL_RED,
+    cGL_FLOAT,
+    result[0].addr
+  )
 
 let ktxExe = findKtxExe()
 let ktxOutDir = joinPath(tmpDir, "out_ktx2")
@@ -448,6 +460,98 @@ let ktxCases = [
 var ktxWindow = newWindow("gltf ktx2 tests", ivec2(32, 32))
 makeContextCurrent(ktxWindow)
 loadExtensions()
+
+echo "Testing KTX2 writer roundtrips."
+let writerOutDir = joinPath(tmpDir, "out_ktx2_writer")
+if dirExists(writerOutDir):
+  removeDir(writerOutDir)
+createDir(writerOutDir)
+
+block:
+  var colorTextureId: GLuint
+  glGenTextures(1, colorTextureId.addr)
+  glBindTexture(GL_TEXTURE_2D, colorTextureId)
+  let colorPixels = @[
+    255'u8,   0,   0, 255,    0, 255,   0, 255,    0,   0, 255, 255,  255, 255,   0, 255,
+    255'u8, 128,   0, 255,    0, 255, 255, 255,  255,   0, 255, 255,  255, 255, 255, 255,
+      0'u8,   0,   0, 255,   64,  64,  64, 255,  128, 128, 128, 255,  192, 192, 192, 255,
+     32'u8,  64,  96, 255,  160,  32, 224, 255,   12, 200,  88, 255,   90,  30, 210, 255
+  ]
+  glTexImage2D(
+    GL_TEXTURE_2D,
+    0,
+    GL_RGBA8.GLint,
+    4,
+    4,
+    0,
+    GL_RGBA,
+    GL_UNSIGNED_BYTE,
+    colorPixels[0].unsafeAddr
+  )
+  let bc1WriterPath = joinPath(writerOutDir, "writer_bc1.ktx2")
+  writeKtx2TextureFile(
+    GL_TEXTURE_2D,
+    colorTextureId,
+    bc1WriterPath,
+    VkFormatBc1RgbSrgbBlock,
+    GL_RGBA,
+    GL_UNSIGNED_BYTE
+  )
+  let bc1Info = readKtx2File(bc1WriterPath)
+  doAssert bc1Info.vkFormat == VkFormatBc1RgbSrgbBlock
+  doAssert bc1Info.width == 4
+  doAssert bc1Info.height == 4
+  doAssert bc1Info.levelCount == 1
+  doAssert bc1Info.glInternalFormat == GlCompressedSrgbS3tcDxt1Ext
+
+  let bc1TextureId = loadKtx2TextureFile(bc1WriterPath)
+  doAssert bc1TextureId != 0
+  doAssert textureLevelParam(bc1TextureId, GlTextureWidth) == 4
+  doAssert textureLevelParam(bc1TextureId, GlTextureHeight) == 4
+  doAssert textureLevelParam(bc1TextureId, GlTextureCompressed) == 1
+  doAssert textureLevelParam(bc1TextureId, GlTextureInternalFormat) ==
+    GlCompressedSrgbS3tcDxt1Ext.GLint
+  doAssert textureLevelParam(bc1TextureId, GlTextureCompressedImageSize) > 0
+  glDeleteTextures(1, bc1TextureId.addr)
+  glDeleteTextures(1, colorTextureId.addr)
+
+block:
+  var floatTextureId: GLuint
+  glGenTextures(1, floatTextureId.addr)
+  glBindTexture(GL_TEXTURE_2D, floatTextureId)
+  let floatPixels = @[0.0'f32, 1.5'f32, -2.25'f32, 42.0'f32]
+  glTexImage2D(
+    GL_TEXTURE_2D,
+    0,
+    GL_R32F.GLint,
+    2,
+    2,
+    0,
+    GL_RED,
+    cGL_FLOAT,
+    floatPixels[0].unsafeAddr
+  )
+  let r32WriterPath = joinPath(writerOutDir, "writer_r32.ktx2")
+  writeKtx2TextureFile(GL_TEXTURE_2D, floatTextureId, r32WriterPath)
+  let r32Info = readKtx2File(r32WriterPath)
+  doAssert r32Info.vkFormat == VkFormatR32Sfloat
+  doAssert r32Info.width == 2
+  doAssert r32Info.height == 2
+  doAssert r32Info.levelCount == 1
+  doAssert r32Info.glInternalFormat == GL_R32F
+
+  let r32TextureId = loadKtx2TextureFile(r32WriterPath)
+  doAssert r32TextureId != 0
+  doAssert textureLevelParam(r32TextureId, GlTextureWidth) == 2
+  doAssert textureLevelParam(r32TextureId, GlTextureHeight) == 2
+  doAssert textureLevelParam(r32TextureId, GlTextureCompressed) == 0
+  doAssert textureLevelParam(r32TextureId, GlTextureInternalFormat) == GL_R32F.GLint
+  let roundTripFloats = readTextureFloats(r32TextureId, 2, 2)
+  doAssert roundTripFloats.len == floatPixels.len
+  for i, expected in floatPixels:
+    doAssert abs(roundTripFloats[i] - expected) < 0.00001'f32
+  glDeleteTextures(1, r32TextureId.addr)
+  glDeleteTextures(1, floatTextureId.addr)
 
 for testCase in ktxCases:
   let texturePath = createKtx2Fixture(ktxExe, ktxOutDir, testCase)

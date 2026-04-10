@@ -16,7 +16,8 @@
 
 `gltf` is a small glTF 2.0 toolkit for Nim. It can load `.gltf` and
 `.glb` files into a `Node` tree, render that tree with a small OpenGL PBR
-pipeline, and write simple scenes back out as `.glb`.
+pipeline, write simple scenes back out as `.glb`, and read or write basic
+KTX2 textures for OpenGL workflows.
 
 The project is still growing, but it is already useful for:
 
@@ -88,7 +89,7 @@ The table below reflects the current code, not the full glTF 2.0 spec.
 | `KHR_animation_pointer` | Partial | Partial | No | Only the visibility target path is supported. |
 | `KHR_draco_mesh_compression` | No | No | No | Not supported yet. |
 | `KHR_mesh_quantization` | No | No | No | Not supported yet. |
-| `KHR_texture_basisu` | Yes | Yes | Yes | KTX2 textures; see [KHR_texture_basisu and KTX2](#khr_texture_basisu-and-ktx2). Writing needs [KTX-Software](#writing-ktx2-with-ktx-software) `ktx` on `PATH`. |
+| `KHR_texture_basisu` | Yes | Yes | Partial | KTX2 textures; see [KHR_texture_basisu and KTX2](#khr_texture_basisu-and-ktx2). The embedded KTX2 module can read and write supported KTX2 payloads directly, while glTF export paths that generate new encoded sidecars still use [KTX-Software](#writing-ktx2-with-ktx-software). |
 | `KHR_lights_punctual` | No | No | No | Not supported yet. |
 | `KHR_materials_unlit` | No | No | No | Not supported yet. |
 | `EXT_texture_webp` | No | No | No | Not supported yet. |
@@ -101,9 +102,9 @@ The library declares support for the glTF extension **`KHR_texture_basisu`**, wh
 
 - Textures can use `extensions.KHR_texture_basisu.source` to point at an image that carries KTX2 payload (`mimeType: image/ktx2`), including sidecar `.ktx2` URIs, `data:image/ktx2` data URIs, and buffer views with `mimeType: image/ktx2`.
 
-### Supported KTX2 inputs (reader)
+### Embedded KTX2 reader/writer
 
-The embedded KTX2 reader loads textures into **OpenGL compressed 2D** textures. Supported inputs match what the code accepts today:
+The embedded KTX2 code can load supported files into **OpenGL 2D textures** and can also write supported textures back out from live OpenGL texture objects. Supported inputs and outputs match what the code accepts today:
 
 | Aspect | Supported |
 | --- | --- |
@@ -115,9 +116,16 @@ The embedded KTX2 reader loads textures into **OpenGL compressed 2D** textures. 
 
 Anything outside that (3D/volume KTX2, texture arrays beyond a single layer, cubemaps, supercompressed payloads, or other `vkFormat` values) is not supported and will fail with a clear error.
 
+### Supported KTX2 writing
+
+- `writeKtx2TextureFile()` writes **2D** textures directly from a live OpenGL texture object.
+- Uncompressed writes include `VK_FORMAT_R32_SFLOAT`.
+- Compressed writes include **BC1-BC5** when OpenGL can provide or create those compressed levels.
+- The low-level KTX2 module itself does **not** require `ktx.exe` for these direct texture writes.
+
 ### Writing KTX2 with KTX Software
 
-Exporting glTF that uses **`KHR_texture_basisu`** and external `.ktx2` sidecars does **not** reimplement encoding inside Nim. The writer shells out to the official **[KTX-Software](https://github.com/KhronosGroup/KTX-Software)** command-line tool: the **`ktx`** executable must be on **`PATH`** (see `findExe("ktx")` in the writer). If it is missing, writing KTX2 images raises an error explaining that requirement.
+Exporting glTF that uses **`KHR_texture_basisu`** and external `.ktx2` sidecars still does **not** fully reimplement the higher-level image encoding pipeline inside Nim. That glTF export path shells out to the official **[KTX-Software](https://github.com/KhronosGroup/KTX-Software)** command-line tool: the **`ktx`** executable must be on **`PATH`** (see `findExe("ktx")` in the writer). If it is missing, writing those encoded KTX2 sidecars raises an error explaining that requirement.
 
 That pipeline is **for optimization and shipping builds**, not something most users should hand-roll as their default content workflow. Typical authoring still uses PNG or JPEG; you then convert to KTX2 when you care about **load time and size** in a game or similar runtime. As a **developer** of this library or of tools built on it, you will usually want KTX-Software installed so tests and `writeGLB` paths that emit KTX2 can run locally and in CI.
 
