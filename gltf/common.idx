@@ -36,3 +36,4 @@ nim	AABounds	gltf/common.html#AABounds	object AABounds		189
 nim	Bounds	gltf/common.html#Bounds	object Bounds		192
 nim	BoundingSphere	gltf/common.html#BoundingSphere	object BoundingSphere		197
 nim	GltfFile	gltf/common.html#GltfFile	type GltfFile		201
+nim	nodeRotationMat4	gltf/common.html#nodeRotationMat4,Quat	proc nodeRotationMat4(q: Quat): Mat4		210
