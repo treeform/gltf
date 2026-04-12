@@ -118,6 +118,11 @@ proc ignoredModelReason(modelPath: string): string =
       return "Ignored for now because it is too slow to load."
   ""
 
+proc isExpectedSampleAssetGltfError(message: string): bool =
+  ## Returns true for sample-asset failures caused by unsupported features.
+  message.startsWith("Unsupported extension required:") or
+  message.startsWith("KTX2: unsupported vkFormat")
+
 proc sanitizeFileName(value: string): string =
   ## Converts a path into a safe screenshot file name.
   for c in value:
@@ -181,6 +186,9 @@ proc xray(
   createDir(generatedPath.parentDir())
   createDir(xrayPath.parentDir())
   image.writeFile(generatedPath)
+  if readFile(baselinePath) == readFile(generatedPath):
+    newImage(image.width, image.height).writeFile(xrayPath)
+    return 0
   let
     baseline = readImage(baselinePath)
     (score, xray) = diff(baseline, image)
@@ -326,9 +334,14 @@ proc testModel(
       result.status = "ok"
       result.message = "Rendered and captured successfully."
   except GltfError:
-    result.status = "gltf_error"
+    let message = getCurrentExceptionMsg()
+    result.status =
+      if message.isExpectedSampleAssetGltfError():
+        "skip"
+      else:
+        "gltf_error"
     result.exceptionName = "GltfError"
-    result.message = getCurrentExceptionMsg()
+    result.message = message
   except CatchableError:
     result.status = "error"
     result.exceptionName = "CatchableError"
