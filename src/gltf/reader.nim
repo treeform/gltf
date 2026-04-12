@@ -1055,6 +1055,7 @@ proc loadModelJsonInternal(
   var bufferIndex = 0
   for entry in jsonRoot["buffers"]:
     var data: string
+    let declaredByteLength = entry["byteLength"].getInt()
     if "uri" in entry:
       let uri = entry["uri"].getStr()
       if uri.startsWith("data:application/"):
@@ -1062,10 +1063,12 @@ proc loadModelJsonInternal(
       else:
         data = readFile(joinPath(modelDir, uri))
     else:
-      data = externalBuffers[bufferIndex][0 ..< entry["byteLength"].getInt()]
+      data = externalBuffers[bufferIndex]
       inc bufferIndex
-    assertRaise data.len == entry["byteLength"].getInt(),
-      "Buffer length does not match declared byteLength"
+    assertRaise data.len >= declaredByteLength,
+      "Buffer length is shorter than declared byteLength"
+    if data.len > declaredByteLength:
+      data = data[0 ..< declaredByteLength]
     buffers.add(data)
 
   var bufferViews: seq[BufferView]
