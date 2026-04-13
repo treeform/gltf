@@ -594,7 +594,9 @@ proc clearTreeFromGpu*(node: Node) =
 
 proc trs*(node: Node): Mat4 =
   ## Get the transformation matrix of a node.
-  translate(node.pos) * nodeRotationMat4(node.rot) * scale(node.scale)
+  translate(node.pos) *
+    quat(-node.rot.x, -node.rot.y, -node.rot.z, node.rot.w).mat4() *
+    scale(node.scale)
 
 proc findTransform*(
   node, target: Node,
@@ -809,7 +811,11 @@ proc dumpTree*(node: Node, indent: string = "") =
 
   # Print the transform values.
   echo &"{indent}  pos: {node.pos}"
-  let euler = nodeRotationMat4(node.rot).toAngles().toDegrees()
+  let euler =
+    quat(-node.rot.x, -node.rot.y, -node.rot.z, node.rot.w)
+      .mat4()
+      .toAngles()
+      .toDegrees()
   echo &"{indent}  rot: {node.rot} ({euler})"
   echo &"{indent}  scale: {node.scale}"
   if node.camera != nil:
