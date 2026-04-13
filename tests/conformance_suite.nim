@@ -7,8 +7,8 @@ const
   WindowSize = 512
   VerticalFov = 45'f
   FitPadding = 1.25'f
-  OrbitYaw = -20.0'f
-  OrbitPitch = -20.0'f
+  OrbitYaw = 20.0'f
+  OrbitPitch = 20.0'f
   MaxXrayScore = 2.0'f
   UpdateXrayScore = 0.5'f
   BackgroundColor = color(0.7058824, 0.74509805, 0.8627451, 1.0)
