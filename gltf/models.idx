@@ -20,26 +20,26 @@ nim	uploadToGpu	gltf/models.html#uploadToGpu,Node	proc uploadToGpu(node: Node)		
 nim	clearFromGpu	gltf/models.html#clearFromGpu,Node	proc clearFromGpu(node: Node)		575
 nim	updateOnGpu	gltf/models.html#updateOnGpu,Node	proc updateOnGpu(node: Node)		583
 nim	clearTreeFromGpu	gltf/models.html#clearTreeFromGpu,Node	proc clearTreeFromGpu(node: Node)		591
-nim	findTransform	gltf/models.html#findTransform,Node,Node,Mat4	proc findTransform(node, target: Node; transform = mat4(); world: var Mat4): bool		599
-nim	skinMatrices	gltf/models.html#skinMatrices,Node,Node	proc skinMatrices(root, node: Node): seq[Mat4]		616
-nim	draw	gltf/models.html#draw,Node,GLuint,Mat4,Mat4,Mat4,Color,Node	proc draw(node: Node; shader: GLuint; transform, view, proj: Mat4; tint: Color;\n     useTrs = true; skipBlend = false; root: Node = nil)		719
-nim	dumpTree	gltf/models.html#dumpTree,Node,string	proc dumpTree(node: Node; indent: string = "")		806
-nim	walkNodes	gltf/models.html#walkNodes,Node	proc walkNodes(node: Node): seq[Node]		877
-nim	center	gltf/models.html#center,AABounds	proc center(a: AABounds): Vec3		885
-nim	radius	gltf/models.html#radius,AABounds	proc radius(a: AABounds): float		889
-nim	merge	gltf/models.html#merge,AABounds,AABounds	proc merge(a, b: AABounds): AABounds		893
-nim	merge	gltf/models.html#merge,BoundingSphere,BoundingSphere	proc merge(a, b: BoundingSphere): BoundingSphere		898
-nim	getAABoundsNode	gltf/models.html#getAABoundsNode,Node	proc getAABoundsNode(node: Node; trs = mat4()): AABounds		908
-nim	getAABounds	gltf/models.html#getAABounds,Node	proc getAABounds(node: Node; trs = mat4()): AABounds		920
-nim	computeBounds	gltf/models.html#computeBounds,Node	proc computeBounds(node: Node; trs = mat4()): Bounds		927
-nim	getBoundingSphereNode	gltf/models.html#getBoundingSphereNode,Node	proc getBoundingSphereNode(node: Node; trs = mat4()): BoundingSphere		946
-nim	getBoundingSphere	gltf/models.html#getBoundingSphere,Node	proc getBoundingSphere(node: Node; trs = mat4()): BoundingSphere		965
-nim	triangles	gltf/models.html#triangles.i,Node	iterator triangles(node: Node): (Vec3, Vec3, Vec3)		972
-nim	`[]`	gltf/models.html#[],Node,string	proc `[]`(node: Node; name: string): Node		989
-nim	draw	gltf/models.html#draw,Node,GLuint,DMat4,DMat4,DMat4,Color	proc draw(node: Node; shader: GLuint; transform, view, proj: DMat4; tint: Color;\n     useTrs = true)		995
+nim	findTransform	gltf/models.html#findTransform,Node,Node,Mat4	proc findTransform(node, target: Node; transform = mat4(); world: var Mat4): bool		601
+nim	skinMatrices	gltf/models.html#skinMatrices,Node,Node	proc skinMatrices(root, node: Node): seq[Mat4]		618
+nim	draw	gltf/models.html#draw,Node,GLuint,Mat4,Mat4,Mat4,Color,Node	proc draw(node: Node; shader: GLuint; transform, view, proj: Mat4; tint: Color;\n     useTrs = true; skipBlend = false; root: Node = nil)		721
+nim	dumpTree	gltf/models.html#dumpTree,Node,string	proc dumpTree(node: Node; indent: string = "")		808
+nim	walkNodes	gltf/models.html#walkNodes,Node	proc walkNodes(node: Node): seq[Node]		883
+nim	center	gltf/models.html#center,AABounds	proc center(a: AABounds): Vec3		891
+nim	radius	gltf/models.html#radius,AABounds	proc radius(a: AABounds): float		895
+nim	merge	gltf/models.html#merge,AABounds,AABounds	proc merge(a, b: AABounds): AABounds		899
+nim	merge	gltf/models.html#merge,BoundingSphere,BoundingSphere	proc merge(a, b: BoundingSphere): BoundingSphere		904
+nim	getAABoundsNode	gltf/models.html#getAABoundsNode,Node	proc getAABoundsNode(node: Node; trs = mat4()): AABounds		914
+nim	getAABounds	gltf/models.html#getAABounds,Node	proc getAABounds(node: Node; trs = mat4()): AABounds		926
+nim	computeBounds	gltf/models.html#computeBounds,Node	proc computeBounds(node: Node; trs = mat4()): Bounds		933
+nim	getBoundingSphereNode	gltf/models.html#getBoundingSphereNode,Node	proc getBoundingSphereNode(node: Node; trs = mat4()): BoundingSphere		952
+nim	getBoundingSphere	gltf/models.html#getBoundingSphere,Node	proc getBoundingSphere(node: Node; trs = mat4()): BoundingSphere		971
+nim	triangles	gltf/models.html#triangles.i,Node	iterator triangles(node: Node): (Vec3, Vec3, Vec3)		978
+nim	`[]`	gltf/models.html#[],Node,string	proc `[]`(node: Node; name: string): Node		995
+nim	draw	gltf/models.html#draw,Node,GLuint,DMat4,DMat4,DMat4,Color	proc draw(node: Node; shader: GLuint; transform, view, proj: DMat4; tint: Color;\n     useTrs = true)		1001
 nimgrp	hasgeometry	gltf/models.html#hasGeometry-procs-all	proc		110
 nimgrp	uploadtogpu	gltf/models.html#uploadToGpu-procs-all	proc		276
 nimgrp	updateongpu	gltf/models.html#updateOnGpu-procs-all	proc		451
 nimgrp	clearfromgpu	gltf/models.html#clearFromGpu-procs-all	proc		414
-nimgrp	draw	gltf/models.html#draw-procs-all	proc		719
-nimgrp	merge	gltf/models.html#merge-procs-all	proc		893
+nimgrp	draw	gltf/models.html#draw-procs-all	proc		721
+nimgrp	merge	gltf/models.html#merge-procs-all	proc		899
