@@ -63,6 +63,51 @@ doAssert matrixNode != nil
 doAssert matrixNode.pos == vec3(1.5, 2.5, 3.5)
 doAssert matrixNode.trs ~= expectedMatrix
 
+echo "Testing quaternion and matrix transform agreement."
+let quarterTurn = sqrt(0.5'f32)
+let quatVsMatrixModel = loadModelJson(
+  %*{
+    "asset": {"version": "2.0"},
+    "buffers": [],
+    "bufferViews": [],
+    "accessors": [],
+    "images": [],
+    "textures": [],
+    "samplers": [],
+    "materials": [],
+    "meshes": [],
+    "nodes": [
+      {
+        "name": "QuatNode",
+        "rotation": [0.0, quarterTurn, 0.0, quarterTurn]
+      },
+      {
+        "name": "MatrixNodeY",
+        "matrix": [
+          0.0, 0.0, -1.0, 0.0,
+          0.0, 1.0, 0.0, 0.0,
+          1.0, 0.0, 0.0, 0.0,
+          0.0, 0.0, 0.0, 1.0
+        ]
+      }
+    ],
+    "scenes": [{"nodes": [0, 1]}],
+    "scene": 0,
+    "animations": []
+  },
+  ".",
+  @[]
+)
+let
+  quatNode = quatVsMatrixModel["QuatNode"]
+  matrixNodeY = quatVsMatrixModel["MatrixNodeY"]
+  xAxis = vec3(1, 0, 0)
+doAssert quatNode != nil
+doAssert matrixNodeY != nil
+doAssert quatNode.trs ~= matrixNodeY.trs
+doAssert quatNode.trs * xAxis ~= vec3(0, 0, -1)
+doAssert matrixNodeY.trs * xAxis ~= vec3(0, 0, -1)
+
 echo "Testing KHR_node_visibility."
 let visibilityBuffer =
   "\0\0\0\0" &

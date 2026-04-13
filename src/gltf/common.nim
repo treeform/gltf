@@ -206,7 +206,3 @@ type
     cameras*: seq[Camera]
     skins*: seq[Skin]
     unsupportedUsedExtensions*: seq[string]
-
-proc nodeRotationMat4*(q: Quat): Mat4 =
-  ## Builds the runtime rotation matrix for a stored node quaternion.
-  quat(-q.x, -q.y, -q.z, q.w).mat4()
