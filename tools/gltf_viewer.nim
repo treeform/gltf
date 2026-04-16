@@ -475,10 +475,10 @@ window.onFrame = proc() =
   ):
     let rot = 300.0'f32
     if window.buttonDown[MouseRight]:
-      camRotation = rotateZ(window.mouseDelta.x.float32 / rot) * camRotation
+      camRotation = rotateZ(-window.mouseDelta.x.float32 / rot) * camRotation
     else:
-      camRotation = rotateY(-window.mouseDelta.x.float32 / rot) * camRotation
-      camRotation = rotateX(-window.mouseDelta.y.float32 / rot) * camRotation
+      camRotation = rotateY(window.mouseDelta.x.float32 / rot) * camRotation
+      camRotation = rotateX(window.mouseDelta.y.float32 / rot) * camRotation
 
   if useFreeCamera:
     let zoomAmount = 0.20'f32

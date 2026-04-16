@@ -7,8 +7,8 @@ const
   WindowSize = 512
   VerticalFov = 45'f
   FitPadding = 1.25'f
-  OrbitYaw = -20.0'f
-  OrbitPitch = -20.0'f
+  OrbitYaw = 20.0'f
+  OrbitPitch = 20.0'f
   MaxXrayScore = 2.0'f
   UpdateXrayScore = 0.5'f
   BackgroundColor = color(0.7058824, 0.74509805, 0.8627451, 1.0)
@@ -383,6 +383,47 @@ proc writeSummary(path: string, results: seq[AssetResult]) =
       lines.add(&"{extension}\t{count}")
   writeFile(path, lines.join("\n") & "\n")
 
+proc writeReport(path: string, results: seq[AssetResult]) =
+  ## Writes an HTML xray report with master/generated/xray images side by side.
+  let reportDir = path.parentDir()
+  var entries: seq[string]
+  for result in results:
+    if result.status == "skip":
+      continue
+    if not fileExists(result.screenshotPath):
+      continue
+    let
+      bg = if result.score > MaxXrayScore: "#fee"
+           elif result.score > 1: "#ffe"
+           else: "#fff"
+      relGenerated = relativePath(result.screenshotPath, reportDir)
+      baseline =
+        if fileExists(result.baselinePath):
+          let relBaseline = relativePath(result.baselinePath, reportDir)
+          &"""<div><div>Baseline</div><img src="{relBaseline}"></div>"""
+        else:
+          "<div><div>Baseline</div><div>(none)</div></div>"
+      xrayImg =
+        if fileExists(result.xrayPath):
+          let relXray = relativePath(result.xrayPath, reportDir)
+          &"""<div><div>Xray</div><img src="{relXray}"></div>"""
+        else:
+          ""
+    entries.add(&"""<div style="background:{bg};border:1px solid #ccc;padding:8px;break-inside:avoid">
+<b>{result.modelPath}</b> score: {result.score:0.3f} — {result.status}
+<div style="display:flex;gap:8px;flex-wrap:wrap">
+{baseline}
+<div><div>Generated</div><img src="{relGenerated}"></div>
+{xrayImg}
+</div></div>""")
+  let html = """<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Xray Report</title>
+<style>body{font-family:monospace;margin:16px}img{display:block;max-width:256px;background:repeating-conic-gradient(#eee 0% 25%,#fff 0% 50%) 0 0/16px 16px}</style>
+</head><body>
+<h1>Xray Report</h1>
+""" & entries.join("\n") & "\n</body></html>"
+  writeFile(path, html)
+
 let rawParams = commandLineParams()
 var
   updateBaselines = false
@@ -471,6 +512,9 @@ for i, modelPath in modelPaths:
 let summaryPath = joinPath(tmpDir, "summary.txt")
 writeSummary(summaryPath, results)
 echo "Wrote summary: ", summaryPath
+let reportPath = joinPath(tmpDir, "xray_report.html")
+writeReport(reportPath, results)
+echo "Wrote report: ", reportPath
 var hasFailure = false
 for result in results:
   if result.status notin ["ok", "skip"]:

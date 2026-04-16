@@ -1544,30 +1544,16 @@ proc loadModelJsonInternal(
 
       node.pos = localMat.pos
       let
-        xAxis = localMat.left
-        yAxis = localMat.up
-        zAxis = localMat.forward
-      node.scale = vec3(length(xAxis), length(yAxis), length(zAxis))
+        sx = vec3(localMat[0, 0], localMat[0, 1], localMat[0, 2]).length()
+        sy = vec3(localMat[1, 0], localMat[1, 1], localMat[1, 2]).length()
+        sz = vec3(localMat[2, 0], localMat[2, 1], localMat[2, 2]).length()
+      node.scale = vec3(sx, sy, sz)
 
-      let rotationMat = mat4(
-        (if node.scale.x != 0: xAxis.x / node.scale.x else: 1'f32),
-        (if node.scale.x != 0: xAxis.y / node.scale.x else: 0'f32),
-        (if node.scale.x != 0: xAxis.z / node.scale.x else: 0'f32),
-        0'f32,
-        (if node.scale.y != 0: yAxis.x / node.scale.y else: 0'f32),
-        (if node.scale.y != 0: yAxis.y / node.scale.y else: 1'f32),
-        (if node.scale.y != 0: yAxis.z / node.scale.y else: 0'f32),
-        0'f32,
-        (if node.scale.z != 0: zAxis.x / node.scale.z else: 0'f32),
-        (if node.scale.z != 0: zAxis.y / node.scale.z else: 0'f32),
-        (if node.scale.z != 0: zAxis.z / node.scale.z else: 1'f32),
-        0'f32,
-        0'f32,
-        0'f32,
-        0'f32,
-        1'f32
-      )
-      node.rot = rotationMat.transpose().quat()
+      var rotationMat = localMat.rotationOnly()
+      if sx != 0: rotationMat[0, 0] /= sx; rotationMat[0, 1] /= sx; rotationMat[0, 2] /= sx
+      if sy != 0: rotationMat[1, 0] /= sy; rotationMat[1, 1] /= sy; rotationMat[1, 2] /= sy
+      if sz != 0: rotationMat[2, 0] /= sz; rotationMat[2, 1] /= sz; rotationMat[2, 2] /= sz
+      node.rot = rotationMat.quat()
     elif "translation" in entry:
       let translation = entry["translation"]
       node.pos = vec3(
