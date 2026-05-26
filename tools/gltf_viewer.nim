@@ -1,28 +1,39 @@
 import
-  std/[algorithm, math, os, strformat, strutils, times],
-  windy, chroma, silky, silky/atlas, jsony, pixie,
-  pixie/fileformats/png, vmath,
+  std/[algorithm, math, os, strutils, times],
+  windy, chroma, vmath,
   ../src/gltf/[animations, models, pbr, reader],
   ../src/gltf/backends/backend
 
 when BackendUsesOpenGlRenderer:
   import opengl
+elif defined(useDirectX):
+  import ../src/gltf/backends/directx
+elif defined(useVulkan):
+  import ../src/gltf/backends/vulkan
+
+when not defined(useDirectX) and not defined(useVulkan):
+  import
+    std/strformat,
+    silky, silky/atlas, jsony, pixie,
+    pixie/fileformats/png
 
 const
-  AtlasPng = staticRead("dist/atlas.png")
   VerticalFov = 45'f32
   FitPadding = 1.25'f32
   FreeCameraName = "Free Camera"
 
-let
-  debugViewOptions = @[
-    "Lit",
-    "Unlit",
-    "Normals",
-    "AO Bake",
-    "Metallic",
-    "Specular"
-  ]
+when not defined(useDirectX) and not defined(useVulkan):
+  const AtlasPng = staticRead("dist/atlas.png")
+
+  let
+    debugViewOptions = @[
+      "Lit",
+      "Unlit",
+      "Normals",
+      "AO Bake",
+      "Metallic",
+      "Specular"
+    ]
 
 let params = commandLineParams()
 if params.len == 0 or not fileExists(params[0]):
@@ -31,29 +42,38 @@ if params.len == 0 or not fileExists(params[0]):
 var window = newWindow(
   "glTF Viewer",
   ivec2(1200, 700),
-  msaa = msaa8x
+  msaa =
+    when BackendUsesOpenGlRenderer:
+      msaa8x
+    else:
+      msaaDisabled
 )
-makeContextCurrent(window)
 when BackendUsesOpenGlRenderer:
+  makeContextCurrent(window)
   loadExtensions()
 else:
   loadBackendExtensions()
 
-let
-  atlasImage = decodePng(AtlasPng).convertToImage()
-  atlasData = extractAtlasJsonFromPng(AtlasPng).fromJson(SilkyAtlas)
+when not defined(useDirectX) and not defined(useVulkan):
+  let
+    atlasImage = decodePng(AtlasPng).convertToImage()
+    atlasData = extractAtlasJsonFromPng(AtlasPng).fromJson(SilkyAtlas)
+
+when defined(useDirectX):
+  var dxRenderer = newDirectXRenderer(window)
+elif defined(useVulkan):
+  var vkRenderer = newVulkanRenderer(window)
+else:
+  var sk = newSilky(window, atlasImage, atlasData)
 
 var
-  sk = newSilky(window, atlasImage, atlasData)
   gltfFile: GltfFile
   model: Node
   modelBounds: Bounds
   loaded = false
   showControls = true
   useLighting = true
-  useShadows = true
   lightFollowCamera = true
-  debugViewName = "Lit"
   cameraOptions = @[FreeCameraName]
   cameraNodes: seq[Node]
   selectedCamera = FreeCameraName
@@ -61,7 +81,6 @@ var
   skyboxPatterns: seq[(string, string)]
   selectedSkybox = ""
   lastSkybox = ""
-  skyboxLod: float32 = 7.0
   modelPath = params[0]
   camCenter = vec3(0, 0, 0)
   camRotation = mat4()
@@ -74,38 +93,52 @@ var
   rimLightDirection = normalize(vec3(-1.0, 1.0, -2.0))
   rimLightColor = color(0.95, 0.72, 0.46, 0.25)
   aspectRatio = window.size.x.float32 / window.size.y.float32
-  proj = perspective(VerticalFov, aspectRatio, 0.1, 200)
+  proj =
+    when defined(useDirectX):
+      perspectiveDxRh(VerticalFov, aspectRatio, 0.1, 200)
+    elif defined(useVulkan):
+      perspectiveVkRh(VerticalFov, aspectRatio, 0.1, 200)
+    else:
+      perspective(VerticalFov, aspectRatio, 0.1, 200)
   lastTime = epochTime()
 
-window.runeInputEnabled = true
-window.onRune = proc(rune: Rune) =
-  sk.inputRunes.add(rune)
+when not defined(useDirectX) and not defined(useVulkan):
+  var
+    useShadows = true
+    debugViewName = "Lit"
+    skyboxLod: float32 = 7.0
 
-proc applyTheme(sk: Silky) =
-  ## Applies the viewer theme colors and spacing.
-  sk.theme.padding = 10
-  sk.theme.spacing = 8
-  sk.theme.border = 10
-  sk.theme.textPadding = 5
-  sk.theme.headerHeight = 30
-  sk.theme.defaultTextColor = rgbx(232, 240, 255, 255)
-  sk.theme.disabledTextColor = rgbx(136, 146, 168, 255)
-  sk.theme.errorTextColor = rgbx(255, 156, 172, 255)
-  sk.theme.buttonHoverColor = rgbx(255, 255, 255, 48)
-  sk.theme.buttonDownColor = rgbx(190, 216, 255, 76)
-  sk.theme.iconButtonHoverColor = rgbx(255, 255, 255, 40)
-  sk.theme.iconButtonDownColor = rgbx(190, 216, 255, 64)
-  sk.theme.dropdownHoverBgColor = rgbx(60, 74, 100, 255)
-  sk.theme.dropdownBgColor = rgbx(34, 42, 58, 255)
-  sk.theme.dropdownPopupBgColor = rgbx(28, 36, 50, 245)
-  sk.theme.textColor = rgbx(224, 234, 255, 255)
-  sk.theme.textH1Color = rgbx(250, 252, 255, 255)
-  sk.theme.headerBgColor = rgbx(38, 46, 62, 255)
-  sk.theme.menuRootHoverColor = rgbx(86, 102, 134, 160)
-  sk.theme.menuItemHoverColor = rgbx(74, 90, 120, 160)
-  sk.theme.menuItemBgColor = rgbx(40, 48, 66, 140)
-  sk.theme.menuPopupHoverColor = rgbx(84, 102, 134, 180)
-  sk.theme.menuPopupSelectedColor = rgbx(68, 84, 112, 140)
+when not defined(useDirectX) and not defined(useVulkan):
+  window.runeInputEnabled = true
+  window.onRune = proc(rune: Rune) =
+    sk.inputRunes.add(rune)
+
+when not defined(useDirectX) and not defined(useVulkan):
+  proc applyTheme(sk: Silky) =
+    ## Applies the viewer theme colors and spacing.
+    sk.theme.padding = 10
+    sk.theme.spacing = 8
+    sk.theme.border = 10
+    sk.theme.textPadding = 5
+    sk.theme.headerHeight = 30
+    sk.theme.defaultTextColor = rgbx(232, 240, 255, 255)
+    sk.theme.disabledTextColor = rgbx(136, 146, 168, 255)
+    sk.theme.errorTextColor = rgbx(255, 156, 172, 255)
+    sk.theme.buttonHoverColor = rgbx(255, 255, 255, 48)
+    sk.theme.buttonDownColor = rgbx(190, 216, 255, 76)
+    sk.theme.iconButtonHoverColor = rgbx(255, 255, 255, 40)
+    sk.theme.iconButtonDownColor = rgbx(190, 216, 255, 64)
+    sk.theme.dropdownHoverBgColor = rgbx(60, 74, 100, 255)
+    sk.theme.dropdownBgColor = rgbx(34, 42, 58, 255)
+    sk.theme.dropdownPopupBgColor = rgbx(28, 36, 50, 245)
+    sk.theme.textColor = rgbx(224, 234, 255, 255)
+    sk.theme.textH1Color = rgbx(250, 252, 255, 255)
+    sk.theme.headerBgColor = rgbx(38, 46, 62, 255)
+    sk.theme.menuRootHoverColor = rgbx(86, 102, 134, 160)
+    sk.theme.menuItemHoverColor = rgbx(74, 90, 120, 160)
+    sk.theme.menuItemBgColor = rgbx(40, 48, 66, 140)
+    sk.theme.menuPopupHoverColor = rgbx(84, 102, 134, 180)
+    sk.theme.menuPopupSelectedColor = rgbx(68, 84, 112, 140)
 
 proc safeNormalize(v, fallback: Vec3): Vec3 =
   ## Normalizes a vector and falls back when its length is too small.
@@ -113,7 +146,9 @@ proc safeNormalize(v, fallback: Vec3): Vec3 =
     return fallback
   normalize(v)
 
-when not BackendUsesOpenGlRenderer:
+when (not BackendUsesOpenGlRenderer) and
+    (not defined(useDirectX)) and
+    (not defined(useVulkan)):
   proc toRgbx(value: Color): ColorRGBX =
     ## Converts a float color to the packed UI color type.
     rgbx(
@@ -123,30 +158,31 @@ when not BackendUsesOpenGlRenderer:
       max(0, min(255, (value.a * 255.0'f32).round.int)).uint8
     )
 
-proc drawColorControls(id, title: string, value: var Color) =
-  ## Draws four scrubbers for one RGBA color.
-  text(title)
-  scrubber(id & "_r", value.r, 0.0'f32, 1.0'f32, "R")
-  scrubber(id & "_g", value.g, 0.0'f32, 1.0'f32, "G")
-  scrubber(id & "_b", value.b, 0.0'f32, 1.0'f32, "B")
-  scrubber(id & "_a", value.a, 0.0'f32, 10.0'f32, "Strength")
+when not defined(useDirectX) and not defined(useVulkan):
+  proc drawColorControls(id, title: string, value: var Color) =
+    ## Draws four scrubbers for one RGBA color.
+    text(title)
+    scrubber(id & "_r", value.r, 0.0'f32, 1.0'f32, "R")
+    scrubber(id & "_g", value.g, 0.0'f32, 1.0'f32, "G")
+    scrubber(id & "_b", value.b, 0.0'f32, 1.0'f32, "B")
+    scrubber(id & "_a", value.a, 0.0'f32, 10.0'f32, "Strength")
 
-proc drawRgbControls(id, title: string, value: var Color) =
-  ## Draws rgb-only controls without a strength slider.
-  text(title)
-  scrubber(id & "_r", value.r, 0.0'f32, 1.0'f32, "R")
-  scrubber(id & "_g", value.g, 0.0'f32, 1.0'f32, "G")
-  scrubber(id & "_b", value.b, 0.0'f32, 1.0'f32, "B")
-  value.a = 1.0
+  proc drawRgbControls(id, title: string, value: var Color) =
+    ## Draws rgb-only controls without a strength slider.
+    text(title)
+    scrubber(id & "_r", value.r, 0.0'f32, 1.0'f32, "R")
+    scrubber(id & "_g", value.g, 0.0'f32, 1.0'f32, "G")
+    scrubber(id & "_b", value.b, 0.0'f32, 1.0'f32, "B")
+    value.a = 1.0
 
-proc drawDirectionControls(id, title: string, value: var Vec3) =
-  ## Draws three scrubbers for a direction vector.
-  text(title)
-  scrubber(id & "_x", value.x, -1.0'f32, 1.0'f32, "X")
-  scrubber(id & "_y", value.y, -1.0'f32, 1.0'f32, "Y")
-  scrubber(id & "_z", value.z, -1.0'f32, 1.0'f32, "Z")
+  proc drawDirectionControls(id, title: string, value: var Vec3) =
+    ## Draws three scrubbers for a direction vector.
+    text(title)
+    scrubber(id & "_x", value.x, -1.0'f32, 1.0'f32, "X")
+    scrubber(id & "_y", value.y, -1.0'f32, 1.0'f32, "Y")
+    scrubber(id & "_z", value.z, -1.0'f32, 1.0'f32, "Z")
 
-applyTheme(sk)
+  applyTheme(sk)
 
 proc skyboxPattern(path: string): string =
   ## Converts one cubemap face path into a wildcard pattern.
@@ -234,7 +270,12 @@ proc cameraProjection(camera: Camera, aspectRatio: float32): Mat4 =
           camera.perspective.zfar
         else:
           2000.0'f32
-    perspective(yfov, camAspect, znear, zfar)
+    when defined(useDirectX):
+      perspectiveDxRh(yfov, camAspect, znear, zfar)
+    elif defined(useVulkan):
+      perspectiveVkRh(yfov, camAspect, znear, zfar)
+    else:
+      perspective(yfov, camAspect, znear, zfar)
   of ckOrthographic:
     ortho(
       -camera.orthographic.xmag,
@@ -325,6 +366,10 @@ proc reloadFile(): bool =
   if model != nil:
     when BackendUsesOpenGlRenderer:
       model.clearFromGpu()
+    elif defined(useDirectX):
+      dxRenderer.clearNode(model)
+    elif defined(useVulkan):
+      vkRenderer.clearNode(model)
 
   if modelPath.len == 0:
     model = Node()
@@ -379,103 +424,105 @@ proc withStrengthDisabled(value: Color, enabled: bool): Color =
     return value
   color(value.r, value.g, value.b, 0.0)
 
-proc parseDebugView(name: string): DebugView =
-  ## Maps the UI label to the renderer debug mode.
-  case name
-  of "Unlit":
-    dvUnlit
-  of "Normals":
-    dvNormals
-  of "AO Bake":
-    dvAoBake
-  of "Metallic":
-    dvMetallic
-  of "Specular":
-    dvSpecular
-  else:
-    dvLit
-
-proc drawOverlay(
-  cameraPosition,
-  effectiveSunLightDirection,
-  effectiveRimLightDirection: Vec3
-) =
-  ## Draws the themed viewer controls window.
-  sk.beginUI(window, window.size)
-  subWindow("glTF Viewer", showControls, vec2(20, 20), vec2(430, 760)):
-    h1text("glTF Viewer")
-    text("Mouse middle or Cmd+left drag: orbit")
-    text("Scroll: dolly")
-    text("Key 1 toggles this window")
-    text("")
-
-    if gltfFile != nil:
-      text("Current file:")
-      text(gltfFile.path)
+when BackendUsesOpenGlRenderer:
+  proc parseDebugView(name: string): DebugView =
+    ## Maps the UI label to the renderer debug mode.
+    case name
+    of "Unlit":
+      dvUnlit
+    of "Normals":
+      dvNormals
+    of "AO Bake":
+      dvAoBake
+    of "Metallic":
+      dvMetallic
+    of "Specular":
+      dvSpecular
     else:
-      text("No glTF file loaded.")
+      dvLit
 
-    group(vec2(0, 0), LeftToRight):
-      button("Reload File"):
-        discard reloadFile()
-      button("Refit View"):
-        camCenter = modelBounds.center
-        camDolly = fitCameraDolly(modelBounds, aspectRatio)
+when not defined(useDirectX) and not defined(useVulkan):
+  proc drawOverlay(
+    cameraPosition,
+    effectiveSunLightDirection,
+    effectiveRimLightDirection: Vec3
+  ) =
+    ## Draws the themed viewer controls window.
+    sk.beginUI(window, window.size)
+    subWindow("glTF Viewer", showControls, vec2(20, 20), vec2(430, 760)):
+      h1text("glTF Viewer")
+      text("Mouse middle or Cmd+left drag: orbit")
+      text("Scroll: dolly")
+      text("Key 1 toggles this window")
+      text("")
 
-    text("")
-    text("Scene")
-    checkBox("Lighting", useLighting)
-    checkBox("Shadows", useShadows)
-    checkBox("Light follow camera", lightFollowCamera)
-    text("Camera")
-    dropDown(selectedCamera, cameraOptions)
-    text("Debug View")
-    dropDown(debugViewName, debugViewOptions)
-    text("Skybox")
-    dropDown(selectedSkybox, skyboxOptions)
-    if selectedSkybox == "Solid Color":
-      drawRgbControls("background", "Background", backgroundColor)
-    else:
-      scrubber("skybox_lod", skyboxLod, 0.0'f32, 10.0'f32, "Skybox Blur")
+      if gltfFile != nil:
+        text("Current file:")
+        text(gltfFile.path)
+      else:
+        text("No glTF file loaded.")
 
-    text("")
-    text("Ambient Light")
-    drawColorControls(
-      "ambient_light",
-      "Ambient Light Color",
-      ambientLightColor
-    )
+      group(vec2(0, 0), LeftToRight):
+        button("Reload File"):
+          discard reloadFile()
+        button("Refit View"):
+          camCenter = modelBounds.center
+          camDolly = fitCameraDolly(modelBounds, aspectRatio)
 
-    text("")
-    text("Sun Light")
-    if lightFollowCamera:
-      text(&"Following camera dir: {effectiveSunLightDirection}")
-    else:
-      drawDirectionControls(
-        "sun_light_dir",
-        "Sun Light Direction",
-        sunLightDirection
+      text("")
+      text("Scene")
+      checkBox("Lighting", useLighting)
+      checkBox("Shadows", useShadows)
+      checkBox("Light follow camera", lightFollowCamera)
+      text("Camera")
+      dropDown(selectedCamera, cameraOptions)
+      text("Debug View")
+      dropDown(debugViewName, debugViewOptions)
+      text("Skybox")
+      dropDown(selectedSkybox, skyboxOptions)
+      if selectedSkybox == "Solid Color":
+        drawRgbControls("background", "Background", backgroundColor)
+      else:
+        scrubber("skybox_lod", skyboxLod, 0.0'f32, 10.0'f32, "Skybox Blur")
+
+      text("")
+      text("Ambient Light")
+      drawColorControls(
+        "ambient_light",
+        "Ambient Light Color",
+        ambientLightColor
       )
-    drawColorControls("sun_light", "Sun Light Color", sunLightColor)
 
-    text("")
-    text("Rim Light")
-    text(&"Current rim dir: {effectiveRimLightDirection}")
-    drawDirectionControls(
-      "rim_light_dir",
-      "Rim Light Direction",
-      rimLightDirection
-    )
-    drawColorControls("rim_light", "Rim Light Color", rimLightColor)
+      text("")
+      text("Sun Light")
+      if lightFollowCamera:
+        text(&"Following camera dir: {effectiveSunLightDirection}")
+      else:
+        drawDirectionControls(
+          "sun_light_dir",
+          "Sun Light Direction",
+          sunLightDirection
+        )
+      drawColorControls("sun_light", "Sun Light Color", sunLightColor)
 
-    text("")
-    text("View")
-    text(&"Active camera: {selectedCamera}")
-    text(&"Camera dolly: {camDolly:>7.2f}")
-    text(&"Camera center: {camCenter}")
-    text(&"Bounds radius: {modelBounds.radius:>7.4f}")
-    text(&"Camera position: {cameraPosition}")
-  sk.endUi()
+      text("")
+      text("Rim Light")
+      text(&"Current rim dir: {effectiveRimLightDirection}")
+      drawDirectionControls(
+        "rim_light_dir",
+        "Rim Light Direction",
+        rimLightDirection
+      )
+      drawColorControls("rim_light", "Rim Light Color", rimLightColor)
+
+      text("")
+      text("View")
+      text(&"Active camera: {selectedCamera}")
+      text(&"Camera dolly: {camDolly:>7.2f}")
+      text(&"Camera center: {camCenter}")
+      text(&"Bounds radius: {modelBounds.radius:>7.4f}")
+      text(&"Camera position: {cameraPosition}")
+    sk.endUi()
 
 window.onFrame = proc() =
   let nowTime = epochTime()
@@ -524,7 +571,13 @@ window.onFrame = proc() =
     cameraMat: Mat4
     cameraPosition: Vec3
   if useFreeCamera:
-    proj = perspective(VerticalFov, aspectRatio, 0.001, 2000)
+    proj =
+      when defined(useDirectX):
+        perspectiveDxRh(VerticalFov, aspectRatio, 0.001, 2000)
+      elif defined(useVulkan):
+        perspectiveVkRh(VerticalFov, aspectRatio, 0.001, 2000)
+      else:
+        perspective(VerticalFov, aspectRatio, 0.001, 2000)
     cameraMat =
       translate(vec3(0, 0, -camDolly)) *
       camRotation *
@@ -537,7 +590,13 @@ window.onFrame = proc() =
       cameraPosition = vec3(world.pos)
       proj = cameraProjection(activeCameraNode.camera, aspectRatio)
     else:
-      proj = perspective(VerticalFov, aspectRatio, 0.001, 2000)
+      proj =
+        when defined(useDirectX):
+          perspectiveDxRh(VerticalFov, aspectRatio, 0.001, 2000)
+        elif defined(useVulkan):
+          perspectiveVkRh(VerticalFov, aspectRatio, 0.001, 2000)
+        else:
+          perspective(VerticalFov, aspectRatio, 0.001, 2000)
       cameraMat =
         translate(vec3(0, 0, -camDolly)) *
         camRotation *
@@ -623,15 +682,69 @@ window.onFrame = proc() =
     glDisable(GL_CULL_FACE)
     glDisable(GL_BLEND)
     glDisable(GL_MULTISAMPLE)
+  elif defined(useDirectX):
+    let
+      effectiveAmbientLightColor =
+        withStrengthDisabled(ambientLightColor, useLighting)
+      effectiveSunLightColor =
+        withStrengthDisabled(sunLightColor, useLighting)
+      effectiveRimLightColor =
+        withStrengthDisabled(rimLightColor, useLighting)
+    dxRenderer.drawPbrFrame(
+      model,
+      window.size,
+      backgroundColor,
+      mat4(),
+      cameraMat,
+      proj,
+      tint = color(1, 1, 1, 1),
+      ambientLightColor = effectiveAmbientLightColor,
+      sunLightDirection = effectiveSunLightDirection,
+      sunLightColor = effectiveSunLightColor,
+      rimLightDirection = effectiveRimLightDirection,
+      rimLightColor = effectiveRimLightColor,
+      cameraPosition = cameraPosition,
+      vsync = window.vsync
+    )
+  elif defined(useVulkan):
+    let
+      effectiveAmbientLightColor =
+        withStrengthDisabled(ambientLightColor, useLighting)
+      effectiveSunLightColor =
+        withStrengthDisabled(sunLightColor, useLighting)
+      effectiveRimLightColor =
+        withStrengthDisabled(rimLightColor, useLighting)
+    vkRenderer.drawPbrFrame(
+      model,
+      window.size,
+      backgroundColor,
+      mat4(),
+      cameraMat,
+      proj,
+      tint = color(1, 1, 1, 1),
+      ambientLightColor = effectiveAmbientLightColor,
+      sunLightDirection = effectiveSunLightDirection,
+      sunLightColor = effectiveSunLightColor,
+      rimLightDirection = effectiveRimLightDirection,
+      rimLightColor = effectiveRimLightColor,
+      cameraPosition = cameraPosition,
+      vsync = window.vsync
+    )
   else:
     sk.clearScreen(backgroundColor.toRgbx())
 
-  drawOverlay(
-    cameraPosition,
-    effectiveSunLightDirection,
-    effectiveRimLightDirection
-  )
-  window.swapBuffers()
+  when not defined(useDirectX) and not defined(useVulkan):
+    drawOverlay(
+      cameraPosition,
+      effectiveSunLightDirection,
+      effectiveRimLightDirection
+    )
+    window.swapBuffers()
 
 while not window.closeRequested:
   pollEvents()
+
+when defined(useDirectX):
+  dxRenderer.shutdown()
+elif defined(useVulkan):
+  vkRenderer.shutdown()

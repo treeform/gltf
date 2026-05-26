@@ -114,6 +114,6 @@ jobs:
       - name: Validate backend shaders (${{ matrix.backend }})
         run: nim r ${{ matrix.flags }} tests/backend_shaders.nim
       - name: Compile sample assets (${{ matrix.backend }})
-        run: nim c --compileOnly ${{ matrix.flags }} tests/sample_assets.nim
+        run: nim c --compileOnly -d:shadyBinaryShaders ${{ matrix.flags }} tests/sample_assets.nim
       - name: Compile viewer (${{ matrix.backend }})
         run: nim c --compileOnly -d:shadyBinaryShaders ${{ matrix.flags }} tools/gltf_viewer.nim

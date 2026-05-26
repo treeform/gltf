@@ -141,7 +141,7 @@ proc gltfPbrVert*(
   vertexWeights: Vec4,
   vertexUV1: Vec2,
   gl_Position: var Vec4,
-  position: var Vec3,
+  worldPos: var Vec3,
   color: var Vec4,
   normal: var Vec3,
   uv: var Vec2,
@@ -150,30 +150,27 @@ proc gltfPbrVert*(
   bitangent: var Vec3,
   vPosLightSpace: var Vec4
 ) =
+  var skin = identityMat4()
+  if useSkinning:
+    skin = skinMatrix(vertexJoints, vertexWeights)
   let
-    skin =
-      if useSkinning:
-        skinMatrix(vertexJoints, vertexWeights)
-      else:
-        identityMat4()
     skinnedPosition = skin * vec4(vertexPosition, 1.0'f32)
     skinnedNormal = (skin * vec4(vertexNormal, 0.0'f32)).xyz
     skinnedTangent = (skin * vec4(vertexTangent.xyz, 0.0'f32)).xyz
-    normalMatrix = mat3(model)
-  position = (model * skinnedPosition).xyz
+  worldPos = (model * skinnedPosition).xyz
   color = vertexColor
   uv = vertexUV
   uv1 = vertexUV1
 
-  let n: Vec3 = normalize(normalMatrix * skinnedNormal)
+  let n: Vec3 = normalize((model * vec4(skinnedNormal, 0.0'f32)).xyz)
   normal = n
-  tangent = normalize(normalMatrix * skinnedTangent)
+  tangent = normalize((model * vec4(skinnedTangent, 0.0'f32)).xyz)
   bitangent = cross(n, tangent) * vertexTangent.w
-  vPosLightSpace = lightSpace * vec4(position, 1.0'f32)
+  vPosLightSpace = lightSpace * vec4(worldPos, 1.0'f32)
   gl_Position = proj * view * model * skinnedPosition
 
 proc gltfPbrFrag*(
-  position: Vec3,
+  worldPos: Vec3,
   color: Vec4,
   normal: Vec3,
   uv: Vec2,
@@ -236,7 +233,7 @@ proc gltfPbrFrag*(
     emissiveValue: Vec3 =
       texture(emissiveTexture, emissiveUv).rgb *
       emissiveFactor
-    geometricNormal: Vec3 = normalize(cross(dFdx(position), dFdy(position)))
+    geometricNormal: Vec3 = normalize(cross(dFdx(worldPos), dFdy(worldPos)))
     meshNormal: Vec3 =
       if length(normal) > 0.0'f32:
         normalize(normal)
@@ -262,7 +259,7 @@ proc gltfPbrFrag*(
   let
     sunDir: Vec3 = normalize(-sunLightDirection)
     rimDir: Vec3 = normalize(-rimLightDirection)
-    viewDir: Vec3 = normalize(cameraPosition - position)
+    viewDir: Vec3 = normalize(cameraPosition - worldPos)
     reflectDir: Vec3 = reflect(-viewDir, computedNormal)
     halfVector: Vec3 = normalize(viewDir + sunDir)
     nDotH = max(dot(computedNormal, halfVector), 0.0'f32)
@@ -301,27 +298,19 @@ proc gltfPbrFrag*(
 
   if debugViewMode == 1:
     fragColor = vec4(albedo * tint.rgb, fragColor.a * tint.a)
-    return
-
-  if debugViewMode == 2:
+  elif debugViewMode == 2:
     fragColor = vec4(computedNormal * 0.5'f32 +
       vec3(0.5'f32, 0.5'f32, 0.5'f32), fragColor.a)
-    return
-
-  if debugViewMode == 3:
+  elif debugViewMode == 3:
     fragColor = vec4(
       ambientOcclusion,
       ambientOcclusion,
       ambientOcclusion,
       fragColor.a
     )
-    return
-
-  if debugViewMode == 4:
+  elif debugViewMode == 4:
     fragColor = vec4(metallic, metallic, metallic, fragColor.a)
-    return
-
-  if debugViewMode == 5:
+  elif debugViewMode == 5:
     let specularMap =
       clamp(
         dot(f0mix, vec3(0.3333333'f32, 0.3333333'f32, 0.3333333'f32)) *
@@ -330,30 +319,29 @@ proc gltfPbrFrag*(
         1.0'f32
       )
     fragColor = vec4(specularMap, specularMap, specularMap, fragColor.a)
-    return
+  else:
+    let
+      direct: Vec3 = (specular + diffuse) * (1.0'f32 - shadow)
+      lo: Vec3 =
+        direct +
+        ambientLightColor.rgb * ambientLightColor.a * ambientOcclusion +
+        rimLight
+    var litColor: Vec3 = mix(lo, envColor, fresnel * metallic)
 
-  let
-    direct: Vec3 = (specular + diffuse) * (1.0'f32 - shadow)
-    lo: Vec3 =
-      direct +
-      ambientLightColor.rgb * ambientLightColor.a * ambientOcclusion +
-      rimLight
-  var litColor: Vec3 = mix(lo, envColor, fresnel * metallic)
+    if transmission > 0.0'f32:
+      let glassMix =
+        clamp(
+          0.35'f32 + transmission * 0.55'f32 + roughness * 0.1'f32,
+          0.0'f32,
+          1.0'f32
+        )
+      litColor = mix(litColor, envColor, glassMix)
+      litColor = litColor * mix(1.0'f32, 0.82'f32, transmission)
+      fragColor.a =
+        fragColor.a * mix(1.0'f32, 0.08'f32 + roughness * 0.2'f32, transmission)
 
-  if transmission > 0.0'f32:
-    let glassMix =
-      clamp(
-        0.35'f32 + transmission * 0.55'f32 + roughness * 0.1'f32,
-        0.0'f32,
-        1.0'f32
-      )
-    litColor = mix(litColor, envColor, glassMix)
-    litColor = litColor * mix(1.0'f32, 0.82'f32, transmission)
-    fragColor.a =
-      fragColor.a * mix(1.0'f32, 0.08'f32 + roughness * 0.2'f32, transmission)
-
-  litColor += emissiveValue
-  fragColor = vec4(litColor, fragColor.a) * tint
+    litColor += emissiveValue
+    fragColor = vec4(litColor, fragColor.a) * tint
 
 proc gltfSkyboxVert*(
   vertexPosition: Vec2,

@@ -17,7 +17,7 @@ require(PbrFragHlsl, "shadowMap.SampleCmpLevelZero", "DirectX shadow sample")
 require(PbrFragHlsl, "SV_IsFrontFace", "DirectX front-facing input")
 
 require(PbrVertVulkan, "#version 450", "Vulkan version")
-require(PbrVertVulkan, "layout(push_constant)", "Vulkan push constants")
+require(PbrVertVulkan, "layout(set = 1, binding = 0, std140)", "Vulkan vertex uniforms")
 require(PbrVertVulkan, "layout(location = 0) in vec3 vertexPosition;", "Vulkan inputs")
 require(PbrFragVulkan, "layout(set = 0, binding =", "Vulkan descriptors")
 

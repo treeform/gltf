@@ -1,7 +1,10 @@
 import
   std/math,
   vmath,
-  common, models
+  common
+
+when not defined(useDirectX) and not defined(useVulkan):
+  import models
 
 proc resetToBase*(node: Node) =
   ## Reset the node and its children to the original transform.
@@ -341,4 +344,7 @@ proc updateAnimation*(node: Node, dt: float32) =
       if clipIdx >= 0 and clipIdx < node.animations.len:
         applyClipAt(node.animations[clipIdx], node.animTime)
   node.applyMorphs()
-  node.updateOnGpu()
+  when defined(useDirectX) or defined(useVulkan):
+    discard
+  else:
+    node.updateOnGpu()
