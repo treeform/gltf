@@ -659,6 +659,9 @@ proc uploadToGpu*(primitive: Primitive) =
     )
     glEnableVertexAttribArray(4)
     glVertexAttribPointer(4, 4, cGL_FLOAT, GL_FALSE, 0, nil)
+  else:
+    glDisableVertexAttribArray(4)
+    glVertexAttrib4f(4, 1.0, 0.0, 0.0, 1.0)
 
   if primitive.colors.len > 0:
     glGenBuffers(1, gpu.colorsId.addr)
@@ -901,10 +904,14 @@ proc renderPbrPrimitive(
     glUniform1i(glGetUniformLocation(pbrShader, "environmentMap"), 5)
     glBindTexture(GL_TEXTURE_CUBE_MAP, environmentMapId)
 
-    if useShadow:
-      glActiveTexture(GL_TEXTURE6)
-      glUniform1i(glGetUniformLocation(pbrShader, "shadowMap"), 6)
-      glBindTexture(GL_TEXTURE_2D, shadowTex)
+    let activeShadowTex =
+      if shadowTex != 0.GLuint:
+        shadowTex
+      else:
+        shadowMapTex
+    glActiveTexture(GL_TEXTURE6)
+    glUniform1i(glGetUniformLocation(pbrShader, "shadowMap"), 6)
+    glBindTexture(GL_TEXTURE_2D, activeShadowTex)
 
     var cutoff = primitive.material.alphaCutoff
     case primitive.material.alphaMode
