@@ -8,8 +8,6 @@ import
   ../shaders as shaderSources
 
 const
-  BackendName* = "OpenGL"
-  HasNativeRenderer* = true
   VertexEntryPoint* = "main"
   FragmentEntryPoint* = "main"
 

@@ -1,10 +1,9 @@
 import
   std/[algorithm, os, sequtils, strformat, strutils, tables, times],
   chroma, pixie, windy, vmath,
-  gltf,
-  gltf/backends/backend
+  gltf
 
-when BackendUsesOpenGlRenderer:
+when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
   import opengl
 
 const
@@ -312,7 +311,7 @@ proc testModel(
           image.writeFile(outPath)
           result.status = "ok"
           result.message = "Rendered successfully; baseline screenshot not found."
-      when BackendUsesOpenGlRenderer:
+      when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
         window.swapBuffers()
     let renderElapsed = epochTime() - renderStart
     echo &"  rendered in {renderElapsed:>7.3f}s"
@@ -471,13 +470,13 @@ var window = newWindow(
     else:
       msaa8x
 )
-when BackendUsesOpenGlRenderer:
+when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
   makeContextCurrent(window)
   loadExtensions()
-else:
-  loadBackendExtensions()
+elif defined(useDirectX) or defined(useVulkan):
+  loadExtensions()
 renderer = newRenderer(window)
-when BackendUsesOpenGlRenderer:
+when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
   loadDefaultEnvironmentMap()
 
 var results: seq[AssetResult]

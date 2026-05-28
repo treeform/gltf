@@ -5,7 +5,6 @@ import
   gltf/models,
   gltf/pbr,
   gltf/reader,
-  gltf/backends/backend,
   gltf/shaders,
   gltf/writer
 
@@ -16,6 +15,5 @@ export
   models,
   pbr,
   reader,
-  backend,
   shaders,
   writer

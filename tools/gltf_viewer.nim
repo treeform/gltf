@@ -1,13 +1,12 @@
 import
   std/[math, os, times],
   windy, chroma, vmath,
-  ../src/gltf/[animations, models, pbr, reader],
-  ../src/gltf/backends/backend
+  ../src/gltf/[animations, models, pbr, reader]
 
-when BackendUsesOpenGlRenderer:
+when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
   import opengl
 
-when BackendUsesOpenGlRenderer:
+when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
   import
     std/[algorithm, strformat, strutils],
     silky, silky/atlas, jsony, pixie,
@@ -18,7 +17,7 @@ const
   FitPadding = 1.25'f32
   FreeCameraName = "Free Camera"
 
-when BackendUsesOpenGlRenderer:
+when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
   const AtlasPng = staticRead("dist/atlas.png")
 
   let
@@ -39,25 +38,25 @@ var window = newWindow(
   "glTF Viewer",
   ivec2(1200, 700),
   msaa =
-    when BackendUsesOpenGlRenderer:
+    when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
       msaa8x
     else:
       msaaDisabled
 )
-when BackendUsesOpenGlRenderer:
+when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
   makeContextCurrent(window)
   loadExtensions()
-else:
-  loadBackendExtensions()
+elif defined(useDirectX) or defined(useVulkan):
+  loadExtensions()
 
-when BackendUsesOpenGlRenderer:
+when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
   let
     atlasImage = decodePng(AtlasPng).convertToImage()
     atlasData = extractAtlasJsonFromPng(AtlasPng).fromJson(SilkyAtlas)
 
 var renderer = newRenderer(window)
 
-when BackendUsesOpenGlRenderer:
+when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
   var sk = newSilky(window, atlasImage, atlasData)
 
 var
@@ -91,7 +90,7 @@ var
       perspective(VerticalFov, aspectRatio, 0.1, 200)
   lastTime = epochTime()
 
-when BackendUsesOpenGlRenderer:
+when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
   var
     skyboxOptions: seq[string]
     skyboxPatterns: seq[(string, string)]
@@ -102,12 +101,12 @@ when BackendUsesOpenGlRenderer:
     debugViewName = "Lit"
     skyboxLod: float32 = 7.0
 
-when BackendUsesOpenGlRenderer:
+when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
   window.runeInputEnabled = true
   window.onRune = proc(rune: Rune) =
     sk.inputRunes.add(rune)
 
-when BackendUsesOpenGlRenderer:
+when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
   proc applyTheme(sk: Silky) =
     ## Applies the viewer theme colors and spacing.
     sk.theme.padding = 10
@@ -140,7 +139,7 @@ proc safeNormalize(v, fallback: Vec3): Vec3 =
     return fallback
   normalize(v)
 
-when BackendUsesOpenGlRenderer:
+when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
   proc drawColorControls(id, title: string, value: var Color) =
     ## Draws four scrubbers for one RGBA color.
     text(title)
@@ -166,7 +165,7 @@ when BackendUsesOpenGlRenderer:
 
   applyTheme(sk)
 
-when BackendUsesOpenGlRenderer:
+when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
   proc skyboxPattern(path: string): string =
     ## Converts one cubemap face path into a wildcard pattern.
     for face in ["px", "nx", "py", "ny", "pz", "nz"]:
@@ -269,7 +268,7 @@ proc cameraProjection(camera: Camera, aspectRatio: float32): Mat4 =
       camera.orthographic.zfar
     )
 
-when BackendUsesOpenGlRenderer:
+when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
   proc discoverSkyboxes() =
     ## Scans the skybox folder for cubemap patterns.
     skyboxOptions = @[]
@@ -388,7 +387,7 @@ proc reloadFile(): bool =
 
 proc loadAssets() =
   ## Loads the renderer assets and the requested model.
-  when BackendUsesOpenGlRenderer:
+  when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
     discoverSkyboxes()
     if selectedSkybox notin skyboxOptions:
       selectedSkybox = defaultSkybox()
@@ -401,7 +400,7 @@ proc withStrengthDisabled(value: Color, enabled: bool): Color =
     return value
   color(value.r, value.g, value.b, 0.0)
 
-when BackendUsesOpenGlRenderer:
+when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
   proc parseDebugView(name: string): DebugView =
     ## Maps the UI label to the renderer debug mode.
     case name
@@ -418,7 +417,7 @@ when BackendUsesOpenGlRenderer:
     else:
       dvLit
 
-when BackendUsesOpenGlRenderer:
+when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
   proc drawOverlay(
     cameraPosition,
     effectiveSunLightDirection,
@@ -538,7 +537,7 @@ window.onFrame = proc() =
     lightFollowCamera = not lightFollowCamera
 
   aspectRatio = window.size.x.float32 / window.size.y.float32
-  when BackendUsesOpenGlRenderer:
+  when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
     updateEnvironmentMap()
 
   if model != nil:
@@ -598,7 +597,7 @@ window.onFrame = proc() =
     effectiveRimLightColor =
       withStrengthDisabled(rimLightColor, useLighting)
     effectiveDebugView =
-      when BackendUsesOpenGlRenderer:
+      when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
         let selectedDebugView = parseDebugView(debugViewName)
         if useLighting:
           selectedDebugView
@@ -625,17 +624,17 @@ window.onFrame = proc() =
       debugView: effectiveDebugView,
       cameraPosition: cameraPosition,
       useShadows:
-        when BackendUsesOpenGlRenderer:
+        when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
           useShadows
         else:
           false,
       drawSkybox:
-        when BackendUsesOpenGlRenderer:
+        when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
           selectedSkybox != "Solid Color"
         else:
           false,
       skyboxLod:
-        when BackendUsesOpenGlRenderer:
+        when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
           skyboxLod
         else:
           0.0'f32,
@@ -652,12 +651,12 @@ window.onFrame = proc() =
     renderer.render(model, renderParams)
   renderer.endFrame()
 
-  when BackendUsesOpenGlRenderer:
+  when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
     glDisable(GL_DEPTH_TEST)
     glDisable(GL_CULL_FACE)
     glDisable(GL_BLEND)
     glDisable(GL_MULTISAMPLE)
-  when BackendUsesOpenGlRenderer:
+  when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
     drawOverlay(
       cameraPosition,
       effectiveSunLightDirection,

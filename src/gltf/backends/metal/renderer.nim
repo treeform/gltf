@@ -1,19 +1,18 @@
 import
   chroma, pixie, vmath, windy,
   ../../common,
-  ../metal as impl
+  ../shaders as shaderSources
 
-export
-  impl.BackendName,
-  impl.HasNativeRenderer,
-  impl.VertexEntryPoint,
-  impl.FragmentEntryPoint,
-  impl.PbrVertexShader,
-  impl.PbrFragmentShader,
-  impl.SkyboxVertexShader,
-  impl.SkyboxFragmentShader,
-  impl.ShadowDepthVertexShader,
-  impl.ShadowDepthFragmentShader
+const
+  VertexEntryPoint* = "vertexMain"
+  FragmentEntryPoint* = "fragmentMain"
+
+  PbrVertexShader* = shaderSources.PbrVertMsl
+  PbrFragmentShader* = shaderSources.PbrFragMsl
+  SkyboxVertexShader* = shaderSources.SkyboxVertMsl
+  SkyboxFragmentShader* = shaderSources.SkyboxFragMsl
+  ShadowDepthVertexShader* = shaderSources.ShadowDepthVertMsl
+  ShadowDepthFragmentShader* = shaderSources.ShadowDepthFragMsl
 
 type Renderer* = ref object
   window*: Window
