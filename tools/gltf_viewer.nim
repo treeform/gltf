@@ -639,7 +639,11 @@ window.onFrame = proc() =
           skyboxLod
         else:
           0.0'f32,
-      vsync: window.vsync
+      vsync:
+        when compiles(window.vsync):
+          window.vsync
+        else:
+          false
     )
 
   renderer.beginFrame(window, window.size)
