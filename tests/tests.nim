@@ -245,8 +245,8 @@ doAssert perspectiveNode != nil
 doAssert orthoNode != nil
 doAssert perspectiveNode.camera != nil
 doAssert orthoNode.camera != nil
-doAssert perspectiveNode.camera.kind == ckPerspective
-doAssert orthoNode.camera.kind == ckOrthographic
+doAssert perspectiveNode.camera.kind == PerspectiveLens
+doAssert orthoNode.camera.kind == OrthographicLens
 doAssert abs(perspectiveNode.camera.perspective.yfov - 0.7853982) < 0.0001
 doAssert abs(orthoNode.camera.orthographic.xmag - 2.0) < 0.0001
 
@@ -703,8 +703,6 @@ doAssert basisNode.mesh != nil
 doAssert basisNode.mesh.primitives.len == 1
 let basisMaterial = basisNode.mesh.primitives[0].material
 doAssert basisMaterial != nil
-doAssert basisMaterial.baseColorId != 0
 doAssert basisMaterial.baseColorName == "basisColor"
 doAssert basisMaterial.baseColor == nil
-glDeleteTextures(1, basisMaterial.baseColorId.addr)
-basisMaterial.baseColorId = 0
+doAssert basisMaterial.baseColorKtx2.len > 0

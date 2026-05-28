@@ -1,5 +1,6 @@
 import
-  chroma, opengl, vmath
+  chroma, vmath,
+  common
 
 type
   BufferView* = object
@@ -9,7 +10,7 @@ type
   SparseIndices* = object
     bufferView*: int
     byteOffset*: int
-    componentType*: GLenum
+    componentType*: ComponentType
 
   SparseValues* = object
     bufferView*: int
@@ -27,7 +28,7 @@ type
   Accessor* = object
     bufferView*: int
     byteOffset*, count*: int
-    componentType*: GLenum
+    componentType*: ComponentType
     kind*: AccessorKind
     normalized*: bool
     sparse*: SparseInfo
@@ -37,7 +38,9 @@ type
     sampler*: int
 
   Sampler* = object
-    magFilter*, minFilter*, wrapS*, wrapT*: GLint
+    magFilter*: TextureMagFilter
+    minFilter*: TextureMinFilter
+    wrapS*, wrapT*: TextureWrap
 
   MaterialTexture* = object
     index*: int
@@ -83,7 +86,7 @@ type
   PrimitiveInfo* = object
     attributes*: PrimitiveAttributes
     indices*, material*: int
-    mode*: GLenum
+    mode*: PrimitiveMode
     morphTargets*: seq[MorphTargetInfo]
 
   SkinInfo* = object

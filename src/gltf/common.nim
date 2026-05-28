@@ -1,8 +1,51 @@
 import
-  chroma, opengl, pixie, vmath
+  chroma, pixie, vmath
+
+when defined(useDirectX):
+  import backends/directx/common
+elif defined(useVulkan):
+  import backends/vulkan/common
+elif defined(useMetal4):
+  import backends/metal/common
+else:
+  import backends/opengl/common
 
 type
   GltfError* = object of CatchableError
+
+  ComponentType* = enum
+    ByteComponent = 5120
+    UnsignedByteComponent = 5121
+    ShortComponent = 5122
+    UnsignedShortComponent = 5123
+    UnsignedIntComponent = 5125
+    FloatComponent = 5126
+
+  TextureMagFilter* = enum
+    NearestMagFilter = 9728
+    LinearMagFilter = 9729
+
+  TextureMinFilter* = enum
+    NearestMinFilter = 9728
+    LinearMinFilter = 9729
+    NearestMipmapNearestMinFilter = 9984
+    LinearMipmapNearestMinFilter = 9985
+    NearestMipmapLinearMinFilter = 9986
+    LinearMipmapLinearMinFilter = 9987
+
+  TextureWrap* = enum
+    ClampToEdgeWrap = 33071
+    MirroredRepeatWrap = 33648
+    RepeatWrap = 10497
+
+  PrimitiveMode* = enum
+    PointsMode = 0
+    LinesMode = 1
+    LineLoopMode = 2
+    LineStripMode = 3
+    TrianglesMode = 4
+    TriangleStripMode = 5
+    TriangleFanMode = 6
 
   TextureTransform* = object
     texCoord*: int
@@ -11,16 +54,16 @@ type
     rotation*: float32
 
   TextureSampler* = object
-    magFilter*: GLint
-    minFilter*: GLint
-    wrapS*: GLint
-    wrapT*: GLint
+    magFilter*: TextureMagFilter
+    minFilter*: TextureMinFilter
+    wrapS*: TextureWrap
+    wrapT*: TextureWrap
 
   AlphaMode* = enum
     OpaqueAlphaMode, MaskAlphaMode, BlendAlphaMode
 
   CameraKind* = enum
-    ckPerspective, ckOrthographic
+    PerspectiveLens, OrthographicLens
 
   PerspectiveCamera* = object
     yfov*: float32
@@ -63,19 +106,9 @@ type
     indices32*: seq[uint32]
     morphTargets*: seq[MorphTarget]
     material*: Material
-    mode*: GLenum
-
-    uploaded*: bool
-    vertexArrayId*: GLuint
-    pointsId*: GLuint
-    uvsId*: GLuint
-    uvs1Id*: GLuint
-    normalsId*: GLuint
-    tangentsId*: GLuint
-    colorsId*: GLuint
-    jointIdsId*: GLuint
-    jointWeightsId*: GLuint
-    indicesId*: GLuint
+    mode*: PrimitiveMode
+    geometryVersion*: uint64
+    data*: PrimitiveData
 
   Mesh* = ref object
     name*: string
@@ -148,28 +181,33 @@ type
   Material* = ref object
     name*: string
     baseColor*: Image
+    baseColorKtx2*: string
     baseColorName*: string
     baseColorTransform*: TextureTransform
     baseColorSampler*: TextureSampler
     baseColorFactor*: Color
     metallicRoughness*: Image
+    metallicRoughnessKtx2*: string
     metallicRoughnessName*: string
     metallicRoughnessTransform*: TextureTransform
     metallicRoughnessSampler*: TextureSampler
     metallicFactor*: float32
     roughnessFactor*: float32
     normal*: Image
+    normalKtx2*: string
     normalName*: string
     normalTransform*: TextureTransform
     normalSampler*: TextureSampler
     hasNormalTexture*: bool
     normalScale*: float32
     occlusion*: Image
+    occlusionKtx2*: string
     occlusionName*: string
     occlusionTransform*: TextureTransform
     occlusionSampler*: TextureSampler
     occlusionStrength*: float32
     emissive*: Image
+    emissiveKtx2*: string
     emissiveName*: string
     emissiveTransform*: TextureTransform
     emissiveSampler*: TextureSampler
@@ -179,12 +217,8 @@ type
     alphaCutoff*: float32
     doubleSided*: bool
     transmissionFactor*: float32
-
-    baseColorId*: GLuint
-    metallicRoughnessId*: GLuint
-    normalId*: GLuint
-    occlusionId*: GLuint
-    emissiveId*: GLuint
+    materialVersion*: uint64
+    data*: MaterialData
 
   AABounds* = object
     min*, max*: Vec3
@@ -206,3 +240,33 @@ type
     cameras*: seq[Camera]
     skins*: seq[Skin]
     unsupportedUsedExtensions*: seq[string]
+    sceneVersion*: uint64
+    data*: GltfFileData
+
+  DebugView* = enum
+    dvLit,
+    dvUnlit,
+    dvNormals,
+    dvAoBake,
+    dvMetallic,
+    dvSpecular
+
+  RenderParams* = object
+    size*: IVec2
+    clearColor*: Color
+    transform*: Mat4
+    view*: Mat4
+    proj*: Mat4
+    tint*: Color
+    useTrs*: bool
+    ambientLightColor*: Color
+    sunLightDirection*: Vec3
+    sunLightColor*: Color
+    rimLightDirection*: Vec3
+    rimLightColor*: Color
+    debugView*: DebugView
+    cameraPosition*: Vec3
+    useShadows*: bool
+    drawSkybox*: bool
+    skyboxLod*: float32
+    vsync*: bool

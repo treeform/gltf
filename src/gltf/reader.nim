@@ -1,7 +1,7 @@
 import
   std/[base64, json, os, strformat, strutils],
-  chroma, flatty/binny, opengl, pixie, vmath, webby,
-  common, internal, ktx2, models
+  chroma, flatty/binny, pixie, vmath, webby,
+  common, internal, models
 
 export common
 
@@ -12,6 +12,83 @@ const SupportedExtensions = [
   "KHR_animation_pointer",
   "KHR_texture_basisu"
 ]
+
+const
+  GltfArrayBufferTarget = 34962
+  GltfElementArrayBufferTarget = 34963
+
+proc parseComponentType(value: int): ComponentType =
+  case value
+  of ByteComponent.int:
+    ByteComponent
+  of UnsignedByteComponent.int:
+    UnsignedByteComponent
+  of ShortComponent.int:
+    ShortComponent
+  of UnsignedShortComponent.int:
+    UnsignedShortComponent
+  of UnsignedIntComponent.int:
+    UnsignedIntComponent
+  of FloatComponent.int:
+    FloatComponent
+  else:
+    raise newException(GltfError, &"Invalid accessor componentType {value}")
+
+proc parseTextureMagFilter(value: int): TextureMagFilter =
+  case value
+  of NearestMagFilter.int:
+    NearestMagFilter
+  of LinearMagFilter.int:
+    LinearMagFilter
+  else:
+    raise newException(GltfError, &"Invalid texture magFilter {value}")
+
+proc parseTextureMinFilter(value: int): TextureMinFilter =
+  case value
+  of NearestMinFilter.int:
+    NearestMinFilter
+  of LinearMinFilter.int:
+    LinearMinFilter
+  of NearestMipmapNearestMinFilter.int:
+    NearestMipmapNearestMinFilter
+  of LinearMipmapNearestMinFilter.int:
+    LinearMipmapNearestMinFilter
+  of NearestMipmapLinearMinFilter.int:
+    NearestMipmapLinearMinFilter
+  of LinearMipmapLinearMinFilter.int:
+    LinearMipmapLinearMinFilter
+  else:
+    raise newException(GltfError, &"Invalid texture minFilter {value}")
+
+proc parseTextureWrap(value: int): TextureWrap =
+  case value
+  of ClampToEdgeWrap.int:
+    ClampToEdgeWrap
+  of MirroredRepeatWrap.int:
+    MirroredRepeatWrap
+  of RepeatWrap.int:
+    RepeatWrap
+  else:
+    raise newException(GltfError, &"Invalid texture wrap mode {value}")
+
+proc parsePrimitiveMode(value: int): PrimitiveMode =
+  case value
+  of PointsMode.int:
+    PointsMode
+  of LinesMode.int:
+    LinesMode
+  of LineLoopMode.int:
+    LineLoopMode
+  of LineStripMode.int:
+    LineStripMode
+  of TrianglesMode.int:
+    TrianglesMode
+  of TriangleStripMode.int:
+    TriangleStripMode
+  of TriangleFanMode.int:
+    TriangleFanMode
+  else:
+    raise newException(GltfError, &"Invalid primitive mode {value}")
 
 proc unsupportedUsedExtensions(jsonRoot: JsonNode): seq[string] =
   ## Returns used extensions we do not currently support.
@@ -40,13 +117,13 @@ proc readSparseIndices(
     start = view.byteOffset + accessor.sparse.indices.byteOffset
   result.setLen(accessor.sparse.count)
   case accessor.sparse.indices.componentType
-  of GL_UNSIGNED_BYTE:
+  of UnsignedByteComponent:
     for i in 0 ..< result.len:
       result[i] = buffer.readUint8(start + i).int
-  of cGL_UNSIGNED_SHORT:
+  of UnsignedShortComponent:
     for i in 0 ..< result.len:
       result[i] = buffer.readUint16(start + i * 2).int
-  of GL_UNSIGNED_INT:
+  of UnsignedIntComponent:
     for i in 0 ..< result.len:
       result[i] = buffer.readUint32(start + i * 4).int
   else:
@@ -69,13 +146,13 @@ proc readAccessorFloats(
     start = view.byteOffset + accessor.byteOffset
     elemSize =
       case accessor.componentType
-      of cGL_FLOAT:
+      of FloatComponent:
         4
-      of GL_UNSIGNED_BYTE:
+      of UnsignedByteComponent:
         1
-      of cGL_UNSIGNED_SHORT:
+      of UnsignedShortComponent:
         2
-      of GL_UNSIGNED_INT:
+      of UnsignedIntComponent:
         4
       else:
         0
@@ -88,13 +165,13 @@ proc readAccessorFloats(
   for i in 0 ..< accessor.count:
     let off = start + i * stride
     case accessor.componentType
-    of cGL_FLOAT:
+    of FloatComponent:
       result[i] = readFloat32(buffer, off)
-    of GL_UNSIGNED_BYTE:
+    of UnsignedByteComponent:
       result[i] = buffer.readUint8(off).float32
-    of cGL_UNSIGNED_SHORT:
+    of UnsignedShortComponent:
       result[i] = buffer.readUint16(off).float32
-    of GL_UNSIGNED_INT:
+    of UnsignedIntComponent:
       result[i] = buffer.readUint32(off).float32
     else:
       discard
@@ -108,13 +185,13 @@ proc readAccessorFloats(
     for i, dstIndex in indices:
       let off = sparseStart + i * sparseStride
       case accessor.componentType
-      of cGL_FLOAT:
+      of FloatComponent:
         result[dstIndex] = readFloat32(sparseBuffer, off)
-      of GL_UNSIGNED_BYTE:
+      of UnsignedByteComponent:
         result[dstIndex] = sparseBuffer.readUint8(off).float32
-      of cGL_UNSIGNED_SHORT:
+      of UnsignedShortComponent:
         result[dstIndex] = sparseBuffer.readUint16(off).float32
-      of GL_UNSIGNED_INT:
+      of UnsignedIntComponent:
         result[dstIndex] = sparseBuffer.readUint32(off).float32
       else:
         discard
@@ -236,7 +313,7 @@ proc readAccessorVec2(
     start = view.byteOffset + accessor.byteOffset
     stride = if view.byteStride > 0: view.byteStride else: 8
   assertRaise accessor.kind == atVEC2, "Unsupported vec2 accessor kind"
-  assertRaise accessor.componentType == cGL_FLOAT,
+  assertRaise accessor.componentType == FloatComponent,
     "Unsupported vec2 component type"
   result.setLen(accessor.count)
   for i in 0 ..< accessor.count:
@@ -272,7 +349,7 @@ proc readAccessorVec4(
     start = view.byteOffset + accessor.byteOffset
     stride = if view.byteStride > 0: view.byteStride else: 16
   assertRaise accessor.kind == atVEC4, "Unsupported vec4 accessor kind"
-  assertRaise accessor.componentType == cGL_FLOAT,
+  assertRaise accessor.componentType == FloatComponent,
     "Unsupported vec4 component type"
   result.setLen(accessor.count)
   for i in 0 ..< accessor.count:
@@ -312,7 +389,7 @@ proc readAccessorMat4(
     start = view.byteOffset + accessor.byteOffset
     stride = if view.byteStride > 0: view.byteStride else: 64
   assertRaise accessor.kind == atMAT4, "Unsupported mat4 accessor kind"
-  assertRaise accessor.componentType == cGL_FLOAT,
+  assertRaise accessor.componentType == FloatComponent,
     "Unsupported mat4 component type"
   result.setLen(accessor.count)
   for i in 0 ..< accessor.count:
@@ -350,9 +427,9 @@ proc readAccessorJointIds(
     start = view.byteOffset + accessor.byteOffset
     elemSize =
       case accessor.componentType
-      of GL_UNSIGNED_BYTE:
+      of UnsignedByteComponent:
         4
-      of cGL_UNSIGNED_SHORT:
+      of UnsignedShortComponent:
         8
       else:
         0
@@ -363,14 +440,14 @@ proc readAccessorJointIds(
   for i in 0 ..< accessor.count:
     let off = start + i * stride
     case accessor.componentType
-    of GL_UNSIGNED_BYTE:
+    of UnsignedByteComponent:
       result[i] = [
         buffer.readUint8(off + 0).uint16,
         buffer.readUint8(off + 1).uint16,
         buffer.readUint8(off + 2).uint16,
         buffer.readUint8(off + 3).uint16
       ]
-    of cGL_UNSIGNED_SHORT:
+    of UnsignedShortComponent:
       result[i] = [
         buffer.readUint16(off + 0),
         buffer.readUint16(off + 2),
@@ -388,11 +465,11 @@ proc normalizedValue(
   if not accessor.normalized:
     return value.float32
   case accessor.componentType
-  of GL_UNSIGNED_BYTE:
+  of UnsignedByteComponent:
     value.float32 / 255.0'f32
-  of cGL_UNSIGNED_SHORT:
+  of UnsignedShortComponent:
     value.float32 / 65535.0'f32
-  of GL_UNSIGNED_INT:
+  of UnsignedIntComponent:
     value.float32 / 4294967295.0'f32
   else:
     value.float32
@@ -411,11 +488,11 @@ proc readAccessorWeights(
     start = view.byteOffset + accessor.byteOffset
     elemSize =
       case accessor.componentType
-      of cGL_FLOAT:
+      of FloatComponent:
         16
-      of GL_UNSIGNED_BYTE:
+      of UnsignedByteComponent:
         4
-      of cGL_UNSIGNED_SHORT:
+      of UnsignedShortComponent:
         8
       else:
         0
@@ -426,21 +503,21 @@ proc readAccessorWeights(
   for i in 0 ..< accessor.count:
     let off = start + i * stride
     case accessor.componentType
-    of cGL_FLOAT:
+    of FloatComponent:
       result[i] = vec4(
         readFloat32(buffer, off + 0),
         readFloat32(buffer, off + 4),
         readFloat32(buffer, off + 8),
         readFloat32(buffer, off + 12)
       )
-    of GL_UNSIGNED_BYTE:
+    of UnsignedByteComponent:
       result[i] = vec4(
         normalizedValue(accessor, buffer.readUint8(off + 0)),
         normalizedValue(accessor, buffer.readUint8(off + 1)),
         normalizedValue(accessor, buffer.readUint8(off + 2)),
         normalizedValue(accessor, buffer.readUint8(off + 3))
       )
-    of cGL_UNSIGNED_SHORT:
+    of UnsignedShortComponent:
       result[i] = vec4(
         normalizedValue(accessor, buffer.readUint16(off + 0)),
         normalizedValue(accessor, buffer.readUint16(off + 2)),
@@ -601,11 +678,11 @@ proc loadPrimitive(
   bufferViews: seq[BufferView],
   buffers: seq[string],
   images: seq[Image],
+  imageKtx2Data: seq[string],
   imageNames: seq[string],
   textures: seq[Texture],
   samplers: seq[Sampler],
-  materials: seq[MaterialInfo],
-  imageTextureIds: seq[GLuint]
+  materials: seq[MaterialInfo]
 ): Primitive =
   ## Loads one glTF primitive into a runtime primitive.
   proc getTextureSampler(textureIndex: int): TextureSampler =
@@ -631,7 +708,7 @@ proc loadPrimitive(
     if pbr.baseColorTexture.index >= 0:
       let imageIndex = textures[pbr.baseColorTexture.index].source
       result.material.baseColor = images[imageIndex]
-      result.material.baseColorId = imageTextureIds[imageIndex]
+      result.material.baseColorKtx2 = imageKtx2Data[imageIndex]
       result.material.baseColorName = imageNames[imageIndex]
       result.material.baseColorSampler =
         getTextureSampler(pbr.baseColorTexture.index)
@@ -649,7 +726,7 @@ proc loadPrimitive(
     if pbr.metallicRoughnessTexture.index >= 0:
       let imageIndex = textures[pbr.metallicRoughnessTexture.index].source
       result.material.metallicRoughness = images[imageIndex]
-      result.material.metallicRoughnessId = imageTextureIds[imageIndex]
+      result.material.metallicRoughnessKtx2 = imageKtx2Data[imageIndex]
       result.material.metallicRoughnessName = imageNames[imageIndex]
       result.material.metallicRoughnessSampler =
         getTextureSampler(pbr.metallicRoughnessTexture.index)
@@ -668,7 +745,7 @@ proc loadPrimitive(
     if material.normalTexture.index >= 0:
       let imageIndex = textures[material.normalTexture.index].source
       result.material.normal = images[imageIndex]
-      result.material.normalId = imageTextureIds[imageIndex]
+      result.material.normalKtx2 = imageKtx2Data[imageIndex]
       result.material.normalName = imageNames[imageIndex]
       result.material.normalSampler =
         getTextureSampler(material.normalTexture.index)
@@ -689,7 +766,7 @@ proc loadPrimitive(
     if material.occlusionTexture.index >= 0:
       let imageIndex = textures[material.occlusionTexture.index].source
       result.material.occlusion = images[imageIndex]
-      result.material.occlusionId = imageTextureIds[imageIndex]
+      result.material.occlusionKtx2 = imageKtx2Data[imageIndex]
       result.material.occlusionName = imageNames[imageIndex]
       result.material.occlusionSampler =
         getTextureSampler(material.occlusionTexture.index)
@@ -707,7 +784,7 @@ proc loadPrimitive(
     if material.emissiveTexture.index >= 0:
       let imageIndex = textures[material.emissiveTexture.index].source
       result.material.emissive = images[imageIndex]
-      result.material.emissiveId = imageTextureIds[imageIndex]
+      result.material.emissiveKtx2 = imageKtx2Data[imageIndex]
       result.material.emissiveName = imageNames[imageIndex]
       result.material.emissiveSampler =
         getTextureSampler(material.emissiveTexture.index)
@@ -747,18 +824,18 @@ proc loadPrimitive(
       bufferView = bufferViews[accessor.bufferView]
       buffer = buffers[bufferView.buffer]
       start = bufferView.byteOffset + accessor.byteOffset
-    if accessor.componentType == GL_UNSIGNED_BYTE:
+    if accessor.componentType == UnsignedByteComponent:
       assertRaise accessor.kind == atSCALAR, "Unsupported index kind"
       assertRaise bufferView.byteStride == 0, "Unsupported index byteStride"
       result.indices16.setLen(accessor.count)
       for i in 0 ..< accessor.count:
         result.indices16[i] = buffer[start + i].uint8
-    elif accessor.componentType == cGL_UNSIGNED_SHORT:
+    elif accessor.componentType == UnsignedShortComponent:
       assertRaise accessor.kind == atSCALAR, "Unsupported index kind"
       assertRaise bufferView.byteStride == 0, "Unsupported index byteStride"
       result.indices16.setLen(accessor.count)
       copyMem(result.indices16[0].addr, buffer[start].addr, accessor.count * 2)
-    elif accessor.componentType == GL_UNSIGNED_INT:
+    elif accessor.componentType == UnsignedIntComponent:
       assertRaise accessor.kind == atSCALAR, "Unsupported index kind"
       assertRaise bufferView.byteStride == 0, "Unsupported index byteStride"
       result.indices32.setLen(accessor.count)
@@ -771,14 +848,14 @@ proc loadPrimitive(
 
   if primInfo.attributes.position >= 0:
     let accessor = accessors[primInfo.attributes.position]
-    if accessor.componentType == cGL_FLOAT:
+    if accessor.componentType == FloatComponent:
       result.points = readAccessorVec3(
         primInfo.attributes.position,
         accessors,
         bufferViews,
         buffers
       )
-    elif accessor.componentType == GL_UNSIGNED_SHORT:
+    elif accessor.componentType == UnsignedShortComponent:
       let
         bufferView = bufferViews[accessor.bufferView]
         buffer = buffers[bufferView.buffer]
@@ -794,7 +871,7 @@ proc loadPrimitive(
           float32 buffer.readUint16(start + i * stride + 2),
           float32 buffer.readUint16(start + i * stride + 4)
         )
-    elif accessor.componentType == GL_UNSIGNED_INT:
+    elif accessor.componentType == UnsignedIntComponent:
       let
         bufferView = bufferViews[accessor.bufferView]
         buffer = buffers[bufferView.buffer]
@@ -840,7 +917,7 @@ proc loadPrimitive(
       buffer = buffers[bufferView.buffer]
       start = bufferView.byteOffset + accessor.byteOffset
     if accessor.kind == atVEC4:
-      if accessor.componentType == cGL_FLOAT:
+      if accessor.componentType == FloatComponent:
         var stride = bufferView.byteStride
         if stride == 0:
           stride = 16
@@ -851,7 +928,7 @@ proc loadPrimitive(
             (buffer.readFloat32(start + i * stride + 8) * 255).uint8,
             (buffer.readFloat32(start + i * stride + 12) * 255).uint8
           ).rgbx)
-      elif accessor.componentType == GL_UNSIGNED_BYTE:
+      elif accessor.componentType == UnsignedByteComponent:
         result.colors.setLen(accessor.count)
         if bufferView.byteStride == 0 or bufferView.byteStride == 4:
           copyMem(result.colors[0].addr, buffer[start].addr, accessor.count * 4)
@@ -870,7 +947,7 @@ proc loadPrimitive(
           "Invalid color component type: " & $accessor.componentType.int
         )
     elif accessor.kind == atVEC3:
-      if accessor.componentType == cGL_FLOAT:
+      if accessor.componentType == FloatComponent:
         var stride = bufferView.byteStride
         if stride == 0:
           stride = 12
@@ -881,7 +958,7 @@ proc loadPrimitive(
             (buffer.readFloat32(start + i * stride + 8) * 255).uint8,
             255
           ))
-      elif accessor.componentType == GL_UNSIGNED_BYTE:
+      elif accessor.componentType == UnsignedByteComponent:
         result.colors.setLen(accessor.count)
         var stride = bufferView.byteStride
         if stride == 0:
@@ -893,7 +970,7 @@ proc loadPrimitive(
             buffer.readUint8(start + i * stride + 2),
             255
           )
-      elif accessor.componentType == GL_UNSIGNED_SHORT:
+      elif accessor.componentType == UnsignedShortComponent:
         result.colors.setLen(accessor.count)
         var stride = bufferView.byteStride
         if stride == 0:
@@ -1081,7 +1158,7 @@ proc loadModelJsonInternal(
 
     if "target" in entry:
       let target = entry["target"].getInt()
-      if target notin @[GL_ARRAY_BUFFER.int, GL_ELEMENT_ARRAY_BUFFER.int]:
+      if target notin @[GltfArrayBufferTarget, GltfElementArrayBufferTarget]:
         raise newException(GltfError, &"Invalid bufferView target {target}")
 
     bufferViews.add(bufferView)
@@ -1094,7 +1171,7 @@ proc loadModelJsonInternal(
     if "byteOffset" in entry:
       accessor.byteOffset = entry{"byteOffset"}.getInt()
     accessor.count = entry["count"].getInt()
-    accessor.componentType = entry["componentType"].getInt().GLenum
+    accessor.componentType = parseComponentType(entry["componentType"].getInt())
     accessor.normalized = entry{"normalized"}.getBool()
     if "sparse" in entry:
       let sparse = entry["sparse"]
@@ -1105,7 +1182,7 @@ proc loadModelJsonInternal(
       accessor.sparse.indices.byteOffset =
         sparse["indices"]{"byteOffset"}.getInt()
       accessor.sparse.indices.componentType =
-        sparse["indices"]["componentType"].getInt().GLenum
+        parseComponentType(sparse["indices"]["componentType"].getInt())
       accessor.sparse.values.bufferView =
         sparse["values"]["bufferView"].getInt()
       accessor.sparse.values.byteOffset =
@@ -1153,14 +1230,14 @@ proc loadModelJsonInternal(
       textures.add(texture)
 
   var images: seq[Image]
+  var imageKtx2Data: seq[string]
   var imageNames: seq[string]
-  var imageTextureIds: seq[GLuint]
   if "images" in jsonRoot:
     for entry in jsonRoot["images"]:
       var
         image: Image
         imageName = entry{"name"}.getStr()
-        textureId: GLuint
+        ktx2Data: string
       if "uri" in entry:
         let uri = entry["uri"].getStr().decodeUriComponent()
         if imageName.len == 0:
@@ -1169,13 +1246,13 @@ proc loadModelJsonInternal(
            uri.startsWith("data:image/jpeg"):
           image = decodeImage(decode(uri.split(',')[1]))
         elif uri.startsWith("data:image/ktx2"):
-          textureId = loadKtx2Texture(decode(uri.split(',')[1]))
+          ktx2Data = decode(uri.split(',')[1])
         elif uri.endsWith(".png") or
              uri.endsWith(".jpg") or
              uri.endsWith(".jpeg"):
           image = readImage(joinPath(modelDir, uri))
         elif uri.endsWith(".ktx2"):
-          textureId = loadKtx2TextureFile(joinPath(modelDir, uri))
+          ktx2Data = readFile(joinPath(modelDir, uri))
         else:
           raise newException(GltfError, &"Unsupported file extension {uri}")
       elif "bufferView" in entry:
@@ -1186,35 +1263,35 @@ proc loadModelJsonInternal(
           imageData = ib[bv.byteOffset ..< bv.byteOffset + bv.byteLength]
         let mimeType = entry{"mimeType"}.getStr()
         if mimeType == "image/ktx2":
-          textureId = loadKtx2Texture(imageData)
+          ktx2Data = imageData
         else:
           image = decodeImage(imageData)
       else:
         raise newException(GltfError, "Unsupported image type")
       images.add(image)
+      imageKtx2Data.add(ktx2Data)
       imageNames.add(imageName)
-      imageTextureIds.add(textureId)
 
   var samplers: seq[Sampler]
   if "samplers" in jsonRoot:
     for entry in jsonRoot["samplers"]:
       var sampler = Sampler()
       if "magFilter" in entry:
-        sampler.magFilter = entry["magFilter"].getInt().GLint
+        sampler.magFilter = parseTextureMagFilter(entry["magFilter"].getInt())
       else:
-        sampler.magFilter = GL_LINEAR
+        sampler.magFilter = LinearMagFilter
       if "minFilter" in entry:
-        sampler.minFilter = entry["minFilter"].getInt().GLint
+        sampler.minFilter = parseTextureMinFilter(entry["minFilter"].getInt())
       else:
-        sampler.minFilter = GL_LINEAR_MIPMAP_LINEAR
+        sampler.minFilter = LinearMipmapLinearMinFilter
       if "wrapS" in entry:
-        sampler.wrapS = entry["wrapS"].getInt().GLint
+        sampler.wrapS = parseTextureWrap(entry["wrapS"].getInt())
       else:
-        sampler.wrapS = GL_REPEAT
+        sampler.wrapS = RepeatWrap
       if "wrapT" in entry:
-        sampler.wrapT = entry["wrapT"].getInt().GLint
+        sampler.wrapT = parseTextureWrap(entry["wrapT"].getInt())
       else:
-        sampler.wrapT = GL_REPEAT
+        sampler.wrapT = RepeatWrap
       samplers.add(sampler)
 
   var materials: seq[MaterialInfo]
@@ -1360,7 +1437,7 @@ proc loadModelJsonInternal(
       let cameraType = entry["type"].getStr()
       case cameraType
       of "perspective":
-        camera.kind = ckPerspective
+        camera.kind = PerspectiveLens
         let perspectiveInfo = entry["perspective"]
         camera.perspective.yfov =
           perspectiveInfo["yfov"].getFloat().float32
@@ -1377,7 +1454,7 @@ proc loadModelJsonInternal(
         else:
           camera.perspective.zfar = 0.0
       of "orthographic":
-        camera.kind = ckOrthographic
+        camera.kind = OrthographicLens
         let orthographicInfo = entry["orthographic"]
         camera.orthographic.xmag =
           orthographicInfo["xmag"].getFloat().float32
@@ -1450,9 +1527,9 @@ proc loadModelJsonInternal(
       else:
         prim.material = -1
       if "mode" in primitive:
-        prim.mode = primitive["mode"].getInt().GLenum
+        prim.mode = parsePrimitiveMode(primitive["mode"].getInt())
       else:
-        prim.mode = GL_TRIANGLES
+        prim.mode = TrianglesMode
       if "targets" in primitive:
         for target in primitive["targets"]:
           var morphTarget = MorphTargetInfo()
@@ -1871,11 +1948,11 @@ proc loadModelJsonInternal(
           bufferViews,
           buffers,
           images,
+          imageKtx2Data,
           imageNames,
           textures,
           samplers,
-          materials,
-          imageTextureIds
+          materials
         ))
       n.mesh = runtimeMesh
       n.morphWeights = meshInfo.weights

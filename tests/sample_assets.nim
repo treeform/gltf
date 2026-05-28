@@ -4,11 +4,7 @@ import
   gltf,
   gltf/backends/backend
 
-when defined(useDirectX):
-  import gltf/backends/directx
-elif defined(useVulkan):
-  import gltf/backends/vulkan
-else:
+when BackendUsesOpenGlRenderer:
   import opengl
 
 const
@@ -36,10 +32,7 @@ type
     exceptionName: string
     message: string
 
-when defined(useDirectX):
-  var dxRenderer: DirectXRenderer
-elif defined(useVulkan):
-  var vkRenderer: VulkanRenderer
+var renderer: Renderer
 
 proc hasModel(node: Node): bool =
   ## Returns true when the node tree has geometry to draw.
@@ -162,41 +155,9 @@ proc screenshotPath(
 
 proc captureScreenshot(width, height: int): Image =
   ## Reads the back buffer into an image.
-  when defined(useDirectX):
-    discard width
-    discard height
-    result = dxRenderer.captureScreenshot()
-  elif defined(useVulkan):
-    discard width
-    discard height
-    result = vkRenderer.captureScreenshot()
-  else:
-    var pixels = newSeq[uint8](width * height * 4)
-    glPixelStorei(GL_PACK_ALIGNMENT, 1)
-    glReadBuffer(GL_BACK)
-    glReadPixels(
-      0,
-      0,
-      width.GLsizei,
-      height.GLsizei,
-      GL_RGBA,
-      GL_UNSIGNED_BYTE,
-      cast[pointer](pixels[0].addr)
-    )
-
-    result = newImage(width, height)
-    for y in 0 ..< height:
-      let srcY = height - 1 - y
-      for x in 0 ..< width:
-        let
-          src = (srcY * width + x) * 4
-          dst = y * width + x
-        result.data[dst] = rgbx(
-          pixels[src + 0],
-          pixels[src + 1],
-          pixels[src + 2],
-          pixels[src + 3]
-        )
+  discard width
+  discard height
+  renderer.captureScreenshot()
 
 proc xray(
   image: Image,
@@ -242,69 +203,30 @@ proc renderScene(window: Window, model: Node) =
     sunLightDirection = safeNormalize(vec3(1, -4, -2), vec3(1, -1, -1))
     rimLightDirection = safeNormalize(vec3(-1, 1, -1), vec3(-1, 1, -1))
 
-  when defined(useDirectX):
-    dxRenderer.drawPbrFrame(
-      model,
-      window.size,
-      BackgroundColor,
-      mat4(),
-      cameraMat,
-      proj,
-      tint = color(1, 1, 1, 1),
-      ambientLightColor = color(0.32, 0.36, 0.46, 0.18),
-      sunLightDirection = sunLightDirection,
-      sunLightColor = color(0.95, 0.96, 1.0, 1.0),
-      rimLightDirection = rimLightDirection,
-      rimLightColor = color(0.95, 0.72, 0.46, 0.25),
-      cameraPosition = cameraPosition,
-      vsync = false
-    )
-  elif defined(useVulkan):
-    vkRenderer.drawPbrFrame(
-      model,
-      window.size,
-      BackgroundColor,
-      mat4(),
-      cameraMat,
-      proj,
-      tint = color(1, 1, 1, 1),
-      ambientLightColor = color(0.32, 0.36, 0.46, 0.18),
-      sunLightDirection = sunLightDirection,
-      sunLightColor = color(0.95, 0.96, 1.0, 1.0),
-      rimLightDirection = rimLightDirection,
-      rimLightColor = color(0.95, 0.72, 0.46, 0.25),
-      cameraPosition = cameraPosition,
-      vsync = false
-    )
-  else:
-    glViewport(0, 0, window.size.x, window.size.y)
-    glClearColor(
-      BackgroundColor.r,
-      BackgroundColor.g,
-      BackgroundColor.b,
-      BackgroundColor.a
-    )
-    glClear(GL_DEPTH_BUFFER_BIT or GL_COLOR_BUFFER_BIT)
-    glCullFace(GL_BACK)
-    glFrontFace(GL_CCW)
-    glEnable(GL_CULL_FACE)
-    glEnable(GL_DEPTH_TEST)
-    glDepthMask(GL_TRUE)
-
-    model.drawPbr(
-      mat4(),
-      cameraMat,
-      proj,
-      tint = color(1, 1, 1, 1),
-      useTrs = true,
-      ambientLightColor = color(0.32, 0.36, 0.46, 0.18),
-      sunLightDirection = sunLightDirection,
-      sunLightColor = color(0.95, 0.96, 1.0, 1.0),
-      rimLightDirection = rimLightDirection,
-      rimLightColor = color(0.95, 0.72, 0.46, 0.25),
-      debugView = dvLit,
-      cameraPosition = cameraPosition
-    )
+  let params = RenderParams(
+    size: window.size,
+    clearColor: BackgroundColor,
+    transform: mat4(),
+    view: cameraMat,
+    proj: proj,
+    tint: color(1, 1, 1, 1),
+    useTrs: true,
+    ambientLightColor: color(0.32, 0.36, 0.46, 0.18),
+    sunLightDirection: sunLightDirection,
+    sunLightColor: color(0.95, 0.96, 1.0, 1.0),
+    rimLightDirection: rimLightDirection,
+    rimLightColor: color(0.95, 0.72, 0.46, 0.25),
+    debugView: dvLit,
+    cameraPosition: cameraPosition,
+    useShadows: false,
+    drawSkybox: false,
+    skyboxLod: 0,
+    vsync: false
+  )
+  renderer.beginFrame(window, window.size)
+  renderer.clearScreen(BackgroundColor)
+  renderer.render(model, params)
+  renderer.endFrame()
 
 proc testModel(
   window: Window,
@@ -414,12 +336,7 @@ proc testModel(
     if model != nil:
       let clearStart = epochTime()
       echo "  phase: cleanup"
-      when defined(useDirectX):
-        dxRenderer.clearNode(model)
-      elif defined(useVulkan):
-        vkRenderer.clearNode(model)
-      else:
-        model.clearFromGpu()
+      renderer.release(model)
       let clearElapsed = epochTime() - clearStart
       echo &"  cleaned in {clearElapsed:>7.3f}s"
 
@@ -554,19 +471,14 @@ var window = newWindow(
     else:
       msaa8x
 )
-when defined(useDirectX):
-  loadBackendExtensions()
-  dxRenderer = newDirectXRenderer(window)
-elif defined(useVulkan):
-  loadBackendExtensions()
-  vkRenderer = newVulkanRenderer(window)
-elif BackendUsesOpenGlRenderer:
+when BackendUsesOpenGlRenderer:
   makeContextCurrent(window)
   loadExtensions()
-  setupPbr()
-  loadDefaultEnvironmentMap()
 else:
   loadBackendExtensions()
+renderer = newRenderer(window)
+when BackendUsesOpenGlRenderer:
+  loadDefaultEnvironmentMap()
 
 var results: seq[AssetResult]
 for i, modelPath in modelPaths:
@@ -602,12 +514,8 @@ var hasFailure = false
 for result in results:
   if result.status notin ["ok", "skip"]:
     hasFailure = true
-when defined(useDirectX):
-  if dxRenderer != nil:
-    dxRenderer.shutdown()
-elif defined(useVulkan):
-  if vkRenderer != nil:
-    vkRenderer.shutdown()
+if renderer != nil:
+  renderer.shutdown()
 echo "done"
 if hasFailure:
   quit(1)

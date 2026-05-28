@@ -4,13 +4,15 @@ when defined(useDirectX) or defined(useVulkan):
   import windy
 
 when defined(useDirectX):
-  import ./directx as selectedBackend
+  import ./directx/renderer as selectedBackend
 elif defined(useVulkan):
-  import ./vulkan as selectedBackend
+  import ./vulkan/renderer as selectedBackend
 elif defined(useMetal4):
-  import ./metal as selectedBackend
+  import ./metal/renderer as selectedBackend
 else:
-  import ./opengl as selectedBackend
+  import ./opengl/renderer as selectedBackend
+
+export selectedBackend
 
 type RenderBackend* = enum
   rbOpenGL = "OpenGL"

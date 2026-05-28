@@ -7,6 +7,7 @@ import
   std/[algorithm, math, tables],
   chroma, pixie, vmath, windy,
   ../common, ../models,
+  ./vulkan/common,
   ./shaders as shaderSources
 
 import pkg/vk14 except Window
@@ -44,11 +45,6 @@ when not defined(shadyBinaryShaders):
     PbrFragmentSpvPath = ShaderCacheDir / "gltf_pbr.frag.spv"
 
 type
-  PipelineKey = object
-    topology: uint32
-    doubleSided: bool
-    blended: bool
-
   VkVertex {.packed.} = object
     position: array[3, float32]
     color: array[4, float32]
@@ -59,36 +55,9 @@ type
     weights: array[4, float32]
     uv1: array[2, float32]
 
-  VkTexture = ref object
-    image: VkImage
-    memory: VkDeviceMemory
-    view: VkImageView
-    sampler: VkSampler
-    format: VkFormat
-    mipLevels: int
-    layers: int
-    isCube: bool
-
   RgbaSubresource = object
     width, height: int
     pixels: seq[ColorRGBX]
-
-  VkMaterial = ref object
-    descriptorPool: VkDescriptorPool
-    descriptorSet: VkDescriptorSet
-    textures: seq[VkTexture]
-
-  VkPrimitive = ref object
-    vertexBuffer: VkBuffer
-    vertexMemory: VkDeviceMemory
-    vertexPtr: pointer
-    vertexCapacity: int
-    indexBuffer: VkBuffer
-    indexMemory: VkDeviceMemory
-    indexPtr: pointer
-    indexCapacity: int
-    indexCount: int
-    topology: VkPrimitiveTopology
 
   FrameBuffer = object
     buffer: VkBuffer
@@ -121,8 +90,6 @@ type
     readbackBuffer: VkBuffer
     readbackMemory: VkDeviceMemory
     readbackSize: IVec2
-    primitives: Table[pointer, VkPrimitive]
-    materials: Table[pointer, VkMaterial]
 
 proc f32bits(value: float32): uint32 =
   cast[uint32](value)
@@ -200,9 +167,6 @@ proc perspectiveVkRh*(fovY, aspect, nearPlane, farPlane: float32): Mat4 =
   result[2, 2] = farPlane / depth
   result[2, 3] = -1.0'f32
   result[3, 2] = (nearPlane * farPlane) / depth
-
-proc vkKey(resource: ref object): pointer =
-  cast[pointer](resource)
 
 proc requiresSwapChainRecreate(vkResult: VkResult): bool =
   let code = vkResult.int32
@@ -1253,10 +1217,9 @@ proc ensurePrimitive(renderer: VulkanRenderer, primitive: Primitive): VkPrimitiv
   if primitive.normals.len == 0 and primitive.mode.int == 4:
     primitive.computeSmoothNormals()
 
-  let key = vkKey(primitive)
-  if key notin renderer.primitives:
-    renderer.primitives[key] = VkPrimitive()
-  result = renderer.primitives[key]
+  if primitive.data == nil:
+    primitive.data = VkPrimitive()
+  result = primitive.data
 
   if primitive.points.len > result.vertexCapacity:
     if result.vertexPtr != nil:
@@ -1307,14 +1270,18 @@ proc ensurePrimitive(renderer: VulkanRenderer, primitive: Primitive): VkPrimitiv
       "Mapping Vulkan index buffer")
   if indices.len > 0:
     copyMem(result.indexPtr, unsafeAddr indices[0], indices.len * sizeof(uint32))
+  result.geometryVersion = primitive.geometryVersion
 
 proc ensureMaterial(renderer: VulkanRenderer, material: Material): VkMaterial =
-  let key = vkKey(material)
-  if key in renderer.materials:
-    return renderer.materials[key]
+  if material == nil:
+    return nil
+  if material.data != nil and material.data.materialVersion == material.materialVersion:
+    return material.data
+  if material.data != nil:
+    renderer.releaseMaterial(material.data)
 
   result = VkMaterial()
-  renderer.materials[key] = result
+  material.data = result
 
   let
     baseColor =
@@ -1398,6 +1365,7 @@ proc ensureMaterial(renderer: VulkanRenderer, material: Material): VkMaterial =
     )
   vkUpdateDescriptorSets(renderer.ctx.device, writes.len.uint32,
     writes[0].addr, 0, nil)
+  result.materialVersion = material.materialVersion
 
 proc prepareNodeResources(renderer: VulkanRenderer, node: Node) =
   if node == nil:
@@ -2085,15 +2053,13 @@ proc clearNode*(renderer: VulkanRenderer, node: Node) =
   discard vkDeviceWaitIdle(renderer.ctx.device)
   if node.mesh != nil:
     for primitive in node.mesh.primitives:
-      let primitiveKey = vkKey(primitive)
-      if primitiveKey in renderer.primitives:
-        renderer.releasePrimitive(renderer.primitives[primitiveKey])
-        renderer.primitives.del(primitiveKey)
+      if primitive.data != nil:
+        renderer.releasePrimitive(primitive.data)
+        primitive.data = nil
       if primitive.material != nil:
-        let materialKey = vkKey(primitive.material)
-        if materialKey in renderer.materials:
-          renderer.releaseMaterial(renderer.materials[materialKey])
-          renderer.materials.del(materialKey)
+        if primitive.material.data != nil:
+          renderer.releaseMaterial(primitive.material.data)
+          primitive.material.data = nil
   for child in node.nodes:
     renderer.clearNode(child)
 
@@ -2103,12 +2069,6 @@ proc shutdown*(renderer: VulkanRenderer) =
     return
   discard vkDeviceWaitIdle(renderer.ctx.device)
   renderer.releaseFrameBuffers()
-  for primitive in renderer.primitives.values:
-    renderer.releasePrimitive(primitive)
-  renderer.primitives.clear()
-  for material in renderer.materials.values:
-    renderer.releaseMaterial(material)
-  renderer.materials.clear()
   renderer.destroySwapChainResources()
   if renderer.readbackBuffer.int64 != 0:
     vkDestroyBuffer(renderer.ctx.device, renderer.readbackBuffer, nil)

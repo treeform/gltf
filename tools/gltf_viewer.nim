@@ -1,19 +1,15 @@
 import
-  std/[algorithm, math, os, strutils, times],
+  std/[math, os, times],
   windy, chroma, vmath,
   ../src/gltf/[animations, models, pbr, reader],
   ../src/gltf/backends/backend
 
 when BackendUsesOpenGlRenderer:
   import opengl
-elif defined(useDirectX):
-  import ../src/gltf/backends/directx
-elif defined(useVulkan):
-  import ../src/gltf/backends/vulkan
 
-when not defined(useDirectX) and not defined(useVulkan):
+when BackendUsesOpenGlRenderer:
   import
-    std/strformat,
+    std/[algorithm, strformat, strutils],
     silky, silky/atlas, jsony, pixie,
     pixie/fileformats/png
 
@@ -22,7 +18,7 @@ const
   FitPadding = 1.25'f32
   FreeCameraName = "Free Camera"
 
-when not defined(useDirectX) and not defined(useVulkan):
+when BackendUsesOpenGlRenderer:
   const AtlasPng = staticRead("dist/atlas.png")
 
   let
@@ -54,16 +50,14 @@ when BackendUsesOpenGlRenderer:
 else:
   loadBackendExtensions()
 
-when not defined(useDirectX) and not defined(useVulkan):
+when BackendUsesOpenGlRenderer:
   let
     atlasImage = decodePng(AtlasPng).convertToImage()
     atlasData = extractAtlasJsonFromPng(AtlasPng).fromJson(SilkyAtlas)
 
-when defined(useDirectX):
-  var dxRenderer = newDirectXRenderer(window)
-elif defined(useVulkan):
-  var vkRenderer = newVulkanRenderer(window)
-else:
+var renderer = newRenderer(window)
+
+when BackendUsesOpenGlRenderer:
   var sk = newSilky(window, atlasImage, atlasData)
 
 var
@@ -77,16 +71,11 @@ var
   cameraOptions = @[FreeCameraName]
   cameraNodes: seq[Node]
   selectedCamera = FreeCameraName
-  skyboxOptions: seq[string]
-  skyboxPatterns: seq[(string, string)]
-  selectedSkybox = ""
-  lastSkybox = ""
   modelPath = params[0]
   camCenter = vec3(0, 0, 0)
   camRotation = mat4()
   camDolly = 10'f32
   backgroundColor = color(0.03, 0.035, 0.05, 1.0)
-  lastBackgroundColor = color(-1.0, -1.0, -1.0, 1.0)
   ambientLightColor = color(0.32, 0.36, 0.46, 0.18)
   sunLightDirection = normalize(vec3(1, 4, 2))
   sunLightColor = color(0.95, 0.96, 1.0, 1.0)
@@ -102,18 +91,23 @@ var
       perspective(VerticalFov, aspectRatio, 0.1, 200)
   lastTime = epochTime()
 
-when not defined(useDirectX) and not defined(useVulkan):
+when BackendUsesOpenGlRenderer:
   var
+    skyboxOptions: seq[string]
+    skyboxPatterns: seq[(string, string)]
+    selectedSkybox = ""
+    lastSkybox = ""
+    lastBackgroundColor = color(-1.0, -1.0, -1.0, 1.0)
     useShadows = true
     debugViewName = "Lit"
     skyboxLod: float32 = 7.0
 
-when not defined(useDirectX) and not defined(useVulkan):
+when BackendUsesOpenGlRenderer:
   window.runeInputEnabled = true
   window.onRune = proc(rune: Rune) =
     sk.inputRunes.add(rune)
 
-when not defined(useDirectX) and not defined(useVulkan):
+when BackendUsesOpenGlRenderer:
   proc applyTheme(sk: Silky) =
     ## Applies the viewer theme colors and spacing.
     sk.theme.padding = 10
@@ -146,19 +140,7 @@ proc safeNormalize(v, fallback: Vec3): Vec3 =
     return fallback
   normalize(v)
 
-when (not BackendUsesOpenGlRenderer) and
-    (not defined(useDirectX)) and
-    (not defined(useVulkan)):
-  proc toRgbx(value: Color): ColorRGBX =
-    ## Converts a float color to the packed UI color type.
-    rgbx(
-      max(0, min(255, (value.r * 255.0'f32).round.int)).uint8,
-      max(0, min(255, (value.g * 255.0'f32).round.int)).uint8,
-      max(0, min(255, (value.b * 255.0'f32).round.int)).uint8,
-      max(0, min(255, (value.a * 255.0'f32).round.int)).uint8
-    )
-
-when not defined(useDirectX) and not defined(useVulkan):
+when BackendUsesOpenGlRenderer:
   proc drawColorControls(id, title: string, value: var Color) =
     ## Draws four scrubbers for one RGBA color.
     text(title)
@@ -184,33 +166,34 @@ when not defined(useDirectX) and not defined(useVulkan):
 
   applyTheme(sk)
 
-proc skyboxPattern(path: string): string =
-  ## Converts one cubemap face path into a wildcard pattern.
-  for face in ["px", "nx", "py", "ny", "pz", "nz"]:
-    let token = "." & face & "."
-    if token in path:
-      return path.replace(token, ".*.")
-  path
+when BackendUsesOpenGlRenderer:
+  proc skyboxPattern(path: string): string =
+    ## Converts one cubemap face path into a wildcard pattern.
+    for face in ["px", "nx", "py", "ny", "pz", "nz"]:
+      let token = "." & face & "."
+      if token in path:
+        return path.replace(token, ".*.")
+    path
 
-proc skyboxName(pattern: string): string =
-  ## Extracts a readable skybox name from a wildcard pattern.
-  pattern.splitFile.name.replace(".*", "")
+  proc skyboxName(pattern: string): string =
+    ## Extracts a readable skybox name from a wildcard pattern.
+    pattern.splitFile.name.replace(".*", "")
 
-proc selectedSkyboxPattern(): string =
-  ## Looks up the selected skybox pattern by name.
-  for (name, pattern) in skyboxPatterns:
-    if name == selectedSkybox:
-      return pattern
-  ""
+  proc selectedSkyboxPattern(): string =
+    ## Looks up the selected skybox pattern by name.
+    for (name, pattern) in skyboxPatterns:
+      if name == selectedSkybox:
+        return pattern
+    ""
 
-proc defaultSkybox(): string =
-  ## Picks the first real skybox and falls back to solid color.
-  for name in skyboxOptions:
-    if name != "Solid Color":
-      return name
-  if skyboxOptions.len > 0:
-    return skyboxOptions[0]
-  "Solid Color"
+  proc defaultSkybox(): string =
+    ## Picks the first real skybox and falls back to solid color.
+    for name in skyboxOptions:
+      if name != "Solid Color":
+        return name
+    if skyboxOptions.len > 0:
+      return skyboxOptions[0]
+    "Solid Color"
 
 proc defaultCamera(): string =
   ## Picks the free camera by default.
@@ -255,7 +238,7 @@ proc discoverCameras() =
 proc cameraProjection(camera: Camera, aspectRatio: float32): Mat4 =
   ## Builds a projection matrix for a glTF camera.
   case camera.kind
-  of ckPerspective:
+  of PerspectiveLens:
     let
       yfov =
         camera.perspective.yfov * 180.0'f32 / PI.float32
@@ -276,7 +259,7 @@ proc cameraProjection(camera: Camera, aspectRatio: float32): Mat4 =
       perspectiveVkRh(yfov, camAspect, znear, zfar)
     else:
       perspective(yfov, camAspect, znear, zfar)
-  of ckOrthographic:
+  of OrthographicLens:
     ortho(
       -camera.orthographic.xmag,
       camera.orthographic.xmag,
@@ -286,57 +269,58 @@ proc cameraProjection(camera: Camera, aspectRatio: float32): Mat4 =
       camera.orthographic.zfar
     )
 
-proc discoverSkyboxes() =
-  ## Scans the skybox folder for cubemap patterns.
-  skyboxOptions = @[]
-  skyboxPatterns.setLen(0)
-  if not dirExists("tools/skybox"):
-    skyboxOptions = @["Solid Color"]
-    return
-
-  for path in walkDirRec("tools/skybox"):
-    let lower = path.toLowerAscii()
-    if not (lower.endsWith(".png") or
-            lower.endsWith(".jpg") or
-            lower.endsWith(".jpeg")):
-      continue
-    let pattern = skyboxPattern(path.replace("\\", "/"))
-    if pattern == path:
-      continue
-    let name = skyboxName(pattern)
-    var known = false
-    for (_, knownPattern) in skyboxPatterns:
-      if knownPattern == pattern:
-        known = true
-        break
-    if not known:
-      skyboxPatterns.add((name, pattern))
-      skyboxOptions.add(name)
-
-  skyboxOptions.sort()
-  skyboxOptions.add("Solid Color")
-
-proc updateEnvironmentMap(force = false) =
-  ## Reloads the environment map when the selection changes.
-  if selectedSkybox == "Solid Color":
-    if force or lastSkybox != selectedSkybox:
-      loadDefaultEnvironmentMap()
-    if force or
-       backgroundColor.r != lastBackgroundColor.r or
-       backgroundColor.g != lastBackgroundColor.g or
-       backgroundColor.b != lastBackgroundColor.b:
-      lastBackgroundColor = backgroundColor
-    lastSkybox = selectedSkybox
-    return
-
-  if force or lastSkybox != selectedSkybox:
-    let pattern = selectedSkyboxPattern()
-    if pattern.len == 0:
-      selectedSkybox = "Solid Color"
-      updateEnvironmentMap(force = true)
+when BackendUsesOpenGlRenderer:
+  proc discoverSkyboxes() =
+    ## Scans the skybox folder for cubemap patterns.
+    skyboxOptions = @[]
+    skyboxPatterns.setLen(0)
+    if not dirExists("tools/skybox"):
+      skyboxOptions = @["Solid Color"]
       return
-    loadEnvironmentMap(pattern)
-    lastSkybox = selectedSkybox
+
+    for path in walkDirRec("tools/skybox"):
+      let lower = path.toLowerAscii()
+      if not (lower.endsWith(".png") or
+              lower.endsWith(".jpg") or
+              lower.endsWith(".jpeg")):
+        continue
+      let pattern = skyboxPattern(path.replace("\\", "/"))
+      if pattern == path:
+        continue
+      let name = skyboxName(pattern)
+      var known = false
+      for (_, knownPattern) in skyboxPatterns:
+        if knownPattern == pattern:
+          known = true
+          break
+      if not known:
+        skyboxPatterns.add((name, pattern))
+        skyboxOptions.add(name)
+
+    skyboxOptions.sort()
+    skyboxOptions.add("Solid Color")
+
+  proc updateEnvironmentMap(force = false) =
+    ## Reloads the environment map when the selection changes.
+    if selectedSkybox == "Solid Color":
+      if force or lastSkybox != selectedSkybox:
+        loadDefaultEnvironmentMap()
+      if force or
+         backgroundColor.r != lastBackgroundColor.r or
+         backgroundColor.g != lastBackgroundColor.g or
+         backgroundColor.b != lastBackgroundColor.b:
+        lastBackgroundColor = backgroundColor
+      lastSkybox = selectedSkybox
+      return
+
+    if force or lastSkybox != selectedSkybox:
+      let pattern = selectedSkyboxPattern()
+      if pattern.len == 0:
+        selectedSkybox = "Solid Color"
+        updateEnvironmentMap(force = true)
+        return
+      loadEnvironmentMap(pattern)
+      lastSkybox = selectedSkybox
 
 proc hasModel(node: Node): bool =
   ## Returns true when the node tree has geometry to draw.
@@ -364,12 +348,7 @@ proc fitCameraDolly(bounds: Bounds, aspectRatio: float32): float32 =
 proc reloadFile(): bool =
   ## Reloads the current glTF file.
   if model != nil:
-    when BackendUsesOpenGlRenderer:
-      model.clearFromGpu()
-    elif defined(useDirectX):
-      dxRenderer.clearNode(model)
-    elif defined(useVulkan):
-      vkRenderer.clearNode(model)
+    renderer.release(model)
 
   if modelPath.len == 0:
     model = Node()
@@ -410,11 +389,9 @@ proc reloadFile(): bool =
 proc loadAssets() =
   ## Loads the renderer assets and the requested model.
   when BackendUsesOpenGlRenderer:
-    setupPbr()
-  discoverSkyboxes()
-  if selectedSkybox notin skyboxOptions:
-    selectedSkybox = defaultSkybox()
-  when BackendUsesOpenGlRenderer:
+    discoverSkyboxes()
+    if selectedSkybox notin skyboxOptions:
+      selectedSkybox = defaultSkybox()
     updateEnvironmentMap(force = true)
   discard reloadFile()
 
@@ -441,7 +418,7 @@ when BackendUsesOpenGlRenderer:
     else:
       dvLit
 
-when not defined(useDirectX) and not defined(useVulkan):
+when BackendUsesOpenGlRenderer:
   proc drawOverlay(
     cameraPosition,
     effectiveSunLightDirection,
@@ -613,127 +590,70 @@ window.onFrame = proc() =
     effectiveRimLightDirection =
       safeNormalize(rimLightDirection, vec3(-1, 1, -1))
 
-  when BackendUsesOpenGlRenderer:
-    let
-      effectiveAmbientLightColor =
-        withStrengthDisabled(ambientLightColor, useLighting)
-      effectiveSunLightColor =
-        withStrengthDisabled(sunLightColor, useLighting)
-      effectiveRimLightColor =
-        withStrengthDisabled(rimLightColor, useLighting)
-      selectedDebugView = parseDebugView(debugViewName)
-      effectiveDebugView =
+  let
+    effectiveAmbientLightColor =
+      withStrengthDisabled(ambientLightColor, useLighting)
+    effectiveSunLightColor =
+      withStrengthDisabled(sunLightColor, useLighting)
+    effectiveRimLightColor =
+      withStrengthDisabled(rimLightColor, useLighting)
+    effectiveDebugView =
+      when BackendUsesOpenGlRenderer:
+        let selectedDebugView = parseDebugView(debugViewName)
         if useLighting:
           selectedDebugView
         else:
           dvUnlit
+      else:
+        if useLighting:
+          dvLit
+        else:
+          dvUnlit
+    renderParams = RenderParams(
+      size: window.size,
+      clearColor: backgroundColor,
+      transform: mat4(),
+      view: cameraMat,
+      proj: proj,
+      tint: color(1, 1, 1, 1),
+      useTrs: true,
+      ambientLightColor: effectiveAmbientLightColor,
+      sunLightDirection: effectiveSunLightDirection,
+      sunLightColor: effectiveSunLightColor,
+      rimLightDirection: effectiveRimLightDirection,
+      rimLightColor: effectiveRimLightColor,
+      debugView: effectiveDebugView,
+      cameraPosition: cameraPosition,
+      useShadows:
+        when BackendUsesOpenGlRenderer:
+          useShadows
+        else:
+          false,
+      drawSkybox:
+        when BackendUsesOpenGlRenderer:
+          selectedSkybox != "Solid Color"
+        else:
+          false,
+      skyboxLod:
+        when BackendUsesOpenGlRenderer:
+          skyboxLod
+        else:
+          0.0'f32,
+      vsync: window.vsync
+    )
+
+  renderer.beginFrame(window, window.size)
+  renderer.clearScreen(backgroundColor)
+  if model.hasModel():
+    renderer.render(model, renderParams)
+  renderer.endFrame()
 
   when BackendUsesOpenGlRenderer:
-    glClearColor(
-      backgroundColor.r,
-      backgroundColor.g,
-      backgroundColor.b,
-      1.0
-    )
-    glClear(GL_DEPTH_BUFFER_BIT or GL_COLOR_BUFFER_BIT)
-    glEnable(GL_MULTISAMPLE)
-    glCullFace(GL_BACK)
-    glFrontFace(GL_CCW)
-    glEnable(GL_CULL_FACE)
-    glEnable(GL_DEPTH_TEST)
-    glDepthMask(GL_TRUE)
-
-    if selectedSkybox != "Solid Color":
-      drawSkybox(cameraMat, proj, skyboxLod)
-
-    if model.hasModel():
-      if useShadows and effectiveDebugView == dvLit:
-        model.drawPbrWithShadow(
-          mat4(),
-          cameraMat,
-          proj,
-          tint = color(1, 1, 1, 1),
-          sunLightDirection = effectiveSunLightDirection,
-          useTrs = true,
-          ambientLightColor = effectiveAmbientLightColor,
-          sunLightColor = effectiveSunLightColor,
-          rimLightDirection = effectiveRimLightDirection,
-          rimLightColor = effectiveRimLightColor,
-          debugView = effectiveDebugView,
-          cameraPosition = cameraPosition
-        )
-      else:
-        model.drawPbr(
-          mat4(),
-          cameraMat,
-          proj,
-          tint = color(1, 1, 1, 1),
-          useTrs = true,
-          ambientLightColor = effectiveAmbientLightColor,
-          sunLightDirection = effectiveSunLightDirection,
-          sunLightColor = effectiveSunLightColor,
-          rimLightDirection = effectiveRimLightDirection,
-          rimLightColor = effectiveRimLightColor,
-          debugView = effectiveDebugView,
-          cameraPosition = cameraPosition
-        )
-
     glDisable(GL_DEPTH_TEST)
     glDisable(GL_CULL_FACE)
     glDisable(GL_BLEND)
     glDisable(GL_MULTISAMPLE)
-  elif defined(useDirectX):
-    let
-      effectiveAmbientLightColor =
-        withStrengthDisabled(ambientLightColor, useLighting)
-      effectiveSunLightColor =
-        withStrengthDisabled(sunLightColor, useLighting)
-      effectiveRimLightColor =
-        withStrengthDisabled(rimLightColor, useLighting)
-    dxRenderer.drawPbrFrame(
-      model,
-      window.size,
-      backgroundColor,
-      mat4(),
-      cameraMat,
-      proj,
-      tint = color(1, 1, 1, 1),
-      ambientLightColor = effectiveAmbientLightColor,
-      sunLightDirection = effectiveSunLightDirection,
-      sunLightColor = effectiveSunLightColor,
-      rimLightDirection = effectiveRimLightDirection,
-      rimLightColor = effectiveRimLightColor,
-      cameraPosition = cameraPosition,
-      vsync = window.vsync
-    )
-  elif defined(useVulkan):
-    let
-      effectiveAmbientLightColor =
-        withStrengthDisabled(ambientLightColor, useLighting)
-      effectiveSunLightColor =
-        withStrengthDisabled(sunLightColor, useLighting)
-      effectiveRimLightColor =
-        withStrengthDisabled(rimLightColor, useLighting)
-    vkRenderer.drawPbrFrame(
-      model,
-      window.size,
-      backgroundColor,
-      mat4(),
-      cameraMat,
-      proj,
-      tint = color(1, 1, 1, 1),
-      ambientLightColor = effectiveAmbientLightColor,
-      sunLightDirection = effectiveSunLightDirection,
-      sunLightColor = effectiveSunLightColor,
-      rimLightDirection = effectiveRimLightDirection,
-      rimLightColor = effectiveRimLightColor,
-      cameraPosition = cameraPosition,
-      vsync = window.vsync
-    )
-  else:
-    sk.clearScreen(backgroundColor.toRgbx())
-
-  when not defined(useDirectX) and not defined(useVulkan):
+  when BackendUsesOpenGlRenderer:
     drawOverlay(
       cameraPosition,
       effectiveSunLightDirection,
@@ -744,7 +664,4 @@ window.onFrame = proc() =
 while not window.closeRequested:
   pollEvents()
 
-when defined(useDirectX):
-  dxRenderer.shutdown()
-elif defined(useVulkan):
-  vkRenderer.shutdown()
+renderer.shutdown()

@@ -1,6 +1,6 @@
 import
   std/[json, os, osproc, strutils, tables, uri],
-  flatty/binny, opengl, pixie, pixie/fileformats/png, vmath,
+  flatty/binny, pixie, pixie/fileformats/png, vmath,
   common, internal
 
 export common
@@ -58,7 +58,7 @@ proc addAccessor(
   data: var string,
   payload: string,
   kind: AccessorKind,
-  component: GLenum,
+  component: ComponentType,
   count: int,
   stride = 0
 ): int =
@@ -287,10 +287,10 @@ proc writeGLB*(
     usedImageFileNames = initTable[string, int]()
 
   samplers.add(Sampler(
-    magFilter: GL_LINEAR,
-    minFilter: GL_LINEAR_MIPMAP_LINEAR,
-    wrapS: GL_REPEAT,
-    wrapT: GL_REPEAT
+    magFilter: LinearMagFilter,
+    minFilter: LinearMipmapLinearMinFilter,
+    wrapS: RepeatWrap,
+    wrapT: RepeatWrap
   ))
 
   var materialIds = initTable[pointer, int]()
@@ -453,7 +453,7 @@ proc writeGLB*(
         data,
         payload,
         atVEC3,
-        cGL_FLOAT,
+        FloatComponent,
         primitive.points.len,
         0
       )
@@ -472,7 +472,7 @@ proc writeGLB*(
         data,
         payload,
         atVEC3,
-        cGL_FLOAT,
+        FloatComponent,
         primitive.normals.len,
         0
       )
@@ -489,7 +489,7 @@ proc writeGLB*(
         data,
         payload,
         atVEC2,
-        cGL_FLOAT,
+        FloatComponent,
         primitive.uvs.len,
         0
       )
@@ -509,7 +509,7 @@ proc writeGLB*(
         data,
         payload,
         atVEC4,
-        GL_UNSIGNED_BYTE,
+        UnsignedByteComponent,
         primitive.colors.len,
         0
       )
@@ -532,7 +532,7 @@ proc writeGLB*(
           data,
           payload,
           atSCALAR,
-          GL_UNSIGNED_BYTE,
+          UnsignedByteComponent,
           primitive.indices16.len,
           0
         )
@@ -546,7 +546,7 @@ proc writeGLB*(
           data,
           payload,
           atSCALAR,
-          cGL_UNSIGNED_SHORT,
+          UnsignedShortComponent,
           primitive.indices16.len,
           0
         )
@@ -560,7 +560,7 @@ proc writeGLB*(
         data,
         payload,
         atSCALAR,
-        GL_UNSIGNED_INT,
+        UnsignedIntComponent,
         primitive.indices32.len,
         0
       )
@@ -673,10 +673,10 @@ proc writeGLB*(
   jsonRoot["samplers"] = newJArray()
   for s in samplers:
     jsonRoot["samplers"].add(%*{
-      "magFilter": s.magFilter,
-      "minFilter": s.minFilter,
-      "wrapS": s.wrapS,
-      "wrapT": s.wrapT
+      "magFilter": s.magFilter.int,
+      "minFilter": s.minFilter.int,
+      "wrapS": s.wrapS.int,
+      "wrapT": s.wrapT.int
     })
 
   if textures.len > 0:

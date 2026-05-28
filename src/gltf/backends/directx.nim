@@ -8,6 +8,7 @@ import
   chroma, pixie, vmath, windy,
   pkg/dx12, pkg/dx12/context,
   ../common, ../models,
+  ./directx/common,
   ./shaders as shaderSources
 
 const
@@ -30,14 +31,6 @@ const
   StudioEnvSize = 8
 
 type
-  DxTopology = enum
-    dtPoint, dtLine, dtTriangle
-
-  PipelineKey = object
-    topology: DxTopology
-    doubleSided: bool
-    blended: bool
-
   DxVertex {.packed.} = object
     position: array[3, float32]
     color: array[4, float32]
@@ -48,33 +41,9 @@ type
     weights: array[4, float32]
     uv1: array[2, float32]
 
-  DxTexture = ref object
-    resource: ID3D12Resource
-    format: uint32
-    isCube: bool
-    mipLevels: int
-
   RgbaSubresource = object
     width, height: int
     pixels: seq[ColorRGBX]
-
-  DxMaterial = ref object
-    heap: ID3D12DescriptorHeap
-    handleGpu: D3D12_GPU_DESCRIPTOR_HANDLE
-    textures: seq[DxTexture]
-
-  DxPrimitive = ref object
-    vertexBuffer: ID3D12Resource
-    vertexBufferPtr: pointer
-    vertexBufferView: D3D12_VERTEX_BUFFER_VIEW
-    vertexCapacity: int
-    indexBuffer: ID3D12Resource
-    indexBufferPtr: pointer
-    indexBufferView: D3D12_INDEX_BUFFER_VIEW
-    indexCapacity: int
-    indexCount: int
-    topology: uint32
-    topologyKind: DxTopology
 
   BlendEntry = object
     node: Node
@@ -93,8 +62,6 @@ type
     readbackFootprint: D3D12_PLACED_SUBRESOURCE_FOOTPRINT
     readbackSize: IVec2
     srvDescriptorSize: UINT
-    primitives: Table[pointer, DxPrimitive]
-    materials: Table[pointer, DxMaterial]
     frameResources: seq[ID3D12Resource]
 
 proc f32bits(value: float32): uint32 =
@@ -136,9 +103,6 @@ proc perspectiveDxRh*(fovY, aspect, nearPlane, farPlane: float32): Mat4 =
   result[2, 2] = farPlane / depth
   result[2, 3] = -1.0'f32
   result[3, 2] = (nearPlane * farPlane) / depth
-
-proc dxKey(resource: ref object): pointer =
-  cast[pointer](resource)
 
 proc bufferDesc(size: uint64): D3D12_RESOURCE_DESC =
   result.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER
@@ -1122,10 +1086,9 @@ proc ensurePrimitive(renderer: DirectXRenderer, primitive: Primitive): DxPrimiti
   if primitive.normals.len == 0 and primitive.mode.int == 4:
     primitive.computeSmoothNormals()
 
-  let key = dxKey(primitive)
-  if key notin renderer.primitives:
-    renderer.primitives[key] = DxPrimitive()
-  result = renderer.primitives[key]
+  if primitive.data == nil:
+    primitive.data = DxPrimitive()
+  result = primitive.data
 
   if primitive.points.len > result.vertexCapacity:
     if result.vertexBuffer != nil:
@@ -1180,14 +1143,18 @@ proc ensurePrimitive(renderer: DirectXRenderer, primitive: Primitive): DxPrimiti
       unsafeAddr indices[0],
       indices.len * sizeof(uint32)
     )
+  result.geometryVersion = primitive.geometryVersion
 
 proc ensureMaterial(renderer: DirectXRenderer, material: Material): DxMaterial =
-  let key = dxKey(material)
-  if key in renderer.materials:
-    return renderer.materials[key]
+  if material == nil:
+    return nil
+  if material.data != nil and material.data.materialVersion == material.materialVersion:
+    return material.data
+  if material.data != nil:
+    material.data.releaseMaterial()
 
   result = DxMaterial()
-  renderer.materials[key] = result
+  material.data = result
 
   var heapDesc = D3D12_DESCRIPTOR_HEAP_DESC(
     typ: D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
@@ -1242,6 +1209,7 @@ proc ensureMaterial(renderer: DirectXRenderer, material: Material): DxMaterial =
       texture,
       offsetCpuHandle(baseHandle, renderer.srvDescriptorSize, i)
     )
+  result.materialVersion = material.materialVersion
 
 proc prepareNodeResources(renderer: DirectXRenderer, node: Node) =
   if node == nil:
@@ -1670,15 +1638,13 @@ proc clearNode*(renderer: DirectXRenderer, node: Node) =
     return
   if node.mesh != nil:
     for primitive in node.mesh.primitives:
-      let primitiveKey = dxKey(primitive)
-      if primitiveKey in renderer.primitives:
-        renderer.primitives[primitiveKey].releasePrimitive()
-        renderer.primitives.del(primitiveKey)
+      if primitive.data != nil:
+        primitive.data.releasePrimitive()
+        primitive.data = nil
       if primitive.material != nil:
-        let materialKey = dxKey(primitive.material)
-        if materialKey in renderer.materials:
-          renderer.materials[materialKey].releaseMaterial()
-          renderer.materials.del(materialKey)
+        if primitive.material.data != nil:
+          primitive.material.data.releaseMaterial()
+          primitive.material.data = nil
   for child in node.nodes:
     renderer.clearNode(child)
 
@@ -1691,12 +1657,6 @@ proc shutdown*(renderer: DirectXRenderer) =
     if resource != nil:
       resource.release()
   renderer.frameResources.setLen(0)
-  for primitive in renderer.primitives.values:
-    primitive.releasePrimitive()
-  renderer.primitives.clear()
-  for material in renderer.materials.values:
-    material.releaseMaterial()
-  renderer.materials.clear()
   if renderer.readbackBuffer != nil:
     renderer.readbackBuffer.release()
     renderer.readbackBuffer = nil

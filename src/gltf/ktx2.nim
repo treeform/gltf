@@ -97,11 +97,31 @@ type
 
 proc defaultKtx2Sampler(): TextureSampler =
   TextureSampler(
-    magFilter: GL_LINEAR,
-    minFilter: GL_LINEAR_MIPMAP_LINEAR,
-    wrapS: GL_REPEAT,
-    wrapT: GL_REPEAT
+    magFilter: LinearMagFilter,
+    minFilter: LinearMipmapLinearMinFilter,
+    wrapS: RepeatWrap,
+    wrapT: RepeatWrap
   )
+
+proc glValue(filter: TextureMagFilter): GLint =
+  case filter
+  of NearestMagFilter: GL_NEAREST.GLint
+  of LinearMagFilter: GL_LINEAR.GLint
+
+proc glValue(filter: TextureMinFilter): GLint =
+  case filter
+  of NearestMinFilter: GL_NEAREST.GLint
+  of LinearMinFilter: GL_LINEAR.GLint
+  of NearestMipmapNearestMinFilter: GL_NEAREST_MIPMAP_NEAREST.GLint
+  of LinearMipmapNearestMinFilter: GL_LINEAR_MIPMAP_NEAREST.GLint
+  of NearestMipmapLinearMinFilter: GL_NEAREST_MIPMAP_LINEAR.GLint
+  of LinearMipmapLinearMinFilter: GL_LINEAR_MIPMAP_LINEAR.GLint
+
+proc glValue(wrap: TextureWrap): GLint =
+  case wrap
+  of RepeatWrap: GL_REPEAT.GLint
+  of ClampToEdgeWrap: GL_CLAMP_TO_EDGE.GLint
+  of MirroredRepeatWrap: GL_MIRRORED_REPEAT.GLint
 
 proc raiseKtx2Error(message: string) {.noreturn.} =
   raise newException(GltfError, "KTX2: " & message)
@@ -648,10 +668,10 @@ proc uploadKtx2*(info: Ktx2TextureInfo, data: string, sampler = defaultKtx2Sampl
         cast[pointer](levelPtr)
       )
 
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, sampler.magFilter)
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, sampler.minFilter)
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, sampler.wrapS)
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, sampler.wrapT)
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, sampler.magFilter.glValue)
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, sampler.minFilter.glValue)
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, sampler.wrapS.glValue)
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, sampler.wrapT.glValue)
 
   let err = glGetError()
   glBindTexture(GL_TEXTURE_2D, 0)
