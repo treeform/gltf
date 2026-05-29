@@ -1316,8 +1316,8 @@ proc ensureMaterial(renderer: Renderer, material: Material): VkMaterial =
     occlusion,
     emissive,
     normal,
-    shadow,
-    environment
+    environment,
+    shadow
   ]
 
   var poolSize = VkDescriptorPoolSize(
@@ -1465,11 +1465,11 @@ proc shadyPixelConstants(
   writer.putVec3(rimLightDirection)
   writer.putVec3(cameraPosition)
   writer.putColor(sunLightColor)
+  writer.putColor(rimLightColor)
+  writer.putFloat(3.0'f32)
   writer.putBool(false)
   writer.putFloat(0.0005'f32)
   writer.putVec2(vec2(1.0'f32 / 2048.0'f32, 1.0'f32 / 2048.0'f32))
-  writer.putColor(rimLightColor)
-  writer.putFloat(3.0'f32)
   writer.putInt(0)
   writer.putColor(tint)
   writer.putColor(ambientLightColor)
