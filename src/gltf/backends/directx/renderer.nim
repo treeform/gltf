@@ -27,6 +27,7 @@ const
   VertexConstantRegisters = 529
   PixelConstantRegisters = 21
   StudioEnvSize = 8
+  PreferredMsaaSamples = 8'u32
 
 type
   DxVertex {.packed.} = object
@@ -53,6 +54,10 @@ type
     ctx: D3D12Context
     rootSignature: ID3D12RootSignature
     pipelineStates: Table[PipelineKey, ID3D12PipelineState]
+    sampleCount: uint32
+    msaaColorBuffer: ID3D12Resource
+    msaaRtvHeap: ID3D12DescriptorHeap
+    msaaRtvHandle: D3D12_CPU_DESCRIPTOR_HANDLE
     depthBuffer: ID3D12Resource
     dsvHeap: ID3D12DescriptorHeap
     dsvHandle: D3D12_CPU_DESCRIPTOR_HANDLE
@@ -128,6 +133,33 @@ proc uploadHeap(): D3D12_HEAP_PROPERTIES =
   result.CreationNodeMask = 1
   result.VisibleNodeMask = 1
 
+proc supportsMsaa(device: ID3D12Device, format, sampleCount: uint32): bool =
+  var levels = D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS(
+    Format: format,
+    SampleCount: sampleCount,
+    Flags: D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE,
+    NumQualityLevels: 0
+  )
+  try:
+    device.checkFeatureSupport(
+      D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS,
+      addr levels,
+      UINT(sizeof(levels))
+    )
+    levels.NumQualityLevels > 0
+  except:
+    false
+
+proc chooseMsaaSampleCount(device: ID3D12Device): uint32 =
+  for sampleCount in [PreferredMsaaSamples, 4'u32, 2'u32]:
+    if device.supportsMsaa(DXGI_FORMAT_R8G8B8A8_UNORM, sampleCount) and
+      device.supportsMsaa(DXGI_FORMAT_D32_FLOAT, sampleCount):
+      return sampleCount
+  1'u32
+
+proc msaaEnabled(renderer: Renderer): bool =
+  renderer.sampleCount > 1
+
 proc readbackHeap(): D3D12_HEAP_PROPERTIES =
   result.typ = D3D12_HEAP_TYPE_READBACK
   result.CPUPageProperty = 0
@@ -185,7 +217,8 @@ proc textureDesc2D(
   height: int,
   format: uint32,
   flags = D3D12_RESOURCE_FLAG_NONE,
-  mipLevels = 1
+  mipLevels = 1,
+  sampleCount = 1'u32
 ): D3D12_RESOURCE_DESC =
   result.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D
   result.Alignment = 0
@@ -194,7 +227,7 @@ proc textureDesc2D(
   result.DepthOrArraySize = 1
   result.MipLevels = uint16(max(1, mipLevels))
   result.Format = format
-  result.SampleDesc = DXGI_SAMPLE_DESC(Count: 1, Quality: 0)
+  result.SampleDesc = DXGI_SAMPLE_DESC(Count: sampleCount, Quality: 0)
   result.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN
   result.Flags = flags
 
@@ -582,6 +615,54 @@ proc createSrv(
     handle
   )
 
+proc createColorBuffer(renderer: Renderer, size: IVec2) =
+  if renderer.msaaColorBuffer != nil:
+    renderer.msaaColorBuffer.release()
+    renderer.msaaColorBuffer = nil
+  if renderer.msaaRtvHeap != nil:
+    renderer.msaaRtvHeap.release()
+    renderer.msaaRtvHeap = nil
+  if not renderer.msaaEnabled:
+    return
+
+  var rtvHeapDesc = D3D12_DESCRIPTOR_HEAP_DESC(
+    typ: D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
+    NumDescriptors: 1,
+    Flags: D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
+    NodeMask: 0
+  )
+  renderer.msaaRtvHeap =
+    renderer.ctx.device.createDescriptorHeap(addr rtvHeapDesc)
+  renderer.msaaRtvHandle =
+    renderer.msaaRtvHeap.getCPUDescriptorHandleForHeapStart()
+
+  var colorDesc = textureDesc2D(
+    size.x.int,
+    size.y.int,
+    DXGI_FORMAT_R8G8B8A8_UNORM,
+    D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
+    sampleCount = renderer.sampleCount
+  )
+  var
+    heap = defaultHeap()
+    clearColor = [0.0.FLOAT, 0.0.FLOAT, 0.0.FLOAT, 1.0.FLOAT]
+    clearValue = D3D12_CLEAR_VALUE(
+      Format: DXGI_FORMAT_R8G8B8A8_UNORM,
+      data: D3D12_CLEAR_VALUE_UNION(Color: clearColor)
+    )
+  renderer.msaaColorBuffer = renderer.ctx.device.createCommittedResource(
+    addr heap,
+    D3D12_HEAP_FLAG_NONE,
+    addr colorDesc,
+    D3D12_RESOURCE_STATE_RENDER_TARGET,
+    addr clearValue
+  )
+  renderer.ctx.device.createRenderTargetView(
+    renderer.msaaColorBuffer,
+    nil,
+    renderer.msaaRtvHandle
+  )
+
 proc createDepthBuffer(renderer: Renderer, size: IVec2) =
   if renderer.depthBuffer != nil:
     renderer.depthBuffer.release()
@@ -603,7 +684,8 @@ proc createDepthBuffer(renderer: Renderer, size: IVec2) =
     size.x.int,
     size.y.int,
     DXGI_FORMAT_D32_FLOAT,
-    D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL
+    D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL,
+    sampleCount = renderer.sampleCount
   )
   var heap = defaultHeap()
   var clearValue = D3D12_CLEAR_VALUE(
@@ -785,7 +867,7 @@ proc createPipeline(
       DepthBiasClamp: 0.0,
       SlopeScaledDepthBias: 0.0,
       DepthClipEnable: 1,
-      MultisampleEnable: 0,
+      MultisampleEnable: if renderer.msaaEnabled: 1 else: 0,
       AntialiasedLineEnable: 0,
       ForcedSampleCount: 0,
       ConservativeRaster: D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
@@ -814,7 +896,7 @@ proc createPipeline(
       of dtTriangle: D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
     NumRenderTargets: 1,
     DSVFormat: DXGI_FORMAT_D32_FLOAT,
-    SampleDesc: DXGI_SAMPLE_DESC(Count: 1, Quality: 0),
+    SampleDesc: DXGI_SAMPLE_DESC(Count: renderer.sampleCount, Quality: 0),
     NodeMask: 0,
     CachedPSO: D3D12_CACHED_PIPELINE_STATE(),
     Flags: 0
@@ -924,11 +1006,13 @@ proc newRenderer*(window: Window): Renderer =
   if hwnd == 0:
     raise newException(GltfError, "Failed to acquire HWND for DirectX renderer.")
   result.ctx.initDevice(hwnd, safeSize.x.int, safeSize.y.int)
+  result.sampleCount = chooseMsaaSampleCount(result.ctx.device)
   result.srvDescriptorSize =
     result.ctx.device.getDescriptorHandleIncrementSize(
       D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
     )
   result.createRootSignature()
+  result.createColorBuffer(safeSize)
   result.createDepthBuffer(safeSize)
   result.createReadbackBuffer(safeSize)
 
@@ -968,6 +1052,7 @@ proc resize(renderer: Renderer, size: IVec2) =
   if renderer.readbackSize == safeSize:
     return
   renderer.ctx.resize(safeSize.x.int, safeSize.y.int)
+  renderer.createColorBuffer(safeSize)
   renderer.createDepthBuffer(safeSize)
   renderer.createReadbackBuffer(safeSize)
 
@@ -1496,15 +1581,24 @@ proc drawPbrFrame*(
       pResource: renderer.ctx.renderTargets[renderer.ctx.currentFrame],
       Subresource: D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
       StateBefore: D3D12_RESOURCE_STATE_PRESENT,
-      StateAfter: D3D12_RESOURCE_STATE_RENDER_TARGET
+      StateAfter:
+        if renderer.msaaEnabled:
+          D3D12_RESOURCE_STATE_RESOLVE_DEST
+        else:
+          D3D12_RESOURCE_STATE_RENDER_TARGET
     ))
   )
   renderer.ctx.commandList.resourceBarrier(1, addr barrier)
+  var rtvHandle =
+    if renderer.msaaEnabled:
+      renderer.msaaRtvHandle
+    else:
+      renderer.ctx.rtvHandles[renderer.ctx.currentFrame]
   renderer.ctx.commandList.rsSetViewports(1, addr renderer.ctx.viewport)
   renderer.ctx.commandList.rsSetScissorRects(1, addr renderer.ctx.scissor)
   renderer.ctx.commandList.omSetRenderTargets(
     1,
-    addr renderer.ctx.rtvHandles[renderer.ctx.currentFrame],
+    addr rtvHandle,
     1,
     unsafeAddr renderer.dsvHandle
   )
@@ -1515,7 +1609,7 @@ proc drawPbrFrame*(
     clearColor.a.FLOAT
   ]
   renderer.ctx.commandList.clearRenderTargetView(
-    renderer.ctx.rtvHandles[renderer.ctx.currentFrame],
+    rtvHandle,
     unsafeAddr clear[0],
     0,
     nil
@@ -1574,9 +1668,40 @@ proc drawPbrFrame*(
           blendedPass = true
         )
 
-  barrier.data.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET
-  barrier.data.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE
-  renderer.ctx.commandList.resourceBarrier(1, addr barrier)
+  if renderer.msaaEnabled:
+    var resolveBarrier = D3D12_RESOURCE_BARRIER(
+      typ: D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+      Flags: D3D12_RESOURCE_BARRIER_FLAG_NONE,
+      data: D3D12_RESOURCE_BARRIER_union(
+        Transition: D3D12_RESOURCE_TRANSITION_BARRIER(
+          pResource: renderer.msaaColorBuffer,
+          Subresource: D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+          StateBefore: D3D12_RESOURCE_STATE_RENDER_TARGET,
+          StateAfter: D3D12_RESOURCE_STATE_RESOLVE_SOURCE
+        )
+      )
+    )
+    renderer.ctx.commandList.resourceBarrier(1, addr resolveBarrier)
+    renderer.ctx.commandList.resolveSubresource(
+      renderer.ctx.renderTargets[renderer.ctx.currentFrame],
+      0,
+      renderer.msaaColorBuffer,
+      0,
+      DXGI_FORMAT_R8G8B8A8_UNORM
+    )
+    resolveBarrier.data.Transition.StateBefore =
+      D3D12_RESOURCE_STATE_RESOLVE_SOURCE
+    resolveBarrier.data.Transition.StateAfter =
+      D3D12_RESOURCE_STATE_RENDER_TARGET
+    renderer.ctx.commandList.resourceBarrier(1, addr resolveBarrier)
+
+    barrier.data.Transition.StateBefore = D3D12_RESOURCE_STATE_RESOLVE_DEST
+    barrier.data.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE
+    renderer.ctx.commandList.resourceBarrier(1, addr barrier)
+  else:
+    barrier.data.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET
+    barrier.data.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE
+    renderer.ctx.commandList.resourceBarrier(1, addr barrier)
 
   var dstLocation = D3D12_TEXTURE_COPY_LOCATION(
     pResource: renderer.readbackBuffer,
@@ -1658,6 +1783,12 @@ proc shutdown*(renderer: Renderer) =
   if renderer.readbackBuffer != nil:
     renderer.readbackBuffer.release()
     renderer.readbackBuffer = nil
+  if renderer.msaaColorBuffer != nil:
+    renderer.msaaColorBuffer.release()
+    renderer.msaaColorBuffer = nil
+  if renderer.msaaRtvHeap != nil:
+    renderer.msaaRtvHeap.release()
+    renderer.msaaRtvHeap = nil
   if renderer.depthBuffer != nil:
     renderer.depthBuffer.release()
     renderer.depthBuffer = nil

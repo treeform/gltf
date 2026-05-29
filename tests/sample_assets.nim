@@ -464,11 +464,7 @@ echo &"Update xray score: {UpdateXrayScore:0.3f}"
 var window = newWindow(
   "glTF Sample Assets",
   ivec2(WindowSize, WindowSize),
-  msaa =
-    when defined(useDirectX) or defined(useVulkan):
-      msaaDisabled
-    else:
-      msaa8x
+  msaa = msaa8x
 )
 when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
   makeContextCurrent(window)

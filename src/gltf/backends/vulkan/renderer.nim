@@ -33,6 +33,7 @@ const
   MaxFrameUniformSets = 8192
   StudioEnvSize = 8
   DepthFormat = VK_FORMAT_D32_SFLOAT
+  PreferredMsaaSamples = 8'u32
 
 when not defined(shadyBinaryShaders):
   const
@@ -77,8 +78,12 @@ type
     uniformSetLayout: VkDescriptorSetLayout
     pipelineLayout: VkPipelineLayout
     pipelineStates: Table[PipelineKey, VkPipeline]
+    sampleCount: VkSampleCountFlagBits
     imageViews: seq[VkImageView]
     imageLayouts: seq[VkImageLayout]
+    colorImages: seq[VkImage]
+    colorMemories: seq[VkDeviceMemory]
+    colorViews: seq[VkImageView]
     depthImages: seq[VkImage]
     depthMemories: seq[VkDeviceMemory]
     depthViews: seq[VkImageView]
@@ -192,6 +197,24 @@ proc findMemoryType(
       return i
   raise newException(GltfError, "Failed to find suitable Vulkan memory type.")
 
+proc chooseMsaaSampleCount(ctx: VulkanContext): VkSampleCountFlagBits =
+  var props: VkPhysicalDeviceProperties
+  vkGetPhysicalDeviceProperties(ctx.physicalDevice, props.addr)
+  let counts = props.limits.framebufferColorSampleCounts.uint32 and
+    props.limits.framebufferDepthSampleCounts.uint32
+  if PreferredMsaaSamples >= 8 and
+    (counts and VK_SAMPLE_COUNT_8_BIT.uint32) != 0:
+    return VK_SAMPLE_COUNT_8_BIT
+  if PreferredMsaaSamples >= 4 and
+    (counts and VK_SAMPLE_COUNT_4_BIT.uint32) != 0:
+    return VK_SAMPLE_COUNT_4_BIT
+  if (counts and VK_SAMPLE_COUNT_2_BIT.uint32) != 0:
+    return VK_SAMPLE_COUNT_2_BIT
+  VK_SAMPLE_COUNT_1_BIT
+
+proc msaaEnabled(renderer: Renderer): bool =
+  renderer.sampleCount != VK_SAMPLE_COUNT_1_BIT
+
 proc createBuffer(
   ctx: VulkanContext,
   size: VkDeviceSize,
@@ -227,6 +250,7 @@ proc createImage(
   format: VkFormat,
   usage: uint32,
   imageFlags: uint32,
+  samples: VkSampleCountFlagBits,
   image: var VkImage,
   memory: var VkDeviceMemory
 ) =
@@ -238,7 +262,7 @@ proc createImage(
     extent: VkExtent3D(width: width.uint32, height: height.uint32, depth: 1),
     mipLevels: mipLevels.uint32,
     arrayLayers: layers.uint32,
-    samples: VK_SAMPLE_COUNT_1_BIT,
+    samples: samples,
     tiling: VK_IMAGE_TILING_OPTIMAL,
     usage: VkImageUsageFlags(usage),
     sharingMode: VK_SHARING_MODE_EXCLUSIVE,
@@ -492,7 +516,7 @@ proc uploadRgbaSubresources(
   createImage(renderer.ctx, width, height, mipLevels, layers,
     VK_FORMAT_R8G8B8A8_UNORM,
     VK_IMAGE_USAGE_TRANSFER_DST_BIT.uint32 or VK_IMAGE_USAGE_SAMPLED_BIT.uint32,
-    imageFlags, image, memory)
+    imageFlags, VK_SAMPLE_COUNT_1_BIT, image, memory)
 
   transitionImageLayout(renderer.ctx, image,
     VkImageAspectFlags(VK_IMAGE_ASPECT_COLOR_BIT),
@@ -610,7 +634,7 @@ proc uploadShadowPlaceholder(renderer: Renderer): VkTexture =
   var memory: VkDeviceMemory
   createImage(renderer.ctx, 1, 1, 1, 1, DepthFormat,
     VK_IMAGE_USAGE_TRANSFER_DST_BIT.uint32 or VK_IMAGE_USAGE_SAMPLED_BIT.uint32,
-    0, image, memory)
+    0, VK_SAMPLE_COUNT_1_BIT, image, memory)
   transitionImageLayout(renderer.ctx, image,
     VkImageAspectFlags(VK_IMAGE_ASPECT_DEPTH_BIT), 1, 1,
     VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
@@ -699,6 +723,51 @@ proc createSwapChainImageViews(renderer: Renderer) =
       renderer.imageViews[i].addr),
       "Creating Vulkan swapchain image view")
 
+proc createColorResources(renderer: Renderer) =
+  renderer.colorImages.setLen(0)
+  renderer.colorMemories.setLen(0)
+  renderer.colorViews.setLen(0)
+  if not renderer.msaaEnabled:
+    return
+
+  let count = renderer.ctx.swapChainImages.len
+  renderer.colorImages.setLen(count)
+  renderer.colorMemories.setLen(count)
+  renderer.colorViews.setLen(count)
+  for i in 0 ..< count:
+    createImage(renderer.ctx,
+      renderer.ctx.swapChainExtent.width.int,
+      renderer.ctx.swapChainExtent.height.int,
+      1, 1, renderer.ctx.swapChainImageFormat,
+      VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT.uint32 or
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT.uint32,
+      0,
+      renderer.sampleCount,
+      renderer.colorImages[i],
+      renderer.colorMemories[i])
+    var imageViewInfo = VkImageViewCreateInfo(
+      sType: VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+      image: renderer.colorImages[i],
+      viewType: VK_IMAGE_VIEW_TYPE_2D,
+      format: renderer.ctx.swapChainImageFormat,
+      components: VkComponentMapping(
+        r: VK_COMPONENT_SWIZZLE_IDENTITY,
+        g: VK_COMPONENT_SWIZZLE_IDENTITY,
+        b: VK_COMPONENT_SWIZZLE_IDENTITY,
+        a: VK_COMPONENT_SWIZZLE_IDENTITY
+      ),
+      subresourceRange: VkImageSubresourceRange(
+        aspectMask: VkImageAspectFlags(VK_IMAGE_ASPECT_COLOR_BIT),
+        baseMipLevel: 0,
+        levelCount: 1,
+        baseArrayLayer: 0,
+        layerCount: 1
+      )
+    )
+    checkVk(vkCreateImageView(renderer.ctx.device, imageViewInfo.addr, nil,
+      renderer.colorViews[i].addr),
+      "Creating Vulkan multisample color image view")
+
 proc createDepthResources(renderer: Renderer) =
   let count = renderer.ctx.swapChainImages.len
   renderer.depthImages.setLen(count)
@@ -711,6 +780,7 @@ proc createDepthResources(renderer: Renderer) =
       1, 1, DepthFormat,
       VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT.uint32,
       0,
+      renderer.sampleCount,
       renderer.depthImages[i],
       renderer.depthMemories[i])
     var imageViewInfo = VkImageViewCreateInfo(
@@ -772,6 +842,15 @@ proc destroySwapChainResources(renderer: Renderer) =
     vkDestroyImageView(renderer.ctx.device, view, nil)
   renderer.imageViews.setLen(0)
   renderer.imageLayouts.setLen(0)
+  for view in renderer.colorViews:
+    vkDestroyImageView(renderer.ctx.device, view, nil)
+  renderer.colorViews.setLen(0)
+  for image in renderer.colorImages:
+    vkDestroyImage(renderer.ctx.device, image, nil)
+  renderer.colorImages.setLen(0)
+  for memory in renderer.colorMemories:
+    vkFreeMemory(renderer.ctx.device, memory, nil)
+  renderer.colorMemories.setLen(0)
   for view in renderer.depthViews:
     vkDestroyImageView(renderer.ctx.device, view, nil)
   renderer.depthViews.setLen(0)
@@ -787,6 +866,7 @@ proc destroySwapChainResources(renderer: Renderer) =
 
 proc createSwapChainResources(renderer: Renderer) =
   renderer.createSwapChainImageViews()
+  renderer.createColorResources()
   renderer.createDepthResources()
   renderer.allocateCommandBuffers()
   renderer.createReadbackBuffer(ivec2(
@@ -974,7 +1054,7 @@ proc createPipeline(
       multisampling = VkPipelineMultisampleStateCreateInfo(
         sType: VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
         sampleShadingEnable: VkBool32(VK_FALSE),
-        rasterizationSamples: VK_SAMPLE_COUNT_1_BIT
+        rasterizationSamples: renderer.sampleCount
       )
       depthStencil = VkPipelineDepthStencilStateCreateInfo(
         sType: VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
@@ -1039,6 +1119,7 @@ proc newRenderer*(window: Window): Renderer =
   if hwnd == 0:
     raise newException(GltfError, "Failed to acquire HWND for Vulkan renderer.")
   result.ctx.initDevice(hwnd, safeSize.x.int, safeSize.y.int, window.vsync)
+  result.sampleCount = chooseMsaaSampleCount(result.ctx)
   result.createDescriptorSetLayouts()
   result.createPipelineLayout()
   result.createFrameDescriptorPool()
@@ -1746,6 +1827,17 @@ proc recordFrame(
     VkAccessFlags2(VK_ACCESS_2_NONE),
     VkAccessFlags2(VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT)
   )
+  if renderer.msaaEnabled:
+    commandBuffer.cmdImageBarrier(
+      renderer.colorImages[imageIndex],
+      VkImageAspectFlags(VK_IMAGE_ASPECT_COLOR_BIT),
+      VK_IMAGE_LAYOUT_UNDEFINED,
+      VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+      VkPipelineStageFlags2(VK_PIPELINE_STAGE_2_NONE),
+      VkPipelineStageFlags2(VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT),
+      VkAccessFlags2(VK_ACCESS_2_NONE),
+      VkAccessFlags2(VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT)
+    )
   commandBuffer.cmdImageBarrier(
     renderer.depthImages[imageIndex],
     VkImageAspectFlags(VK_IMAGE_ASPECT_DEPTH_BIT),
@@ -1764,10 +1856,33 @@ proc recordFrame(
       depthStencil: VkClearDepthStencilValue(depth: 1.0'f32, stencil: 0))
     colorAttachment = VkRenderingAttachmentInfo(
       sType: VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-      imageView: renderer.imageViews[imageIndex],
+      imageView:
+        if renderer.msaaEnabled:
+          renderer.colorViews[imageIndex]
+        else:
+          renderer.imageViews[imageIndex],
       imageLayout: VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+      resolveMode:
+        if renderer.msaaEnabled:
+          VK_RESOLVE_MODE_AVERAGE_BIT
+        else:
+          VK_RESOLVE_MODE_NONE,
+      resolveImageView:
+        if renderer.msaaEnabled:
+          renderer.imageViews[imageIndex]
+        else:
+          VkImageView(0),
+      resolveImageLayout:
+        if renderer.msaaEnabled:
+          VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+        else:
+          VK_IMAGE_LAYOUT_UNDEFINED,
       loadOp: VK_ATTACHMENT_LOAD_OP_CLEAR,
-      storeOp: VK_ATTACHMENT_STORE_OP_STORE,
+      storeOp:
+        if renderer.msaaEnabled:
+          VK_ATTACHMENT_STORE_OP_DONT_CARE
+        else:
+          VK_ATTACHMENT_STORE_OP_STORE,
       clearValue: colorClear
     )
     depthAttachment = VkRenderingAttachmentInfo(

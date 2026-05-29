@@ -37,11 +37,7 @@ if params.len == 0 or not fileExists(params[0]):
 var window = newWindow(
   "glTF Viewer",
   ivec2(1200, 700),
-  msaa =
-    when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
-      msaa8x
-    else:
-      msaaDisabled
+  msaa = msaa8x
 )
 when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
   makeContextCurrent(window)
