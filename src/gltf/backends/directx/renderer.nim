@@ -878,7 +878,7 @@ proc createRootSignature(renderer: Renderer) =
   for i in 0 ..< samplers.len:
     samplers[i] = D3D12_STATIC_SAMPLER_DESC(
       Filter:
-        if i == 5: D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT
+        if i == 6: D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT
         else: D3D12_FILTER_MIN_MAG_MIP_LINEAR,
       AddressU:
         if i == 5 or i == 6: D3D12_TEXTURE_ADDRESS_MODE_CLAMP
@@ -892,7 +892,7 @@ proc createRootSignature(renderer: Renderer) =
       MipLODBias: 0.0,
       MaxAnisotropy: 1,
       ComparisonFunc:
-        if i == 5: D3D12_COMPARISON_FUNC_LESS_EQUAL
+        if i == 6: D3D12_COMPARISON_FUNC_LESS_EQUAL
         else: D3D12_COMPARISON_FUNC_ALWAYS,
       BorderColor: D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
       MinLOD: 0.0,
@@ -1199,8 +1199,8 @@ proc ensureMaterial(renderer: Renderer, material: Material): DxMaterial =
     occlusion,
     emissive,
     normal,
-    shadow,
-    environment
+    environment,
+    shadow
   ]
   for i, texture in result.textures:
     renderer.createSrv(
@@ -1311,12 +1311,12 @@ proc shadyPixelConstants(
   result.putVec3(52, rimLightDirection)
   result.putVec3(56, cameraPosition)
   result.putColor(60, sunLightColor)
-  result[64] = 0
-  result.putFloat(65, 0.0005'f32)
-  result.putVec2(66, vec2(1.0'f32 / 2048.0'f32, 1.0'f32 / 2048.0'f32))
-  result.putColor(68, rimLightColor)
-  result.putFloat(72, 3.0'f32)
-  result[73] = 0
+  result.putColor(64, rimLightColor)
+  result.putFloat(68, 3.0'f32)
+  result[69] = 0
+  result.putFloat(70, 0.0005'f32)
+  result.putVec2(72, vec2(1.0'f32 / 2048.0'f32, 1.0'f32 / 2048.0'f32))
+  result[74] = 0
   result.putColor(76, tint)
   result.putColor(80, ambientLightColor)
 
