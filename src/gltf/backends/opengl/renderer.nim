@@ -463,6 +463,8 @@ proc uploadTextureToGpu(
 
   glGenTextures(1, textureId.addr)
   glBindTexture(GL_TEXTURE_2D, textureId)
+  # Opaque images upload as RGB, so NPOT widths can have non-4-byte rows.
+  glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
   if image.isOpaque():
     var data = newSeq[uint8](image.width * image.height * 3)
     for i, rgbx in image.data:
@@ -497,6 +499,7 @@ proc uploadTextureToGpu(
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, sampler.wrapS.glValue)
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, sampler.wrapT.glValue)
   glGenerateMipmap(GL_TEXTURE_2D)
+  glPixelStorei(GL_UNPACK_ALIGNMENT, 4)
 
 proc uploadMaterialToGpu(material: Material) =
   if material == nil:
