@@ -23,28 +23,6 @@ jobs:
           repository: treeform/shady
           ref: shady-backends
           path: shady
-      - uses: actions/checkout@v5
-        with:
-          repository: KhronosGroup/glTF-Sample-Assets
-          path: glTF-Sample-Assets
-          sparse-checkout: |
-            Models/Avocado/glTF-Draco
-            Models/BarramundiFish/glTF-Draco
-            Models/BoomBox/glTF-Draco
-            Models/Box/glTF-Draco
-            Models/BrainStem/glTF-Draco
-            Models/CarConcept/glTF-KTX-BasisU-Draco
-            Models/CesiumMan/glTF-Draco
-            Models/CesiumMilkTruck/glTF-Draco
-            Models/Corset/glTF-Draco
-            Models/Duck/glTF-Draco
-            Models/Lantern/glTF-Draco
-            Models/MorphPrimitivesTest/glTF-Draco
-            Models/RiggedFigure/glTF-Draco
-            Models/RiggedSimple/glTF-Draco
-            Models/SunglassesKhronos/glTF-Draco
-            Models/VirtualCity/glTF-Draco
-            Models/WaterBottle/glTF-Draco
       - uses: treeform/setup-nim-action@v6
       - run: nimby install shady/shady.nimble
       - run: nimby install gltf/gltf.nimble

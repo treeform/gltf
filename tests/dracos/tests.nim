@@ -1,14 +1,14 @@
 import
   test_bitstreams,
+  test_decoders,
   test_entropy,
   test_meshes,
-  test_octs,
-  test_samples
+  test_octs
 
 runBitstreamTests()
+runDecoderTests()
 runEntropyTests()
 runMeshTests()
 runOctTests()
-runSampleTests()
 
 echo "Draco tests passed"
