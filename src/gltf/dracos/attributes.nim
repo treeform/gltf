@@ -27,7 +27,7 @@ const
   UpperNormalBound = 1 shl 29
 
 type
-  AttributeController = object
+  AttributeController = ref object
     linear: bool
     attrDataId: int
     elementType: int
@@ -65,9 +65,9 @@ proc signedSymbol(value: uint32): int32 =
   ## Converts an unsigned Draco symbol to a signed integer.
   let shifted = int32(value shr 1)
   if (value and 1) != 0:
-    -shifted - 1
+    return -shifted - 1
   else:
-    shifted
+    return shifted
 
 proc appendUint8(data: var string, value: uint8) =
   ## Appends one byte to a binary string.
@@ -93,15 +93,15 @@ proc dracoKind(value: int): DracoAttributeKind =
   ## Converts a Draco attribute kind id.
   case value
   of PositionKind:
-    PositionAttribute
+    return PositionAttribute
   of NormalKind:
-    NormalAttribute
+    return NormalAttribute
   of ColorKind:
-    ColorAttribute
+    return ColorAttribute
   of TexCoordKind:
-    TexCoordAttribute
+    return TexCoordAttribute
   of GenericKind:
-    GenericAttribute
+    return GenericAttribute
   else:
     raise newException(DracoError, &"Invalid Draco attribute kind {value}")
 
@@ -109,7 +109,7 @@ proc dracoType(value: int): DracoDataType =
   ## Converts a Draco scalar data type id.
   if value < InvalidType.int or value > BoolType.int:
     raise newException(DracoError, &"Invalid Draco data type {value}")
-  DracoDataType(value)
+  return DracoDataType(value)
 
 proc addAttribute(
   mesh: var DracoMesh,
@@ -133,17 +133,17 @@ proc addAttribute(
     identityMap: true
   )
   mesh.attributes.add(attr)
-  mesh.attributes.len - 1
+  return mesh.attributes.len - 1
 
 proc mappedIndex(attr: DracoAttribute, pointId: int): int =
   ## Returns the attribute value index for a point id.
   if attr.identityMap:
     return pointId
-  attr.pointMap[pointId]
+  return attr.pointMap[pointId]
 
 proc intComponent(attr: DracoAttribute, entry, component: int): int32 =
   ## Returns one integer component from an attribute.
-  attr.intValues[entry * attr.numComponents + component]
+  return attr.intValues[entry * attr.numComponents + component]
 
 proc setOctBits(tool: var OctTool, qBits: int) =
   ## Initializes octahedral normal helper constants.
@@ -197,7 +197,7 @@ proc invertDiamond(tool: OctTool, s, t: int32): array[2, int32] =
     ut = tmp
   us += cornerS
   ut += cornerT
-  [us div 2, ut div 2]
+  return [us div 2, ut div 2]
 
 proc canonicalizeOctahedralCoords(
   tool: OctTool,
@@ -220,7 +220,7 @@ proc canonicalizeOctahedralCoords(
     s = tool.centerValue.int32 + (tool.centerValue.int32 - s)
   elif t == 0 and s > tool.centerValue.int32:
     s = tool.centerValue.int32 - (s - tool.centerValue.int32)
-  [s, t]
+  return [s, t]
 
 proc canonicalizeIntegerVector(
   tool: OctTool,
@@ -261,7 +261,7 @@ proc integerVectorToOct(
       t = abs(vector[1])
     else:
       t = tool.maxValue.int32 - abs(vector[1])
-  tool.canonicalizeOctahedralCoords(s, t)
+  return tool.canonicalizeOctahedralCoords(s, t)
 
 proc octToUnit(tool: OctTool, s, t: int32): array[3, float32] =
   ## Converts quantized octahedral coordinates to a unit vector.
@@ -284,7 +284,7 @@ proc octToUnit(tool: OctTool, s, t: int32): array[3, float32] =
   if normSq < 0.000001'f:
     return [0.0'f, 0.0'f, 0.0'f]
   let scale = 1.0'f / sqrt(normSq)
-  [x * scale, y * scale, z * scale]
+  return [x * scale, y * scale, z * scale]
 
 proc decodeWrapTransform(stream: var DracoStream): WrapTransform =
   ## Decodes wrap prediction transform data.
@@ -324,7 +324,7 @@ proc isBottomLeft(s, t: int32): bool =
   ## Returns true when an octahedral point is in the bottom-left quadrant.
   if s == 0 and t == 0:
     return true
-  s < 0 and t <= 0
+  return s < 0 and t <= 0
 
 proc rotationCount(s, t: int32): int =
   ## Computes the octahedral canonicalization rotation count.
@@ -339,26 +339,24 @@ proc rotationCount(s, t: int32): int =
       return 2
     return 1
   if t <= 0:
-    0
+    return 0
   else:
-    3
+    return 3
 
-proc rotatePoint(s, t: var int32, count: int) =
+proc rotatePoint(
+  s, t: int32,
+  count: int
+): tuple[s: int32, t: int32] =
   ## Rotates an octahedral point by quarter turns.
-  let oldS = s
-  let oldT = t
   case count mod 4
   of 1:
-    s = oldT
-    t = -oldS
+    return (t, -s)
   of 2:
-    s = -oldS
-    t = -oldT
+    return (-s, -t)
   of 3:
-    s = -oldT
-    t = oldS
+    return (-t, s)
   else:
-    discard
+    return (s, t)
 
 proc computeOriginal(
   transform: NormalTransform,
@@ -386,7 +384,9 @@ proc computeOriginal(
     bottomLeft = isBottomLeft(predS, predT)
     rotations = rotationCount(predS, predT)
   if not bottomLeft:
-    rotatePoint(predS, predT, rotations)
+    let rotated = rotatePoint(predS, predT, rotations)
+    predS = rotated.s
+    predT = rotated.t
   var
     origS = predS + corrections[corrOffset]
     origT = predT + corrections[corrOffset + 1]
@@ -399,7 +399,9 @@ proc computeOriginal(
   elif origT < -center:
     origT += maxValue
   if not bottomLeft:
-    rotatePoint(origS, origT, (4 - rotations) mod 4)
+    let rotated = rotatePoint(origS, origT, (4 - rotations) mod 4)
+    origS = rotated.s
+    origT = rotated.t
   if not predInDiamond:
     let inv = transform.tool.invertDiamond(origS, origT)
     origS = inv[0]
@@ -433,6 +435,7 @@ proc computeParallelogram(
         decoded[prevData * componentCount + c] -
         decoded[oppData * componentCount + c]
     return true
+  return false
 
 proc computeParallelogram(
   corner: int,
@@ -460,13 +463,14 @@ proc computeParallelogram(
         decoded[prevData * componentCount + c] -
         decoded[oppData * componentCount + c]
     return true
+  return false
 
 proc parentAttribute(mesh: DracoMesh, kind: DracoAttributeKind): int =
   ## Returns the first decoded attribute of a given kind.
   for i, attr in mesh.attributes:
     if attr.kind == kind:
       return i
-  -1
+  return -1
 
 proc computeNormalPrediction(
   table: CornerTable,
@@ -483,7 +487,7 @@ proc computeNormalPrediction(
       dataId = data.vertexToValue[vertexId]
       pointId = entryToPoint[dataId]
       entry = position.mappedIndex(pointId)
-    [
+    return [
       position.intComponent(entry, 0),
       position.intComponent(entry, 1),
       position.intComponent(entry, 2)
@@ -527,7 +531,7 @@ proc computeNormalPrediction(
       normal[0] = normal[0] div quotient
       normal[1] = normal[1] div quotient
       normal[2] = normal[2] div quotient
-  [
+  return [
     normal[0].int32,
     normal[1].int32,
     normal[2].int32
@@ -549,7 +553,7 @@ proc computeTexPrediction(
     let
       pointId = entryToPoint[id]
       entry = position.mappedIndex(pointId)
-    [
+    return [
       position.intComponent(entry, 0).int64,
       position.intComponent(entry, 1).int64,
       position.intComponent(entry, 2).int64
@@ -625,7 +629,7 @@ proc computeTexPrediction(
     offset = (dataId - 1) * 2
   else:
     return [0'i32, 0'i32]
-  [decoded[offset], decoded[offset + 1]]
+  return [decoded[offset], decoded[offset + 1]]
 
 proc readPredictionInfo(
   stream: var DracoStream,
@@ -695,6 +699,7 @@ proc readPredictionInfo(
     result.flipDecoder.startDecoding(stream)
   discard positiveCorrections
   discard entryCount
+  return result
 
 proc decodeIntegerValues(
   stream: var DracoStream,
@@ -1008,6 +1013,7 @@ proc decodeIntegerValues(
       )
   else:
     raise newException(DracoError, &"Unsupported Draco prediction {predictionMethod}")
+  return result
 
 proc decodeQuantization(
   stream: var DracoStream,
@@ -1021,6 +1027,7 @@ proc decodeQuantization(
   result.bits = stream.readUint8().int
   if result.bits < 1 or result.bits > 30:
     raise newException(DracoError, "Invalid Draco quantization bits")
+  return result
 
 proc storeIntegerAttribute(attr: var DracoAttribute) =
   ## Stores decoded integer values into the final byte buffer.
@@ -1082,7 +1089,7 @@ proc decodeGenericValues(
 proc decodeControllerData(
   stream: var DracoStream,
   mesh: var DracoMesh,
-  controller: var AttributeController
+  controller: AttributeController
 ) =
   ## Decodes one sequential attribute decoder descriptor block.
   let count = stream.readVarint().int
@@ -1113,6 +1120,7 @@ proc readEdgebreakerController(
   id: int
 ): AttributeController =
   ## Reads one edgebreaker attribute decoder controller.
+  result = AttributeController()
   result.attrDataId = stream.readInt8().int
   result.elementType = stream.readUint8().int
   discard stream.readUint8()
@@ -1131,9 +1139,10 @@ proc readEdgebreakerController(
       raise newException(DracoError, "Invalid Draco corner attribute data id")
     state.attributeData[result.attrDataId].decoderId = id
     result.encodingKind = result.attrDataId
+  return result
 
 proc prepareController(
-  controller: var AttributeController,
+  controller: AttributeController,
   mesh: var DracoMesh,
   state: var EdgebreakerMesh
 ) =
@@ -1206,7 +1215,7 @@ proc controllerEncoding(
       AttributeCornerTable(),
       false
     )
-  (
+  return (
     state.attributeData[controller.encodingKind].encoding,
     state.attributeData[controller.encodingKind].connectivity,
     true
@@ -1309,7 +1318,7 @@ proc decodeSequentialAttributes*(
   let controllerCount = stream.readUint8().int
   var controllers = newSeq[AttributeController](controllerCount)
   for i in 0 ..< controllerCount:
-    controllers[i].linear = true
+    controllers[i] = AttributeController(linear: true)
   for i in 0 ..< controllerCount:
     decodeControllerData(stream, mesh, controllers[i])
   var dummy = EdgebreakerMesh(mesh: mesh)

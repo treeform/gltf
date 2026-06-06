@@ -34,11 +34,8 @@ proc checkRotate(
   expected: array[2, int32]
 ) =
   ## Checks one octahedral quarter-turn rotation.
-  var
-    s = sIn
-    t = tIn
-  rotatePoint(s, t, count)
-  doAssert [s, t] == expected
+  let rotated = rotatePoint(sIn, tIn, count)
+  doAssert [rotated.s, rotated.t] == expected
 
 proc testCanonicalRotation() =
   ## Checks canonicalized octahedral rotation helpers.
