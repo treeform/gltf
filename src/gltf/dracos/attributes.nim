@@ -699,7 +699,6 @@ proc readPredictionInfo(
     result.flipDecoder.startDecoding(stream)
   discard positiveCorrections
   discard entryCount
-  return result
 
 proc decodeIntegerValues(
   stream: var DracoStream,
@@ -1013,7 +1012,6 @@ proc decodeIntegerValues(
       )
   else:
     raise newException(DracoError, &"Unsupported Draco prediction {predictionMethod}")
-  return result
 
 proc decodeQuantization(
   stream: var DracoStream,
@@ -1027,7 +1025,6 @@ proc decodeQuantization(
   result.bits = stream.readUint8().int
   if result.bits < 1 or result.bits > 30:
     raise newException(DracoError, "Invalid Draco quantization bits")
-  return result
 
 proc storeIntegerAttribute(attr: var DracoAttribute) =
   ## Stores decoded integer values into the final byte buffer.
@@ -1139,7 +1136,6 @@ proc readEdgebreakerController(
       raise newException(DracoError, "Invalid Draco corner attribute data id")
     state.attributeData[result.attrDataId].decoderId = id
     result.encodingKind = result.attrDataId
-  return result
 
 proc prepareController(
   controller: AttributeController,
