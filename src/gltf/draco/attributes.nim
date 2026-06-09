@@ -35,6 +35,7 @@ type
     decoderTypes: seq[int]
     pointIds: seq[int]
     encodingKind: int
+    traversalMethod: int
 
   WrapTransform = object
     minValue: int32
@@ -1120,7 +1121,7 @@ proc readEdgebreakerController(
   result = AttributeController()
   result.attrDataId = stream.readInt8().int
   result.elementType = stream.readUint8().int
-  discard stream.readUint8()
+  result.traversalMethod = stream.readUint8().int
   if result.elementType == MeshVertexAttribute:
     if result.attrDataId >= 0:
       if result.attrDataId >= state.attributeData.len:
@@ -1154,7 +1155,8 @@ proc prepareController(
     if controller.encodingKind == -1:
       controller.pointIds = state.cornerTable.generateSequence(
         mesh,
-        state.posEncoding
+        state.posEncoding,
+        controller.traversalMethod
       )
       for attrId in controller.attrIds:
         mesh.attributes[attrId].applyPointMap(
@@ -1166,7 +1168,8 @@ proc prepareController(
       let dataId = controller.encodingKind
       controller.pointIds = state.cornerTable.generateSequence(
         mesh,
-        state.attributeData[dataId].encoding
+        state.attributeData[dataId].encoding,
+        controller.traversalMethod
       )
       for attrId in controller.attrIds:
         mesh.attributes[attrId].applyPointMap(
@@ -1175,6 +1178,8 @@ proc prepareController(
           state.attributeData[dataId].encoding
         )
   else:
+    if controller.traversalMethod != 0:
+      raise newException(DracoError, "Unsupported Draco corner traversal method")
     let dataId = controller.encodingKind
     controller.pointIds = state.attributeData[dataId].connectivity
       .generateSequence(

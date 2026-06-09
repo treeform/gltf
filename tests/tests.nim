@@ -1,5 +1,5 @@
 import
-  std/[json, os, osproc, strutils],
+  std/[base64, json, os, osproc, strutils],
   gltf,
   opengl,
   pixie,
@@ -706,3 +706,105 @@ doAssert basisMaterial != nil
 doAssert basisMaterial.baseColorName == "basisColor"
 doAssert basisMaterial.baseColor == nil
 doAssert basisMaterial.baseColorKtx2.len > 0
+
+echo "Testing EXT_texture_webp source selection."
+let
+  webpGltfPath = joinPath(ktxOutDir, "webp_test.gltf")
+  webpBufferPath = joinPath(ktxOutDir, "webp_test.bin")
+  fallbackPath = joinPath(ktxOutDir, "fallback.png")
+  preferredPath = joinPath(ktxOutDir, "preferred.webp")
+const preferredWebp =
+  "UklGRhwAAABXRUJQVlA4TA8AAAAvAAAAAAcQ0f/+ByKi/wEA"
+var fallbackImage = newImage(1, 1)
+fallbackImage[0, 0] = rgbx(255, 0, 0, 255)
+fallbackImage.writeFile(fallbackPath)
+writeFile(preferredPath, base64.decode(preferredWebp))
+writeBytes(
+  webpBufferPath,
+  @[
+    0x00'u8, 0x00, 0x00, 0x00,
+    0x00'u8, 0x00, 0x00, 0x00,
+    0x00'u8, 0x00, 0x00, 0x00
+  ]
+)
+writeFile(
+  webpGltfPath,
+  $(%*{
+    "asset": {"version": "2.0"},
+    "extensionsRequired": ["EXT_texture_webp"],
+    "extensionsUsed": ["EXT_texture_webp"],
+    "buffers": [
+      {
+        "byteLength": 12,
+        "uri": "webp_test.bin"
+      }
+    ],
+    "bufferViews": [
+      {"buffer": 0, "byteOffset": 0, "byteLength": 12}
+    ],
+    "accessors": [
+      {"bufferView": 0, "componentType": 5126, "count": 1, "type": "VEC3"}
+    ],
+    "images": [
+      {
+        "uri": "fallback.png",
+        "name": "fallback"
+      },
+      {
+        "uri": "preferred.webp",
+        "name": "preferred"
+      }
+    ],
+    "textures": [
+      {
+        "source": 0,
+        "extensions": {
+          "EXT_texture_webp": {
+            "source": 1
+          }
+        }
+      }
+    ],
+    "samplers": [],
+    "materials": [
+      {
+        "pbrMetallicRoughness": {
+          "baseColorTexture": {
+            "index": 0
+          }
+        }
+      }
+    ],
+    "meshes": [
+      {
+        "primitives": [
+          {
+            "attributes": {
+              "POSITION": 0
+            },
+            "material": 0
+          }
+        ]
+      }
+    ],
+    "nodes": [
+      {
+        "name": "WebpNode",
+        "mesh": 0
+      }
+    ],
+    "scenes": [{"nodes": [0]}],
+    "scene": 0,
+    "animations": []
+  })
+)
+let webpFile = readGltfFile(webpGltfPath)
+let webpNode = webpFile.root["WebpNode"]
+doAssert webpNode != nil
+doAssert webpNode.mesh != nil
+doAssert webpNode.mesh.primitives.len == 1
+let webpMaterial = webpNode.mesh.primitives[0].material
+doAssert webpMaterial != nil
+doAssert webpMaterial.baseColorName == "preferred"
+doAssert webpMaterial.baseColor != nil
+doAssert webpMaterial.baseColor[0, 0] == rgbx(0, 0, 255, 255)
