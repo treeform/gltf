@@ -80,6 +80,15 @@ type
     position*, normal*, tangent*, color0*, texcoord0*, texcoord1*: int
     joints0*, weights0*: int
 
+  DracoAttributeInfo* = object
+    name*: string
+    id*: int
+
+  DracoInfo* = object
+    used*: bool
+    bufferView*: int
+    attributes*: seq[DracoAttributeInfo]
+
   MorphTargetInfo* = object
     position*, normal*, tangent*: int
 
@@ -87,6 +96,7 @@ type
     attributes*: PrimitiveAttributes
     indices*, material*: int
     mode*: PrimitiveMode
+    draco*: DracoInfo
     morphTargets*: seq[MorphTargetInfo]
 
   SkinInfo* = object

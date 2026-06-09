@@ -1,7 +1,7 @@
 import
   std/[base64, json, os, strformat, strutils],
   chroma, flatty/binny, pixie, vmath, webby,
-  common, internal, models
+  common, draco, internal, models
 
 export common
 
@@ -10,7 +10,8 @@ const SupportedExtensions = [
   "KHR_materials_transmission",
   "KHR_node_visibility",
   "KHR_animation_pointer",
-  "KHR_texture_basisu"
+  "KHR_texture_basisu",
+  "KHR_draco_mesh_compression"
 ]
 
 const
@@ -272,6 +273,462 @@ proc assertRaise(test: bool, msg: string) =
   ## Raises an exception when a glTF invariant is not met.
   if not test:
     raise newException(GltfError, msg)
+
+proc componentSize(componentType: ComponentType): int =
+  ## Returns the byte size of one accessor component.
+  case componentType
+  of ByteComponent, UnsignedByteComponent:
+    1
+  of ShortComponent, UnsignedShortComponent:
+    2
+  of UnsignedIntComponent, FloatComponent:
+    4
+
+proc accessorComponentCount(kind: AccessorKind): int =
+  ## Returns the number of components in one accessor element.
+  case kind
+  of atSCALAR:
+    1
+  of atVEC2:
+    2
+  of atVEC3:
+    3
+  of atVEC4:
+    4
+  of atMAT2:
+    4
+  of atMAT3:
+    9
+  of atMAT4:
+    16
+
+proc dracoAttributeId(draco: DracoInfo, name: string): int =
+  ## Returns a Draco unique attribute id by glTF semantic name.
+  for attr in draco.attributes:
+    if attr.name == name:
+      return attr.id
+  raise newException(
+    GltfError,
+    &"Missing KHR_draco_mesh_compression attribute {name}"
+  )
+
+proc addDracoSpec(
+  specs: var seq[DracoDecodeAttribute],
+  draco: DracoInfo,
+  accessors: seq[Accessor],
+  name: string,
+  accessorIdx: int
+) =
+  ## Adds one Draco decode request from a glTF accessor reference.
+  if accessorIdx < 0:
+    return
+  let accessor = accessors[accessorIdx]
+  specs.add(DracoDecodeAttribute(
+    name: name,
+    id: draco.dracoAttributeId(name),
+    componentType: accessor.componentType
+  ))
+
+proc dracoSpecs(
+  primInfo: PrimitiveInfo,
+  accessors: seq[Accessor]
+): seq[DracoDecodeAttribute] =
+  ## Builds Draco decode requests for one compressed primitive.
+  result.addDracoSpec(
+    primInfo.draco,
+    accessors,
+    "POSITION",
+    primInfo.attributes.position
+  )
+  result.addDracoSpec(
+    primInfo.draco,
+    accessors,
+    "NORMAL",
+    primInfo.attributes.normal
+  )
+  result.addDracoSpec(
+    primInfo.draco,
+    accessors,
+    "TANGENT",
+    primInfo.attributes.tangent
+  )
+  result.addDracoSpec(
+    primInfo.draco,
+    accessors,
+    "COLOR_0",
+    primInfo.attributes.color0
+  )
+  result.addDracoSpec(
+    primInfo.draco,
+    accessors,
+    "TEXCOORD_0",
+    primInfo.attributes.texcoord0
+  )
+  result.addDracoSpec(
+    primInfo.draco,
+    accessors,
+    "TEXCOORD_1",
+    primInfo.attributes.texcoord1
+  )
+  result.addDracoSpec(
+    primInfo.draco,
+    accessors,
+    "JOINTS_0",
+    primInfo.attributes.joints0
+  )
+  result.addDracoSpec(
+    primInfo.draco,
+    accessors,
+    "WEIGHTS_0",
+    primInfo.attributes.weights0
+  )
+
+proc clearDracoSourceAccessors(primInfo: var PrimitiveInfo) =
+  ## Clears compressed accessor ids so uncompressed readers are skipped.
+  primInfo.indices = -1
+  primInfo.attributes.position = -1
+  primInfo.attributes.normal = -1
+  primInfo.attributes.tangent = -1
+  primInfo.attributes.color0 = -1
+  primInfo.attributes.texcoord0 = -1
+  primInfo.attributes.texcoord1 = -1
+  primInfo.attributes.joints0 = -1
+  primInfo.attributes.weights0 = -1
+
+proc dracoAttribute(
+  decoded: DracoDecodeResult,
+  name: string
+): DracoAttributeData =
+  ## Returns a decoded Draco attribute by glTF semantic name.
+  for attr in decoded.attributes:
+    if attr.name == name:
+      return attr
+  raise newException(GltfError, &"Decoded Draco attribute {name} is missing")
+
+proc dracoFloatValue(
+  attr: DracoAttributeData,
+  index: int
+): float32 =
+  ## Reads one decoded Draco component as a float32.
+  let offset = index * attr.componentType.componentSize()
+  case attr.componentType
+  of ByteComponent:
+    cast[int8](attr.data[offset]).float32
+  of UnsignedByteComponent:
+    attr.data.readUint8(offset).float32
+  of ShortComponent:
+    cast[int16](attr.data.readUint16(offset)).float32
+  of UnsignedShortComponent:
+    attr.data.readUint16(offset).float32
+  of UnsignedIntComponent:
+    attr.data.readUint32(offset).float32
+  of FloatComponent:
+    readFloat32(attr.data, offset)
+
+proc dracoRawUint(
+  attr: DracoAttributeData,
+  index: int
+): uint32 =
+  ## Reads one decoded Draco component as an unsigned integer.
+  let offset = index * attr.componentType.componentSize()
+  case attr.componentType
+  of ByteComponent:
+    cast[int8](attr.data[offset]).uint32
+  of UnsignedByteComponent:
+    attr.data.readUint8(offset).uint32
+  of ShortComponent:
+    cast[int16](attr.data.readUint16(offset)).uint32
+  of UnsignedShortComponent:
+    attr.data.readUint16(offset).uint32
+  of UnsignedIntComponent:
+    attr.data.readUint32(offset)
+  of FloatComponent:
+    readFloat32(attr.data, offset).uint32
+
+proc dracoNormalizedValue(
+  accessor: Accessor,
+  attr: DracoAttributeData,
+  index: int
+): float32 =
+  ## Reads one decoded Draco component with glTF normalization applied.
+  let value = dracoFloatValue(attr, index)
+  if not accessor.normalized:
+    return value
+  case accessor.componentType
+  of ByteComponent:
+    max(value / 127.0'f, -1.0'f)
+  of UnsignedByteComponent:
+    value / 255.0'f
+  of ShortComponent:
+    max(value / 32767.0'f, -1.0'f)
+  of UnsignedShortComponent:
+    value / 65535.0'f
+  of UnsignedIntComponent:
+    value / 4294967295.0'f
+  of FloatComponent:
+    value
+
+proc byteColor(value: float32): uint8 =
+  ## Converts a color component to an 8-bit channel.
+  if value <= 0:
+    return 0
+  if value >= 255:
+    return 255
+  value.uint8
+
+proc dracoColorByte(
+  accessor: Accessor,
+  attr: DracoAttributeData,
+  index: int
+): uint8 =
+  ## Reads one decoded Draco color component as an 8-bit channel.
+  let value = dracoNormalizedValue(accessor, attr, index)
+  if accessor.normalized or accessor.componentType == FloatComponent:
+    return byteColor(value * 255.0'f)
+  if accessor.componentType == UnsignedShortComponent:
+    return byteColor(value / 257.0'f)
+  byteColor(value)
+
+proc assertDracoAttribute(
+  accessor: Accessor,
+  attr: DracoAttributeData,
+  componentCount: int
+) =
+  ## Checks a decoded Draco attribute against its accessor metadata.
+  assertRaise(
+    attr.componentCount == componentCount,
+    &"Invalid Draco component count for {attr.name}"
+  )
+  assertRaise(
+    attr.data.len == accessor.count * componentCount *
+      attr.componentType.componentSize(),
+    &"Invalid Draco data length for {attr.name}"
+  )
+
+proc readDracoVec2(
+  decoded: DracoDecodeResult,
+  accessors: seq[Accessor],
+  name: string,
+  accessorIdx: int
+): seq[Vec2] =
+  ## Reads a decoded Draco vec2 attribute.
+  let
+    accessor = accessors[accessorIdx]
+    attr = decoded.dracoAttribute(name)
+  assertRaise accessor.kind == atVEC2, &"Unsupported {name} kind"
+  assertDracoAttribute(accessor, attr, 2)
+  result.setLen(accessor.count)
+  for i in 0 ..< accessor.count:
+    result[i] = vec2(
+      dracoNormalizedValue(accessor, attr, i * 2 + 0),
+      dracoNormalizedValue(accessor, attr, i * 2 + 1)
+    )
+
+proc readDracoVec3(
+  decoded: DracoDecodeResult,
+  accessors: seq[Accessor],
+  name: string,
+  accessorIdx: int
+): seq[Vec3] =
+  ## Reads a decoded Draco vec3 attribute.
+  let
+    accessor = accessors[accessorIdx]
+    attr = decoded.dracoAttribute(name)
+  assertRaise accessor.kind == atVEC3, &"Unsupported {name} kind"
+  assertDracoAttribute(accessor, attr, 3)
+  result.setLen(accessor.count)
+  for i in 0 ..< accessor.count:
+    result[i] = vec3(
+      dracoNormalizedValue(accessor, attr, i * 3 + 0),
+      dracoNormalizedValue(accessor, attr, i * 3 + 1),
+      dracoNormalizedValue(accessor, attr, i * 3 + 2)
+    )
+
+proc readDracoVec4(
+  decoded: DracoDecodeResult,
+  accessors: seq[Accessor],
+  name: string,
+  accessorIdx: int
+): seq[Vec4] =
+  ## Reads a decoded Draco vec4 attribute.
+  let
+    accessor = accessors[accessorIdx]
+    attr = decoded.dracoAttribute(name)
+  assertRaise accessor.kind == atVEC4, &"Unsupported {name} kind"
+  assertDracoAttribute(accessor, attr, 4)
+  result.setLen(accessor.count)
+  for i in 0 ..< accessor.count:
+    result[i] = vec4(
+      dracoNormalizedValue(accessor, attr, i * 4 + 0),
+      dracoNormalizedValue(accessor, attr, i * 4 + 1),
+      dracoNormalizedValue(accessor, attr, i * 4 + 2),
+      dracoNormalizedValue(accessor, attr, i * 4 + 3)
+    )
+
+proc readDracoColors(
+  decoded: DracoDecodeResult,
+  accessors: seq[Accessor],
+  accessorIdx: int
+): seq[ColorRGBX] =
+  ## Reads a decoded Draco COLOR_0 attribute.
+  let
+    accessor = accessors[accessorIdx]
+    attr = decoded.dracoAttribute("COLOR_0")
+    componentCount = accessor.kind.accessorComponentCount()
+  assertRaise(
+    accessor.kind in {atVEC3, atVEC4},
+    "Unsupported COLOR_0 kind"
+  )
+  assertDracoAttribute(accessor, attr, componentCount)
+  result.setLen(accessor.count)
+  for i in 0 ..< accessor.count:
+    let base = i * componentCount
+    result[i] = rgbx(
+      dracoColorByte(accessor, attr, base + 0),
+      dracoColorByte(accessor, attr, base + 1),
+      dracoColorByte(accessor, attr, base + 2),
+      if componentCount == 4:
+        dracoColorByte(accessor, attr, base + 3)
+      else:
+        255
+    )
+
+proc readDracoJointIds(
+  decoded: DracoDecodeResult,
+  accessors: seq[Accessor],
+  accessorIdx: int
+): seq[JointIds] =
+  ## Reads a decoded Draco JOINTS_0 attribute.
+  let
+    accessor = accessors[accessorIdx]
+    attr = decoded.dracoAttribute("JOINTS_0")
+  assertRaise accessor.kind == atVEC4, "Unsupported JOINTS_0 kind"
+  assertDracoAttribute(accessor, attr, 4)
+  result.setLen(accessor.count)
+  for i in 0 ..< accessor.count:
+    result[i] = [
+      dracoRawUint(attr, i * 4 + 0).uint16,
+      dracoRawUint(attr, i * 4 + 1).uint16,
+      dracoRawUint(attr, i * 4 + 2).uint16,
+      dracoRawUint(attr, i * 4 + 3).uint16
+    ]
+
+proc readDracoWeights(
+  decoded: DracoDecodeResult,
+  accessors: seq[Accessor],
+  accessorIdx: int
+): seq[Vec4] =
+  ## Reads a decoded Draco WEIGHTS_0 attribute.
+  let
+    accessor = accessors[accessorIdx]
+    attr = decoded.dracoAttribute("WEIGHTS_0")
+  assertRaise accessor.kind == atVEC4, "Unsupported WEIGHTS_0 kind"
+  assertDracoAttribute(accessor, attr, 4)
+  result.setLen(accessor.count)
+  for i in 0 ..< accessor.count:
+    result[i] = vec4(
+      dracoNormalizedValue(accessor, attr, i * 4 + 0),
+      dracoNormalizedValue(accessor, attr, i * 4 + 1),
+      dracoNormalizedValue(accessor, attr, i * 4 + 2),
+      dracoNormalizedValue(accessor, attr, i * 4 + 3)
+    )
+
+proc readDracoIndices(
+  primitive: Primitive,
+  decoded: DracoDecodeResult,
+  accessors: seq[Accessor],
+  accessorIdx: int
+) =
+  ## Reads decoded Draco triangle indices into a runtime primitive.
+  if decoded.indices.len == 0:
+    return
+  let componentType =
+    if accessorIdx >= 0:
+      accessors[accessorIdx].componentType
+    else:
+      UnsignedIntComponent
+  case componentType
+  of UnsignedByteComponent, UnsignedShortComponent:
+    primitive.indices16.setLen(decoded.indices.len)
+    for i, value in decoded.indices:
+      assertRaise value <= uint16.high.uint32, "Draco index exceeds uint16"
+      primitive.indices16[i] = value.uint16
+  of UnsignedIntComponent:
+    primitive.indices32 = decoded.indices
+  else:
+    raise newException(
+      GltfError,
+      "Invalid Draco index component type: " & $componentType.int
+    )
+
+proc readDracoPrimitive(
+  primitive: Primitive,
+  primInfo: PrimitiveInfo,
+  accessors: seq[Accessor],
+  bufferViews: seq[BufferView],
+  buffers: seq[string]
+) =
+  ## Reads one KHR_draco_mesh_compression primitive.
+  let
+    view = bufferViews[primInfo.draco.bufferView]
+    buffer = buffers[view.buffer]
+    payload = buffer[view.byteOffset ..< view.byteOffset + view.byteLength]
+    decoded = decodeDraco(payload, dracoSpecs(primInfo, accessors))
+
+  primitive.readDracoIndices(decoded, accessors, primInfo.indices)
+  if primInfo.attributes.position >= 0:
+    primitive.points = readDracoVec3(
+      decoded,
+      accessors,
+      "POSITION",
+      primInfo.attributes.position
+    )
+  if primInfo.attributes.normal >= 0:
+    primitive.normals = readDracoVec3(
+      decoded,
+      accessors,
+      "NORMAL",
+      primInfo.attributes.normal
+    )
+  if primInfo.attributes.tangent >= 0:
+    primitive.tangents = readDracoVec4(
+      decoded,
+      accessors,
+      "TANGENT",
+      primInfo.attributes.tangent
+    )
+  if primInfo.attributes.color0 >= 0:
+    primitive.colors = readDracoColors(
+      decoded,
+      accessors,
+      primInfo.attributes.color0
+    )
+  if primInfo.attributes.texcoord0 >= 0:
+    primitive.uvs = readDracoVec2(
+      decoded,
+      accessors,
+      "TEXCOORD_0",
+      primInfo.attributes.texcoord0
+    )
+  if primInfo.attributes.texcoord1 >= 0:
+    primitive.uvs1 = readDracoVec2(
+      decoded,
+      accessors,
+      "TEXCOORD_1",
+      primInfo.attributes.texcoord1
+    )
+  if primInfo.attributes.joints0 >= 0:
+    primitive.jointIds = readDracoJointIds(
+      decoded,
+      accessors,
+      primInfo.attributes.joints0
+    )
+  if primInfo.attributes.weights0 >= 0:
+    primitive.jointWeights = readDracoWeights(
+      decoded,
+      accessors,
+      primInfo.attributes.weights0
+    )
 
 proc readWeightFrames(
   accessorIdx: int,
@@ -698,7 +1155,7 @@ proc loadPrimitive(
     result.wrapS = sampler.wrapS
     result.wrapT = sampler.wrapT
 
-  let primInfo = primitiveDefs[primitiveIndex]
+  var primInfo = primitiveDefs[primitiveIndex]
   result = Primitive(mode: primInfo.mode)
   result.material = defaultRuntimeMaterial()
   if primInfo.material >= 0:
@@ -817,6 +1274,15 @@ proc loadPrimitive(
       raise newException(GltfError, &"Invalid alpha mode {material.alphaMode}")
 
     result.material.doubleSided = material.doubleSided
+
+  if primInfo.draco.used:
+    result.readDracoPrimitive(
+      primInfo,
+      accessors,
+      bufferViews,
+      buffers
+    )
+    primInfo.clearDracoSourceAccessors()
 
   if primInfo.indices >= 0:
     let
@@ -1054,8 +1520,8 @@ proc loadPrimitive(
   result.baseTangents = result.tangents
 
   if result.tangents.len == 0 and
-    primInfo.attributes.normal >= 0 and
-    primInfo.attributes.texcoord0 >= 0:
+    result.normals.len > 0 and
+    result.uvs.len > 0:
     result.tangents.setLen(result.normals.len)
 
     template computeTangents(idx: untyped) =
@@ -1120,7 +1586,8 @@ proc loadModelJsonInternal(
   if "extensionsRequired" in jsonRoot:
     for extension in jsonRoot["extensionsRequired"]:
       case extension.getStr()
-      of "KHR_texture_transform", "KHR_node_visibility", "KHR_texture_basisu":
+      of "KHR_texture_transform", "KHR_node_visibility",
+        "KHR_texture_basisu", "KHR_draco_mesh_compression":
         discard
       else:
         raise newException(
@@ -1166,8 +1633,9 @@ proc loadModelJsonInternal(
   var accessors: seq[Accessor]
   for entry in jsonRoot["accessors"]:
     var accessor = Accessor()
-    assertRaise "bufferView" in entry, "Missing bufferView"
-    accessor.bufferView = entry["bufferView"].getInt()
+    accessor.bufferView = -1
+    if "bufferView" in entry:
+      accessor.bufferView = entry["bufferView"].getInt()
     if "byteOffset" in entry:
       accessor.byteOffset = entry{"byteOffset"}.getInt()
     accessor.count = entry["count"].getInt()
@@ -1530,6 +1998,16 @@ proc loadModelJsonInternal(
         prim.mode = parsePrimitiveMode(primitive["mode"].getInt())
       else:
         prim.mode = TrianglesMode
+      if "extensions" in primitive and
+        "KHR_draco_mesh_compression" in primitive["extensions"]:
+          let draco = primitive["extensions"]["KHR_draco_mesh_compression"]
+          prim.draco.used = true
+          prim.draco.bufferView = draco["bufferView"].getInt()
+          for name, attrId in draco["attributes"]:
+            prim.draco.attributes.add(DracoAttributeInfo(
+              name: name,
+              id: attrId.getInt()
+            ))
       if "targets" in primitive:
         for target in primitive["targets"]:
           var morphTarget = MorphTargetInfo()

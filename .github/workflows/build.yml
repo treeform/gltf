@@ -63,7 +63,9 @@ jobs:
         with:
           path: ${{ github.workspace }}
       - run: nim check src/gltf.nim
+      - run: nim check tests/draco/tests.nim
       - run: nim r -d:release tests/backend_shaders.nim
+      - run: nim r -d:release tests/draco/tests.nim
       - name: Run tests (Linux)
         if: runner.os == 'Linux'
         run: xvfb-run -s "-screen 0 1024x768x24" env LIBGL_ALWAYS_SOFTWARE=1 nim r -d:release tests/tests.nim
