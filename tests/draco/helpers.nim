@@ -1,5 +1,5 @@
 import
-  gltf/dracos/types
+  gltf/draco/types
 
 template expectDracoError*(body: untyped) =
   ## Runs a block and requires it to raise a DracoError.

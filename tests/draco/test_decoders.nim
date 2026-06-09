@@ -1,5 +1,5 @@
 import
-  gltf/dracos,
+  gltf/draco,
   helpers
 
 proc testMalformedPayloads() =

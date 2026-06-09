@@ -1,7 +1,7 @@
 import
   std/[base64, json, os, strformat, strutils],
   chroma, flatty/binny, pixie, vmath, webby,
-  common, dracos, internal, models
+  common, draco, internal, models
 
 export common
 

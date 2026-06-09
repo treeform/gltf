@@ -1,5 +1,5 @@
 import
-  gltf/dracos/attributes {.all.},
+  gltf/draco/attributes {.all.},
   helpers
 
 proc testOctInitialization() =

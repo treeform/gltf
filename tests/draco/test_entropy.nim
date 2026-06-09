@@ -1,6 +1,6 @@
 import
-  gltf/dracos/bitstreams,
-  gltf/dracos/entropy {.all.},
+  gltf/draco/bitstreams,
+  gltf/draco/entropy {.all.},
   helpers
 
 proc testPrecisionBits() =

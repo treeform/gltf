@@ -1,5 +1,5 @@
 import
-  gltf/dracos/bitstreams,
+  gltf/draco/bitstreams,
   helpers
 
 proc testByteReads() =

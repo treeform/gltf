@@ -1,7 +1,7 @@
 import
   std/[algorithm],
-  gltf/dracos/meshes {.all.},
-  gltf/dracos/types
+  gltf/draco/meshes {.all.},
+  gltf/draco/types
 
 proc makeSquareTable(): CornerTable =
   ## Builds a two-triangle corner table with one shared edge.

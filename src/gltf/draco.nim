@@ -1,6 +1,6 @@
 import
-  dracos/decoders,
-  dracos/types
+  draco/decoders,
+  draco/types
 
 export types
 
