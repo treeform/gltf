@@ -90,10 +90,11 @@ func transformUv(uv, offset, scale: Vec2, rotation: float32): Vec2 =
     c = cos(rotation)
     s = sin(rotation)
     scaled = uv * scale
-  result = vec2(
-    c * scaled.x - s * scaled.y,
-    s * scaled.x + c * scaled.y
-  ) + offset
+    transformed = vec2(
+      c * scaled.x + s * scaled.y,
+      -s * scaled.x + c * scaled.y
+    ) + offset
+  result = transformed
 
 func selectUv(texCoord: int, uv, uv1: Vec2): Vec2 =
   if texCoord == 1:
@@ -208,7 +209,7 @@ proc gltfPbrFrag*(
       metallicFactor
     transmission = clamp(transmissionFactor, 0.0'f, 1.0'f)
     ambientOcclusion =
-      texture(occlusionTexture, occlusionUv).g *
+      texture(occlusionTexture, occlusionUv).r *
       occlusionStrength
     emissiveValue: Vec3 =
       texture(emissiveTexture, emissiveUv).rgb *
