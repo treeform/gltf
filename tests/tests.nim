@@ -6,6 +6,12 @@ import
   windy,
   vmath
 
+proc float32Buffer(values: openArray[float32]): string =
+  result = newString(values.len * sizeof(float32))
+  for i, value in values:
+    var copy = value
+    copyMem(result[i * sizeof(float32)].addr, copy.addr, sizeof(float32))
+
 echo "Testing empty glTF file."
 let gltfFile = GltfFile(
   path: "demo.glb",
@@ -107,6 +113,82 @@ doAssert matrixNodeY != nil
 doAssert quatNode.trs ~= matrixNodeY.trs
 doAssert quatNode.trs * xAxis ~= vec3(0, 0, -1)
 doAssert matrixNodeY.trs * xAxis ~= vec3(0, 0, -1)
+
+echo "Testing EXT_mesh_gpu_instancing expansion."
+let instancingBuffer = float32Buffer([
+  1.0'f32, 0.0, 0.0,
+  -2.0'f32, 0.0, 0.0,
+  2.0'f32, 0.0, 0.0,
+  0.0'f32, 0.0, 0.0, 1.0,
+  0.0'f32, 0.0, 0.0, 1.0,
+  1.0'f32, 1.0, 1.0,
+  2.0'f32, 1.0, 1.0
+])
+let instancingModel = loadModelJson(
+  %*{
+    "asset": {"version": "2.0"},
+    "extensionsRequired": ["EXT_mesh_gpu_instancing"],
+    "extensionsUsed": ["EXT_mesh_gpu_instancing"],
+    "buffers": [
+      {"byteLength": instancingBuffer.len}
+    ],
+    "bufferViews": [
+      {"buffer": 0, "byteOffset": 0, "byteLength": 12},
+      {"buffer": 0, "byteOffset": 12, "byteLength": 24},
+      {"buffer": 0, "byteOffset": 36, "byteLength": 32},
+      {"buffer": 0, "byteOffset": 68, "byteLength": 24}
+    ],
+    "accessors": [
+      {"bufferView": 0, "componentType": 5126, "count": 1, "type": "VEC3"},
+      {"bufferView": 1, "componentType": 5126, "count": 2, "type": "VEC3"},
+      {"bufferView": 2, "componentType": 5126, "count": 2, "type": "VEC4"},
+      {"bufferView": 3, "componentType": 5126, "count": 2, "type": "VEC3"}
+    ],
+    "meshes": [
+      {
+        "primitives": [
+          {
+            "attributes": {
+              "POSITION": 0
+            }
+          }
+        ]
+      }
+    ],
+    "nodes": [
+      {
+        "name": "InstancedNode",
+        "mesh": 0,
+        "extensions": {
+          "EXT_mesh_gpu_instancing": {
+            "attributes": {
+              "TRANSLATION": 1,
+              "ROTATION": 2,
+              "SCALE": 3
+            }
+          }
+        }
+      }
+    ],
+    "scenes": [{"nodes": [0]}],
+    "scene": 0,
+    "animations": []
+  },
+  ".",
+  @[instancingBuffer]
+)
+let instancedNode = instancingModel["InstancedNode"]
+doAssert instancedNode != nil
+doAssert instancedNode.mesh == nil
+doAssert instancedNode.nodes.len == 2
+doAssert instancedNode.nodes[0].mesh != nil
+doAssert instancedNode.nodes[0].mesh == instancedNode.nodes[1].mesh
+doAssert instancedNode.nodes[0].pos == vec3(-2, 0, 0)
+doAssert instancedNode.nodes[1].pos == vec3(2, 0, 0)
+doAssert instancedNode.nodes[1].scale == vec3(2, 1, 1)
+let instancingBounds = instancingModel.computeBounds()
+doAssert instancingBounds.center ~= vec3(1.5, 0, 0)
+doAssert instancingBounds.size ~= vec3(5, 0, 0)
 
 echo "Testing KHR_node_visibility."
 let visibilityBuffer =
