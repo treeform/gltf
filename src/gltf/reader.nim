@@ -12,7 +12,8 @@ const SupportedExtensions = [
   "KHR_animation_pointer",
   "KHR_texture_basisu",
   "EXT_texture_webp",
-  "KHR_draco_mesh_compression"
+  "KHR_draco_mesh_compression",
+  "EXT_mesh_gpu_instancing"
 ]
 
 const
@@ -245,15 +246,49 @@ proc readAccessorQuat(
     view = bufferViews[accessor.bufferView]
     buffer = buffers[view.buffer]
     start = view.byteOffset + accessor.byteOffset
-    stride = if view.byteStride > 0: view.byteStride else: 16
+    elemSize =
+      case accessor.componentType
+      of FloatComponent:
+        16
+      of ByteComponent:
+        4
+      of ShortComponent:
+        8
+      else:
+        0
+    stride = if view.byteStride > 0: view.byteStride else: elemSize
+  if accessor.kind != atVEC4:
+    raise newException(GltfError, "Unsupported quaternion accessor kind")
+  if elemSize == 0:
+    raise newException(GltfError, "Unsupported quaternion component type")
+  if accessor.componentType in {ByteComponent, ShortComponent} and
+     not accessor.normalized:
+    raise newException(
+      GltfError,
+      "Integer quaternion accessors must be normalized"
+    )
+
+  proc quatValue(data: string, off, component: int): float32 =
+    case accessor.componentType
+    of FloatComponent:
+      return readFloat32(data, off + component * 4)
+    of ByteComponent:
+      let value = cast[int8](data[off + component])
+      return max(value.float32 / 127.0'f32, -1.0'f32)
+    of ShortComponent:
+      let value = cast[int16](data.readUint16(off + component * 2))
+      return max(value.float32 / 32767.0'f32, -1.0'f32)
+    else:
+      raise newException(GltfError, "Unsupported quaternion component type")
+
   result.setLen(accessor.count)
   for i in 0 ..< accessor.count:
     let off = start + i * stride
     result[i] = quat(
-      readFloat32(buffer, off),
-      readFloat32(buffer, off + 4),
-      readFloat32(buffer, off + 8),
-      readFloat32(buffer, off + 12)
+      quatValue(buffer, off, 0),
+      quatValue(buffer, off, 1),
+      quatValue(buffer, off, 2),
+      quatValue(buffer, off, 3)
     )
   if accessor.sparse.used:
     let
@@ -262,18 +297,145 @@ proc readAccessorQuat(
       sparseBuffer = buffers[sparseView.buffer]
       sparseStart = sparseView.byteOffset + accessor.sparse.values.byteOffset
     for i, dstIndex in indices:
-      let off = sparseStart + i * 16
+      let off = sparseStart + i * elemSize
       result[dstIndex] = quat(
-        readFloat32(sparseBuffer, off),
-        readFloat32(sparseBuffer, off + 4),
-        readFloat32(sparseBuffer, off + 8),
-        readFloat32(sparseBuffer, off + 12)
+        quatValue(sparseBuffer, off, 0),
+        quatValue(sparseBuffer, off, 1),
+        quatValue(sparseBuffer, off, 2),
+        quatValue(sparseBuffer, off, 3)
       )
 
 proc assertRaise(test: bool, msg: string) =
   ## Raises an exception when a glTF invariant is not met.
   if not test:
     raise newException(GltfError, msg)
+
+type
+  MeshInstance = object
+    pos: Vec3
+    rot: Quat
+    scale: Vec3
+
+proc validateInstanceAccessor(
+  accessorIdx: int,
+  accessors: seq[Accessor],
+  semantic: string,
+  kind: AccessorKind,
+  componentTypes: openArray[ComponentType],
+  expectedCount: int
+): int =
+  ## Checks one EXT_mesh_gpu_instancing transform accessor.
+  assertRaise(
+    accessorIdx >= 0 and accessorIdx < accessors.len,
+    &"Invalid EXT_mesh_gpu_instancing {semantic} accessor"
+  )
+  let accessor = accessors[accessorIdx]
+  assertRaise(
+    accessor.kind == kind,
+    &"Unsupported EXT_mesh_gpu_instancing {semantic} accessor kind"
+  )
+  assertRaise(
+    accessor.componentType in componentTypes,
+    &"Unsupported EXT_mesh_gpu_instancing {semantic} component type"
+  )
+  if expectedCount >= 0:
+    assertRaise(
+      accessor.count == expectedCount,
+      "EXT_mesh_gpu_instancing attribute counts must match"
+    )
+  return accessor.count
+
+proc readMeshInstances(
+  instancing: JsonNode,
+  accessors: seq[Accessor],
+  bufferViews: seq[BufferView],
+  buffers: seq[string]
+): seq[MeshInstance] =
+  ## Reads EXT_mesh_gpu_instancing transforms.
+  assertRaise(
+    "attributes" in instancing,
+    "EXT_mesh_gpu_instancing requires attributes"
+  )
+  let attributes = instancing["attributes"]
+  var
+    count = -1
+    translations: seq[Vec3]
+    rotations: seq[Quat]
+    scales: seq[Vec3]
+
+  if "TRANSLATION" in attributes:
+    let accessorIdx = attributes["TRANSLATION"].getInt()
+    count = validateInstanceAccessor(
+      accessorIdx,
+      accessors,
+      "TRANSLATION",
+      atVEC3,
+      [FloatComponent],
+      count
+    )
+    translations = readAccessorVec3(
+      accessorIdx,
+      accessors,
+      bufferViews,
+      buffers
+    )
+
+  if "ROTATION" in attributes:
+    let accessorIdx = attributes["ROTATION"].getInt()
+    count = validateInstanceAccessor(
+      accessorIdx,
+      accessors,
+      "ROTATION",
+      atVEC4,
+      [FloatComponent, ByteComponent, ShortComponent],
+      count
+    )
+    rotations = readAccessorQuat(
+      accessorIdx,
+      accessors,
+      bufferViews,
+      buffers
+    )
+
+  if "SCALE" in attributes:
+    let accessorIdx = attributes["SCALE"].getInt()
+    count = validateInstanceAccessor(
+      accessorIdx,
+      accessors,
+      "SCALE",
+      atVEC3,
+      [FloatComponent],
+      count
+    )
+    scales = readAccessorVec3(
+      accessorIdx,
+      accessors,
+      bufferViews,
+      buffers
+    )
+
+  assertRaise(
+    count >= 0,
+    "EXT_mesh_gpu_instancing requires at least one transform attribute"
+  )
+
+  result.setLen(count)
+  for i in 0 ..< count:
+    result[i].pos =
+      if translations.len > 0:
+        translations[i]
+      else:
+        vec3(0, 0, 0)
+    result[i].rot =
+      if rotations.len > 0:
+        rotations[i]
+      else:
+        quat(0, 0, 0, 1)
+    result[i].scale =
+      if scales.len > 0:
+        scales[i]
+      else:
+        vec3(1, 1, 1)
 
 proc componentSize(componentType: ComponentType): int =
   ## Returns the byte size of one accessor component.
@@ -2045,6 +2207,7 @@ proc loadModelJsonInternal(
     nodeSkins: seq[int]
     nodeCameras: seq[int]
     nodeChildren: seq[seq[int]]
+    nodeInstances: seq[seq[MeshInstance]]
   for entry in jsonRoot["nodes"]:
     var node = Node()
     if "name" in entry:
@@ -2058,6 +2221,17 @@ proc loadModelJsonInternal(
         let visibility = extensions["KHR_node_visibility"]
         if "visible" in visibility:
           node.visible = visibility["visible"].getBool()
+
+    var instances: seq[MeshInstance]
+    if "extensions" in entry:
+      let extensions = entry["extensions"]
+      if "EXT_mesh_gpu_instancing" in extensions:
+        instances = readMeshInstances(
+          extensions["EXT_mesh_gpu_instancing"],
+          accessors,
+          bufferViews,
+          buffers
+        )
 
     var meshId = -1
     if "mesh" in entry:
@@ -2174,6 +2348,7 @@ proc loadModelJsonInternal(
     nodeSkins.add(skinId)
     nodeCameras.add(cameraId)
     nodeChildren.add(children)
+    nodeInstances.add(instances)
 
   var skins: seq[Skin]
   for skinInfo in skinInfos:
@@ -2415,6 +2590,7 @@ proc loadModelJsonInternal(
     let meshId = nodeMeshes[nodeId]
     let skinId = nodeSkins[nodeId]
     let cameraId = nodeCameras[nodeId]
+    let instances = nodeInstances[nodeId]
     if meshId >= 0:
       let meshInfo = meshDefs[meshId]
       let runtimeMesh = Mesh(name: meshInfo.name)
@@ -2443,6 +2619,37 @@ proc loadModelJsonInternal(
 
     for childId in nodeChildren[nodeId]:
       n.nodes.add(processNode(childId))
+
+    if instances.len > 0:
+      assertRaise(
+        n.mesh != nil,
+        "EXT_mesh_gpu_instancing requires a node mesh"
+      )
+      let
+        instanceMesh = n.mesh
+        instanceMorphWeights = n.morphWeights
+        instanceBaseMorphWeights = n.baseMorphWeights
+        instanceSkin = n.skin
+      n.mesh = nil
+      n.morphWeights.setLen(0)
+      n.baseMorphWeights.setLen(0)
+      n.skin = nil
+      for i, instance in instances:
+        n.nodes.add(Node(
+          name: &"{n.name}_instance_{i}",
+          visible: true,
+          pos: instance.pos,
+          rot: instance.rot,
+          scale: instance.scale,
+          baseVisible: true,
+          basePos: instance.pos,
+          baseRot: instance.rot,
+          baseScale: instance.scale,
+          mesh: instanceMesh,
+          morphWeights: instanceMorphWeights,
+          baseMorphWeights: instanceBaseMorphWeights,
+          skin: instanceSkin
+        ))
 
     return n
 
