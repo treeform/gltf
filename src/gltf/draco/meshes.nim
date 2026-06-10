@@ -5,6 +5,8 @@ import
 const
   InvalidCorner = -1
   InvalidVertex = -1
+  TraversalDepthFirst = 0
+  TraversalPredictionDegree = 1
   TopologyC = 0
   TopologyS = 1
   TopologyL = 3
@@ -1019,6 +1021,140 @@ proc generateSequence*(
             stack[^1] = leftCorner
             stack.add(rightCorner)
             break
+
+proc generatePredictionDegreeSequence(
+  table: CornerTable,
+  mesh: DracoMesh,
+  data: var EncodingData
+): seq[int] =
+  ## Generates point ids using Draco prediction-degree mesh traversal.
+  data.valueToCorner.setLen(0)
+  data.valueCount = 0
+  var
+    faceVisited = newSeq[uint8](table.faceCount)
+    vertexVisited = newSeq[uint8](table.vertexCount)
+    predictionDegree = newSeq[int](table.vertexCount)
+    stacks: array[3, seq[int]]
+    bestPriority = 0
+
+  template addVertex(vertex, corner: int) =
+    let pointId = mesh.faces[corner].int
+    result.add(pointId)
+    data.valueToCorner.add(corner)
+    data.vertexToValue[vertex] = data.valueCount
+    inc data.valueCount
+
+  template faceIsVisited(faceId: int): bool =
+    faceId < 0 or faceVisited[faceId] != 0
+
+  proc computePriority(corner: int): int =
+    let vertex = table.vertex(corner)
+    if vertex == InvalidVertex:
+      return 0
+    if vertexVisited[vertex] != 0:
+      return 0
+    inc predictionDegree[vertex]
+    result =
+      if predictionDegree[vertex] > 1:
+        1
+      else:
+        2
+    if result >= stacks.len:
+      result = stacks.len - 1
+
+  proc addCorner(corner, priority: int) =
+    stacks[priority].add(corner)
+    if priority < bestPriority:
+      bestPriority = priority
+
+  proc popCorner(): int =
+    for priority in bestPriority ..< stacks.len:
+      if stacks[priority].len > 0:
+        result = stacks[priority].pop()
+        bestPriority = priority
+        return
+    return InvalidCorner
+
+  for startFace in 0 ..< table.faceCount:
+    let startCorner = startFace * 3
+    if faceVisited[startFace] != 0:
+      continue
+    for priority in 0 ..< stacks.len:
+      stacks[priority].setLen(0)
+    stacks[0].add(startCorner)
+    bestPriority = 0
+
+    let
+      next = startCorner.nextCorner()
+      prev = startCorner.previousCorner()
+      nextVertex = table.vertex(next)
+      prevVertex = table.vertex(prev)
+      tipVertex = table.vertex(startCorner)
+    if nextVertex == InvalidVertex or
+      prevVertex == InvalidVertex or
+      tipVertex == InvalidVertex:
+        raise newException(DracoError, "Invalid Draco traversal vertex")
+    if vertexVisited[nextVertex] == 0:
+      vertexVisited[nextVertex] = 1
+      addVertex(nextVertex, next)
+    if vertexVisited[prevVertex] == 0:
+      vertexVisited[prevVertex] = 1
+      addVertex(prevVertex, prev)
+    if vertexVisited[tipVertex] == 0:
+      vertexVisited[tipVertex] = 1
+      addVertex(tipVertex, startCorner)
+
+    var corner = popCorner()
+    while corner != InvalidCorner:
+      var faceId = corner.face()
+      if faceIsVisited(faceId):
+        corner = popCorner()
+        continue
+      while true:
+        faceId = corner.face()
+        faceVisited[faceId] = 1
+        let vertex = table.vertex(corner)
+        if vertex == InvalidVertex:
+          raise newException(DracoError, "Invalid Draco traversal corner")
+        if vertexVisited[vertex] == 0:
+          vertexVisited[vertex] = 1
+          addVertex(vertex, corner)
+        let
+          rightCorner = table.opposite(corner.nextCorner())
+          leftCorner = table.opposite(corner.previousCorner())
+          rightFace = rightCorner.face()
+          leftFace = leftCorner.face()
+          rightVisited = faceIsVisited(rightFace)
+          leftVisited = faceIsVisited(leftFace)
+        if not leftVisited:
+          let priority = computePriority(leftCorner)
+          if rightVisited and priority <= bestPriority:
+            corner = leftCorner
+            continue
+          addCorner(leftCorner, priority)
+        if not rightVisited:
+          let priority = computePriority(rightCorner)
+          if priority <= bestPriority:
+            corner = rightCorner
+            continue
+          addCorner(rightCorner, priority)
+        break
+      corner = popCorner()
+
+proc generateSequence*(
+  table: CornerTable,
+  mesh: DracoMesh,
+  data: var EncodingData,
+  traversalMethod: int
+): seq[int] =
+  ## Generates mesh traversal point ids for attribute decoding.
+  case traversalMethod
+  of TraversalDepthFirst:
+    return table.generateSequence(mesh, data)
+  of TraversalPredictionDegree:
+    return table.generatePredictionDegreeSequence(mesh, data)
+  else:
+    raise newException(DracoError, "Unsupported Draco traversal method")
 
 proc generateSequence*(
   attr: AttributeCornerTable,
