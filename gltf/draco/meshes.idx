@@ -1,23 +1,24 @@
 nimTitle	meshes	gltf/draco/meshes.html	module gltf/draco/meshes		0
-nim	CornerTable	gltf/draco/meshes.html#CornerTable	object CornerTable		18
-nim	AttributeCornerTable	gltf/draco/meshes.html#AttributeCornerTable	object AttributeCornerTable		25
-nim	EncodingData	gltf/draco/meshes.html#EncodingData	object EncodingData		33
-nim	AttributeData	gltf/draco/meshes.html#AttributeData	object AttributeData		38
-nim	EdgebreakerMesh	gltf/draco/meshes.html#EdgebreakerMesh	object EdgebreakerMesh		63
-nim	cornerCount	gltf/draco/meshes.html#cornerCount,CornerTable	proc cornerCount(table: CornerTable): int		91
-nim	nextCorner	gltf/draco/meshes.html#nextCorner,int	proc nextCorner(corner: int): int		95
-nim	previousCorner	gltf/draco/meshes.html#previousCorner,int	proc previousCorner(corner: int): int		105
-nim	face	gltf/draco/meshes.html#face,int	proc face(corner: int): int		115
-nim	vertex	gltf/draco/meshes.html#vertex,CornerTable,int	proc vertex(table: CornerTable; corner: int): int		121
-nim	opposite	gltf/draco/meshes.html#opposite,CornerTable,int	proc opposite(table: CornerTable; corner: int): int		127
-nim	leftMostCorner	gltf/draco/meshes.html#leftMostCorner,CornerTable,int	proc leftMostCorner(table: CornerTable; vertex: int): int		133
-nim	swingLeft	gltf/draco/meshes.html#swingLeft,CornerTable,int	proc swingLeft(table: CornerTable; corner: int): int		159
-nim	swingRight	gltf/draco/meshes.html#swingRight,CornerTable,int	proc swingRight(table: CornerTable; corner: int): int		166
-nim	decodeEdgebreakerMesh	gltf/draco/meshes.html#decodeEdgebreakerMesh,DracoStream,int	proc decodeEdgebreakerMesh(stream: var DracoStream; traversalKind: int): EdgebreakerMesh		820
-nim	decodeSequentialMesh	gltf/draco/meshes.html#decodeSequentialMesh,DracoStream	proc decodeSequentialMesh(stream: var DracoStream): DracoMesh		907
-nim	generateSequence	gltf/draco/meshes.html#generateSequence,CornerTable,DracoMesh,EncodingData	proc generateSequence(table: CornerTable; mesh: DracoMesh; data: var EncodingData): seq[\n    int]		941
-nim	generateSequence	gltf/draco/meshes.html#generateSequence,AttributeCornerTable,CornerTable,DracoMesh,EncodingData	proc generateSequence(attr: AttributeCornerTable; base: CornerTable; mesh: DracoMesh;\n                 data: var EncodingData): seq[int]		1023
-nim	applyPointMap	gltf/draco/meshes.html#applyPointMap,DracoAttribute,CornerTable,DracoMesh,EncodingData	proc applyPointMap(attr: var DracoAttribute; table: CornerTable; mesh: DracoMesh;\n              data: EncodingData)		1041
-nim	applyPointMap	gltf/draco/meshes.html#applyPointMap,DracoAttribute,AttributeCornerTable,DracoMesh,EncodingData	proc applyPointMap(attr: var DracoAttribute; conn: AttributeCornerTable;\n              mesh: DracoMesh; data: EncodingData)		1057
-nimgrp	generatesequence	gltf/draco/meshes.html#generateSequence-procs-all	proc		941
-nimgrp	applypointmap	gltf/draco/meshes.html#applyPointMap-procs-all	proc		1041
+nim	CornerTable	gltf/draco/meshes.html#CornerTable	object CornerTable		20
+nim	AttributeCornerTable	gltf/draco/meshes.html#AttributeCornerTable	object AttributeCornerTable		27
+nim	EncodingData	gltf/draco/meshes.html#EncodingData	object EncodingData		35
+nim	AttributeData	gltf/draco/meshes.html#AttributeData	object AttributeData		40
+nim	EdgebreakerMesh	gltf/draco/meshes.html#EdgebreakerMesh	object EdgebreakerMesh		65
+nim	cornerCount	gltf/draco/meshes.html#cornerCount,CornerTable	proc cornerCount(table: CornerTable): int		93
+nim	nextCorner	gltf/draco/meshes.html#nextCorner,int	proc nextCorner(corner: int): int		97
+nim	previousCorner	gltf/draco/meshes.html#previousCorner,int	proc previousCorner(corner: int): int		107
+nim	face	gltf/draco/meshes.html#face,int	proc face(corner: int): int		117
+nim	vertex	gltf/draco/meshes.html#vertex,CornerTable,int	proc vertex(table: CornerTable; corner: int): int		123
+nim	opposite	gltf/draco/meshes.html#opposite,CornerTable,int	proc opposite(table: CornerTable; corner: int): int		129
+nim	leftMostCorner	gltf/draco/meshes.html#leftMostCorner,CornerTable,int	proc leftMostCorner(table: CornerTable; vertex: int): int		135
+nim	swingLeft	gltf/draco/meshes.html#swingLeft,CornerTable,int	proc swingLeft(table: CornerTable; corner: int): int		161
+nim	swingRight	gltf/draco/meshes.html#swingRight,CornerTable,int	proc swingRight(table: CornerTable; corner: int): int		168
+nim	decodeEdgebreakerMesh	gltf/draco/meshes.html#decodeEdgebreakerMesh,DracoStream,int	proc decodeEdgebreakerMesh(stream: var DracoStream; traversalKind: int): EdgebreakerMesh		822
+nim	decodeSequentialMesh	gltf/draco/meshes.html#decodeSequentialMesh,DracoStream	proc decodeSequentialMesh(stream: var DracoStream): DracoMesh		909
+nim	generateSequence	gltf/draco/meshes.html#generateSequence,CornerTable,DracoMesh,EncodingData	proc generateSequence(table: CornerTable; mesh: DracoMesh; data: var EncodingData): seq[\n    int]		943
+nim	generateSequence	gltf/draco/meshes.html#generateSequence,CornerTable,DracoMesh,EncodingData,int	proc generateSequence(table: CornerTable; mesh: DracoMesh; data: var EncodingData;\n                 traversalMethod: int): seq[int]		1144
+nim	generateSequence	gltf/draco/meshes.html#generateSequence,AttributeCornerTable,CornerTable,DracoMesh,EncodingData	proc generateSequence(attr: AttributeCornerTable; base: CornerTable; mesh: DracoMesh;\n                 data: var EncodingData): seq[int]		1159
+nim	applyPointMap	gltf/draco/meshes.html#applyPointMap,DracoAttribute,CornerTable,DracoMesh,EncodingData	proc applyPointMap(attr: var DracoAttribute; table: CornerTable; mesh: DracoMesh;\n              data: EncodingData)		1177
+nim	applyPointMap	gltf/draco/meshes.html#applyPointMap,DracoAttribute,AttributeCornerTable,DracoMesh,EncodingData	proc applyPointMap(attr: var DracoAttribute; conn: AttributeCornerTable;\n              mesh: DracoMesh; data: EncodingData)		1193
+nimgrp	generatesequence	gltf/draco/meshes.html#generateSequence-procs-all	proc		943
+nimgrp	applypointmap	gltf/draco/meshes.html#applyPointMap-procs-all	proc		1177

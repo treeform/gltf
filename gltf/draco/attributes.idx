@@ -1,3 +1,3 @@
 nimTitle	attributes	gltf/draco/attributes.html	module gltf/draco/attributes		0
-nim	decodeEdgebreakerAttributes	gltf/draco/attributes.html#decodeEdgebreakerAttributes,DracoStream,EdgebreakerMesh	proc decodeEdgebreakerAttributes(stream: var DracoStream; state: var EdgebreakerMesh)		1286
-nim	decodeSequentialAttributes	gltf/draco/attributes.html#decodeSequentialAttributes,DracoStream,DracoMesh	proc decodeSequentialAttributes(stream: var DracoStream; mesh: var DracoMesh)		1309
+nim	decodeEdgebreakerAttributes	gltf/draco/attributes.html#decodeEdgebreakerAttributes,DracoStream,EdgebreakerMesh	proc decodeEdgebreakerAttributes(stream: var DracoStream; state: var EdgebreakerMesh)		1291
+nim	decodeSequentialAttributes	gltf/draco/attributes.html#decodeSequentialAttributes,DracoStream,DracoMesh	proc decodeSequentialAttributes(stream: var DracoStream; mesh: var DracoMesh)		1314
