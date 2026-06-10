@@ -437,6 +437,13 @@ proc glValue(mode: PrimitiveMode): GLenum =
   of TriangleStripMode: GL_TRIANGLE_STRIP
   of TriangleFanMode: GL_TRIANGLE_FAN
 
+proc setFrontFace(transform: Mat4, mode: PrimitiveMode) =
+  if mode in {TrianglesMode, TriangleStripMode, TriangleFanMode} and
+    transform.determinant < 0.0'f:
+    glFrontFace(GL_CW)
+  else:
+    glFrontFace(GL_CCW)
+
 proc ensureData(primitive: Primitive): PrimitiveData =
   if primitive.data == nil:
     primitive.data = PrimitiveData()
@@ -821,10 +828,17 @@ proc renderPbrPrimitive(
 
   var
     modelArray = transform
+    normalArray = transform.normalMatrix
     viewArray = view
     projArray = proj
     lightSpaceArray = lightSpace
   glUniformMatrix4fv(modelUniform, 1, GL_FALSE, cast[ptr float32](modelArray.addr))
+  glUniformMatrix3fv(
+    glGetUniformLocation(pbrShader, "normalMatrix"),
+    1,
+    GL_FALSE,
+    cast[ptr float32](normalArray.addr)
+  )
   glUniformMatrix4fv(viewUniform, 1, GL_FALSE, cast[ptr float32](viewArray.addr))
   glUniformMatrix4fv(projUniform, 1, GL_FALSE, cast[ptr float32](projArray.addr))
   glUniformMatrix4fv(lightSpaceUniform, 1, GL_FALSE, cast[ptr float32](lightSpaceArray.addr))
@@ -984,6 +998,7 @@ proc renderPbrPrimitive(
   glUniform1i(glGetUniformLocation(pbrShader, "useShadow"), useShadow.Glint)
 
   let glMode = primitive.mode.glValue
+  setFrontFace(transform, primitive.mode)
   if primitive.mode == PointsMode:
     glPointSize(1.0)
 
@@ -1010,6 +1025,7 @@ proc renderPbrPrimitive(
 
   glDisable(GL_BLEND)
   glDepthMask(GL_TRUE)
+  glFrontFace(GL_CCW)
   glEnable(GL_CULL_FACE)
 
 proc renderPbrNode(
@@ -1276,6 +1292,7 @@ proc renderShadowPrimitive(
     glUniform4f(tintUniform, tint.r, tint.g, tint.b, tint.a)
 
   let glMode = primitive.mode.glValue
+  setFrontFace(transform, primitive.mode)
   if primitive.mode == PointsMode:
     glPointSize(1.0)
   if primitive.indices16.len == 0 and primitive.indices32.len == 0:
@@ -1286,6 +1303,7 @@ proc renderShadowPrimitive(
       glDrawElements(glMode, primitive.indices16.len.GLint, GL_UNSIGNED_SHORT, nil)
     elif primitive.indices32.len > 0:
       glDrawElements(glMode, primitive.indices32.len.GLint, GL_UNSIGNED_INT, nil)
+  glFrontFace(GL_CCW)
 
 proc renderShadowNode(
   node,

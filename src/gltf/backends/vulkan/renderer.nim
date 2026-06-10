@@ -146,6 +146,14 @@ proc putMat4(writer: var Std140Writer, value: Mat4) =
     for j in 0 ..< 4:
       writer.putFloat(value[i, j])
 
+proc putMat3(writer: var Std140Writer, value: Mat3) =
+  writer.alignOffset(16)
+  for i in 0 ..< 3:
+    for j in 0 ..< 3:
+      writer.putFloat(value[i, j])
+    writer.ensureBytes(writer.offset + 4)
+    writer.offset += 4
+
 proc putMat4Array(writer: var Std140Writer, values: openArray[Mat4], count: int) =
   writer.alignOffset(16)
   for i in 0 ..< count:
@@ -1478,6 +1486,7 @@ proc shadyVertexConstants(
   writer.putBool(jointMatrices.len > 0)
   writer.putMat4Array(jointMatrices, 128)
   writer.putMat4(transform)
+  writer.putMat3(transform.normalMatrix)
   writer.putMat4(mat4())
   writer.putMat4(proj)
   writer.putMat4(view)

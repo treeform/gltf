@@ -199,6 +199,18 @@ proc trs*(node: Node): Mat4 =
     node.rot.mat4() *
     scale(node.scale)
 
+proc linearMat3*(transform: Mat4): Mat3 =
+  ## Returns the linear part of an affine transform.
+  mat3(
+    transform[0, 0], transform[0, 1], transform[0, 2],
+    transform[1, 0], transform[1, 1], transform[1, 2],
+    transform[2, 0], transform[2, 1], transform[2, 2]
+  )
+
+proc normalMatrix*(transform: Mat4): Mat3 =
+  ## Returns the inverse-transpose matrix for transforming normals.
+  transform.linearMat3.inverse.transpose
+
 proc findTransform*(
   node, target: Node,
   transform = mat4(),

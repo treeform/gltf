@@ -24,7 +24,7 @@ const
 
   TextureDescriptorCount = 7
   RootTextureDescriptorCount = 7
-  VertexConstantRegisters = 529
+  VertexConstantRegisters = 532
   PixelConstantRegisters = 21
   StudioEnvSize = 8
   PreferredMsaaSamples = 8'u32
@@ -94,6 +94,13 @@ proc putMat4(data: var openArray[uint32], registerIndex: int, value: Mat4) =
     for j in 0 ..< 4:
       data.putFloat(outIndex, value[i, j])
       inc outIndex
+
+proc putMat3(data: var openArray[uint32], registerIndex: int, value: Mat3) =
+  var outIndex = registerIndex * 4
+  for i in 0 ..< 3:
+    for j in 0 ..< 3:
+      data.putFloat(outIndex + j, value[i, j])
+    outIndex += 4
 
 proc perspectiveDxRh*(fovY, aspect, nearPlane, farPlane: float32): Mat4 =
   ## DirectX right-handed projection matrix for vmath camera transforms.
@@ -1330,9 +1337,10 @@ proc shadyVertexConstants(
   for i in 0 ..< min(jointMatrices.len, 128):
     result.putMat4(1 + i * 4, jointMatrices[i])
   result.putMat4(513, transform)
-  result.putMat4(517, mat4())
-  result.putMat4(521, proj)
-  result.putMat4(525, view)
+  result.putMat3(517, transform.normalMatrix)
+  result.putMat4(520, mat4())
+  result.putMat4(524, proj)
+  result.putMat4(528, view)
 
 proc shadyPixelConstants(
   primitive: Primitive,

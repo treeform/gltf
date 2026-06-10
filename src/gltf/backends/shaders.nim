@@ -8,6 +8,7 @@ const ShaderPi = 3.1415926535897932384626433832795'f
 
 var
   model*: Uniform[Mat4]
+  normalMatrix*: Uniform[Mat3]
   view*: Uniform[Mat4]
   proj*: Uniform[Mat4]
   lightSpace*: Uniform[Mat4]
@@ -143,9 +144,12 @@ proc gltfPbrVert*(
   uv = vertexUV
   uv1 = vertexUV1
 
-  let n: Vec3 = safeNormalize((model * vec4(skinnedNormal, 0.0'f)).xyz)
+  let
+    n = safeNormalize(normalMatrix * skinnedNormal)
+    rawTangent = (model * vec4(skinnedTangent, 0.0'f)).xyz
+    t = safeNormalize(rawTangent - n * dot(n, rawTangent))
   normal = n
-  tangent = safeNormalize((model * vec4(skinnedTangent, 0.0'f)).xyz)
+  tangent = t
   bitangent = cross(n, tangent) * vertexTangent.w
   vPosLightSpace = lightSpace * vec4(worldPos, 1.0'f)
   gl_Position = proj * view * model * skinnedPosition
