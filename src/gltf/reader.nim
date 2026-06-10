@@ -11,6 +11,7 @@ const SupportedExtensions = [
   "KHR_node_visibility",
   "KHR_animation_pointer",
   "KHR_texture_basisu",
+  "EXT_texture_webp",
   "KHR_draco_mesh_compression"
 ]
 
@@ -1585,11 +1586,7 @@ proc loadModelJsonInternal(
   ## Loads a 3D model from a parsed glTF json tree.
   if "extensionsRequired" in jsonRoot:
     for extension in jsonRoot["extensionsRequired"]:
-      case extension.getStr()
-      of "KHR_texture_transform", "KHR_node_visibility",
-        "KHR_texture_basisu", "KHR_draco_mesh_compression":
-        discard
-      else:
+      if extension.getStr() notin SupportedExtensions:
         raise newException(
           GltfError,
           &"Unsupported extension required: {extension}"
@@ -1683,13 +1680,15 @@ proc loadModelJsonInternal(
     for entry in jsonRoot["textures"]:
       var texture = Texture()
       texture.source = -1
-      if "extensions" in entry and
-         "KHR_texture_basisu" in entry["extensions"]:
-        texture.source =
-          entry["extensions"]["KHR_texture_basisu"]["source"].getInt()
-      elif "source" in entry:
+      if "extensions" in entry:
+        let extensions = entry["extensions"]
+        if "KHR_texture_basisu" in extensions:
+          texture.source = extensions["KHR_texture_basisu"]["source"].getInt()
+        elif "EXT_texture_webp" in extensions:
+          texture.source = extensions["EXT_texture_webp"]["source"].getInt()
+      if texture.source < 0 and "source" in entry:
         texture.source = entry["source"].getInt()
-      else:
+      if texture.source < 0:
         raise newException(GltfError, "Texture is missing a source image")
       if "sampler" in entry:
         texture.sampler = entry["sampler"].getInt()
@@ -1711,13 +1710,15 @@ proc loadModelJsonInternal(
         if imageName.len == 0:
           imageName = extractFilename(uri)
         if uri.startsWith("data:image/png") or
-           uri.startsWith("data:image/jpeg"):
+           uri.startsWith("data:image/jpeg") or
+           uri.startsWith("data:image/webp"):
           image = decodeImage(decode(uri.split(',')[1]))
         elif uri.startsWith("data:image/ktx2"):
           ktx2Data = decode(uri.split(',')[1])
         elif uri.endsWith(".png") or
              uri.endsWith(".jpg") or
-             uri.endsWith(".jpeg"):
+             uri.endsWith(".jpeg") or
+             uri.endsWith(".webp"):
           image = readImage(joinPath(modelDir, uri))
         elif uri.endsWith(".ktx2"):
           ktx2Data = readFile(joinPath(modelDir, uri))
