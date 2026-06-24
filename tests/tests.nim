@@ -415,6 +415,26 @@ proc writeBytes(path: string, bytes: openArray[byte]) =
     data[i] = char(value)
   writeFile(path, data)
 
+proc writeUint32Le(data: var string, offset: int, value: uint32) =
+  ## Writes a little-endian uint32 into a test byte string.
+  data[offset] = char(value and 0xFF'u32)
+  data[offset + 1] = char((value shr 8) and 0xFF'u32)
+  data[offset + 2] = char((value shr 16) and 0xFF'u32)
+  data[offset + 3] = char((value shr 24) and 0xFF'u32)
+
+proc writeUint64Le(data: var string, offset: int, value: uint64) =
+  ## Writes a little-endian uint64 into a test byte string.
+  for i in 0 .. 7:
+    data[offset + i] = char((value shr (i * 8)) and 0xFF'u64)
+
+proc expectKtx2Error(data, message: string) =
+  ## Asserts that KTX2 parsing raises the expected error.
+  try:
+    discard parseKtx2(data)
+    doAssert false, "KTX2 parser should have rejected the data"
+  except GltfError as error:
+    doAssert error.msg.contains(message), error.msg
+
 proc createKtx2Fixture(
   ktxExe, outDir: string,
   testCase: Ktx2Case
@@ -449,6 +469,31 @@ let ktxOutDir = joinPath(tmpDir, "out_ktx2")
 if dirExists(ktxOutDir):
   removeDir(ktxOutDir)
 createDir(ktxOutDir)
+
+echo "Testing KTX2 parser validation."
+let validBc1Data = encodeKtx2(
+  VkFormatBc1RgbUnormBlock,
+  4,
+  4,
+  @["\0\0\0\0\0\0\0\0"]
+)
+let validBc1Info = parseKtx2(validBc1Data)
+doAssert validBc1Info.width == 4
+doAssert validBc1Info.height == 4
+doAssert validBc1Info.levels[0].byteLength == 8
+
+var badLevelLengthData = validBc1Data
+writeUint64Le(badLevelLengthData, 88, 7'u64)
+expectKtx2Error(badLevelLengthData, "does not match expected")
+
+var badTypeSizeData = validBc1Data
+writeUint32Le(badTypeSizeData, 16, 4'u32)
+expectKtx2Error(badTypeSizeData, "typeSize")
+
+var basisLikeData = validBc1Data
+writeUint32Le(basisLikeData, 12, 0'u32)
+writeUint32Le(basisLikeData, 44, 1'u32)
+expectKtx2Error(basisLikeData, "supercompressed")
 
 let ktxCases = [
   Ktx2Case(

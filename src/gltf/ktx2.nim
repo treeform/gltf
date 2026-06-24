@@ -348,6 +348,46 @@ proc bytesPerPixelForVkFormat(vkFormat: uint32): int =
   else:
     raiseKtx2Error("no bytes-per-pixel defined for " & vkFormatName(vkFormat))
 
+proc blockBytesForVkFormat(vkFormat: uint32): int =
+  ## Returns the byte size of one compressed block.
+  case vkFormat
+  of VkFormatBc1RgbUnormBlock, VkFormatBc1RgbSrgbBlock,
+     VkFormatBc1RgbaUnormBlock, VkFormatBc1RgbaSrgbBlock,
+     VkFormatBc4UnormBlock, VkFormatBc4SnormBlock:
+    8
+  of VkFormatBc2UnormBlock, VkFormatBc2SrgbBlock,
+     VkFormatBc3UnormBlock, VkFormatBc3SrgbBlock,
+     VkFormatBc5UnormBlock, VkFormatBc5SnormBlock:
+    16
+  else:
+    raiseKtx2Error("no block size defined for " & vkFormatName(vkFormat))
+
+proc typeSizeForVkFormat(vkFormat: uint32): uint32 =
+  ## Returns the KTX2 type size for a supported Vulkan format.
+  if isCompressedVkFormat(vkFormat):
+    1'u32
+  else:
+    bytesPerPixelForVkFormat(vkFormat).uint32
+
+proc expectedLevelByteLength(
+  vkFormat: uint32,
+  width, height: int
+): uint64 =
+  ## Returns the exact payload size for one supported 2D mip level.
+  if isCompressedVkFormat(vkFormat):
+    let
+      blocksWide = (width.uint64 + 3'u64) div 4'u64
+      blocksHigh = (height.uint64 + 3'u64) div 4'u64
+    blocksWide * blocksHigh * blockBytesForVkFormat(vkFormat).uint64
+  else:
+    width.uint64 * height.uint64 * bytesPerPixelForVkFormat(vkFormat).uint64
+
+proc checkedInt(value: uint64, name: string): int =
+  ## Converts a KTX2 uint64 field to a platform int.
+  if value > high(int).uint64:
+    raiseKtx2Error(name & " is too large")
+  value.int
+
 proc levelAlignmentForVkFormat(vkFormat: uint32): int =
   case vkFormat
   of VkFormatBc1RgbUnormBlock, VkFormatBc1RgbSrgbBlock,
@@ -368,7 +408,7 @@ proc parseKtx2*(data: string): Ktx2TextureInfo =
     raiseKtx2Error("invalid identifier")
 
   result.vkFormat = data.readUint32(12)
-  discard data.readUint32(16) # typeSize
+  let typeSize = data.readUint32(16)
   result.width = data.readUint32(20).int
   result.height = data.readUint32(24).int
   result.depth = data.readUint32(28).int
@@ -376,7 +416,6 @@ proc parseKtx2*(data: string): Ktx2TextureInfo =
   result.faceCount = data.readUint32(36).int
   result.levelCount = data.readUint32(40).int
   result.supercompressionScheme = data.readUint32(44)
-  result.glInternalFormat = glInternalFormatForVkFormat(result.vkFormat)
 
   if result.width <= 0 or result.height <= 0:
     raiseKtx2Error("only 2D textures with width and height are supported")
@@ -390,6 +429,15 @@ proc parseKtx2*(data: string): Ktx2TextureInfo =
     raiseKtx2Error("KTX2 textures must include at least one mip level")
   if result.supercompressionScheme != Ktx2NoSupercompression:
     raiseKtx2Error("supercompressed KTX2 textures are not supported")
+  if not isSupportedVkFormat(result.vkFormat):
+    raiseKtx2Error("unsupported vkFormat " & vkFormatName(result.vkFormat))
+  let expectedTypeSize = typeSizeForVkFormat(result.vkFormat)
+  if typeSize != expectedTypeSize:
+    raiseKtx2Error(
+      "typeSize " & $typeSize & " does not match " &
+      vkFormatName(result.vkFormat)
+    )
+  result.glInternalFormat = glInternalFormatForVkFormat(result.vkFormat)
 
   let levelIndexEnd = Ktx2HeaderSize + result.levelCount * Ktx2LevelSize
   if levelIndexEnd > data.len:
@@ -398,13 +446,34 @@ proc parseKtx2*(data: string): Ktx2TextureInfo =
   result.levels.setLen(result.levelCount)
   for level in 0 ..< result.levelCount:
     let offset = Ktx2HeaderSize + level * Ktx2LevelSize
-    let byteOffset = data.readUint64(offset).int
-    let byteLength = data.readUint64(offset + 8).int
-    let uncompressedByteLength = data.readUint64(offset + 16).int
-    if byteOffset < 0 or byteLength <= 0:
+    let
+      byteOffsetRaw = data.readUint64(offset)
+      byteLengthRaw = data.readUint64(offset + 8)
+      uncompressedByteLengthRaw = data.readUint64(offset + 16)
+      byteOffset = checkedInt(byteOffsetRaw, "level byteOffset")
+      byteLength = checkedInt(byteLengthRaw, "level byteLength")
+      uncompressedByteLength = checkedInt(
+        uncompressedByteLengthRaw,
+        "level uncompressedByteLength"
+      )
+    if byteLength <= 0:
       raiseKtx2Error("invalid level index entry")
-    if byteOffset + byteLength > data.len:
+    if byteOffsetRaw > data.len.uint64 or
+       byteLengthRaw > data.len.uint64 - byteOffsetRaw:
       raiseKtx2Error("level data extends past end of file")
+    let
+      levelWidth = mipDimension(result.width, level)
+      levelHeight = mipDimension(result.height, level)
+      expectedByteLength = expectedLevelByteLength(
+        result.vkFormat,
+        levelWidth,
+        levelHeight
+      )
+    if byteLengthRaw != expectedByteLength:
+      raiseKtx2Error(
+        "level " & $level & " byteLength " & $byteLengthRaw &
+        " does not match expected " & $expectedByteLength
+      )
     result.levels[level] = Ktx2LevelInfo(
       byteOffset: byteOffset,
       byteLength: byteLength,
@@ -414,13 +483,32 @@ proc parseKtx2*(data: string): Ktx2TextureInfo =
 proc readKtx2File*(file: string): Ktx2TextureInfo =
   parseKtx2(readFile(file))
 
-proc encodeKtx2*(vkFormat: uint32, width, height: int, levelsData: openArray[string]): string =
+proc encodeKtx2*(
+  vkFormat: uint32,
+  width, height: int,
+  levelsData: openArray[string]
+): string =
   if not isSupportedVkFormat(vkFormat):
     raiseKtx2Error("unsupported write format " & vkFormatName(vkFormat))
   if width <= 0 or height <= 0:
     raiseKtx2Error("width and height must be positive")
   if levelsData.len == 0:
     raiseKtx2Error("at least one mip level is required")
+
+  for level, levelBytes in levelsData:
+    let
+      levelWidth = mipDimension(width, level)
+      levelHeight = mipDimension(height, level)
+      expectedByteLength = expectedLevelByteLength(
+        vkFormat,
+        levelWidth,
+        levelHeight
+      )
+    if levelBytes.len.uint64 != expectedByteLength:
+      raiseKtx2Error(
+        "level " & $level & " byteLength " & $levelBytes.len &
+        " does not match expected " & $expectedByteLength
+      )
 
   let
     dfd = dfdForVkFormat(vkFormat)
@@ -431,9 +519,12 @@ proc encodeKtx2*(vkFormat: uint32, width, height: int, levelsData: openArray[str
 
   result = Ktx2Identifier
   result.appendUint32Le(vkFormat)
-  result.appendUint32Le(
-    if isCompressedVkFormat(vkFormat): 1'u32 else: bytesPerPixelForVkFormat(vkFormat).uint32
-  )
+  let ktxTypeSize =
+    if isCompressedVkFormat(vkFormat):
+      1'u32
+    else:
+      bytesPerPixelForVkFormat(vkFormat).uint32
+  result.appendUint32Le(ktxTypeSize)
   result.appendUint32Le(width.uint32)
   result.appendUint32Le(height.uint32)
   result.appendUint32Le(0)
