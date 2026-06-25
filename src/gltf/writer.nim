@@ -436,6 +436,102 @@ proc writeGLB*(
     idx
 
   var meshIds = initTable[pointer, int]()
+  var
+    nodeIds = initTable[pointer, int]()
+    skinIds = initTable[pointer, int]()
+    walkedNodes: seq[Node]
+    skinsJson: seq[JsonNode]
+    animationsJson: seq[JsonNode]
+
+  proc addFloatAccessor(values: seq[float32]): int =
+    ## Adds one scalar float accessor.
+    var payload = newString(values.len * 4)
+    for i, value in values:
+      payload.writeFloat32(i * 4, value)
+    addAccessor(
+      accessors,
+      bufferViews,
+      data,
+      payload,
+      atSCALAR,
+      FloatComponent,
+      values.len,
+      0
+    )
+
+  proc addVec3Accessor(values: seq[Vec3]): int =
+    ## Adds one Vec3 float accessor.
+    var payload = newString(values.len * 12)
+    for i, value in values:
+      payload.writeFloat32(i * 12 + 0, value.x)
+      payload.writeFloat32(i * 12 + 4, value.y)
+      payload.writeFloat32(i * 12 + 8, value.z)
+    addAccessor(
+      accessors,
+      bufferViews,
+      data,
+      payload,
+      atVEC3,
+      FloatComponent,
+      values.len,
+      0
+    )
+
+  proc addVec4Accessor(values: seq[Vec4]): int =
+    ## Adds one Vec4 float accessor.
+    var payload = newString(values.len * 16)
+    for i, value in values:
+      payload.writeFloat32(i * 16 + 0, value.x)
+      payload.writeFloat32(i * 16 + 4, value.y)
+      payload.writeFloat32(i * 16 + 8, value.z)
+      payload.writeFloat32(i * 16 + 12, value.w)
+    addAccessor(
+      accessors,
+      bufferViews,
+      data,
+      payload,
+      atVEC4,
+      FloatComponent,
+      values.len,
+      0
+    )
+
+  proc addQuatAccessor(values: seq[Quat]): int =
+    ## Adds one quaternion accessor.
+    var payload = newString(values.len * 16)
+    for i, value in values:
+      payload.writeFloat32(i * 16 + 0, value.x)
+      payload.writeFloat32(i * 16 + 4, value.y)
+      payload.writeFloat32(i * 16 + 8, value.z)
+      payload.writeFloat32(i * 16 + 12, value.w)
+    addAccessor(
+      accessors,
+      bufferViews,
+      data,
+      payload,
+      atVEC4,
+      FloatComponent,
+      values.len,
+      0
+    )
+
+  proc addMat4Accessor(values: seq[Mat4]): int =
+    ## Adds one Mat4 float accessor.
+    var payload = newString(values.len * 64)
+    for i, value in values:
+      let floats = cast[ptr UncheckedArray[float32]](value.addr)
+      for j in 0 ..< 16:
+        payload.writeFloat32(i * 64 + j * 4, floats[j])
+    addAccessor(
+      accessors,
+      bufferViews,
+      data,
+      payload,
+      atMAT4,
+      FloatComponent,
+      values.len,
+      0
+    )
 
   proc primitiveJson(primitive: Primitive): JsonNode =
     ## Builds one glTF primitive entry from runtime data.
@@ -514,6 +610,30 @@ proc writeGLB*(
         0
       )
       attributes["COLOR_0"] = newJInt(acc)
+
+    if primitive.jointIds.len == primitive.points.len and
+      primitive.jointIds.len > 0:
+      var payload = newString(primitive.jointIds.len * 8)
+      for i, ids in primitive.jointIds:
+        for j in 0 ..< 4:
+          payload.writeUint16AtLe(i * 8 + j * 2, ids[j])
+      let acc = addAccessor(
+        accessors,
+        bufferViews,
+        data,
+        payload,
+        atVEC4,
+        UnsignedShortComponent,
+        primitive.jointIds.len,
+        0
+      )
+      attributes["JOINTS_0"] = newJInt(acc)
+
+    if primitive.jointWeights.len == primitive.points.len and
+      primitive.jointWeights.len > 0:
+      attributes["WEIGHTS_0"] = newJInt(
+        addVec4Accessor(primitive.jointWeights)
+      )
 
     var indicesAcc = -1
     if primitive.indices16.len > 0:
@@ -623,9 +743,135 @@ proc writeGLB*(
         nodeObj["children"].add(newJInt(childIdx))
 
     nodesJson.add(nodeObj)
-    nodesJson.len - 1
+    result = nodesJson.len - 1
+    nodeIds[cast[pointer](n)] = result
+    walkedNodes.add(n)
+
+  proc skinIndex(skin: Skin): int =
+    ## Returns the output glTF skin index for one runtime skin.
+    if skin == nil:
+      return -1
+    let key = cast[pointer](skin)
+    if key in skinIds:
+      return skinIds[key]
+
+    var skinObj = newJObject()
+    skinObj["name"] = newJString(skin.name)
+    skinObj["joints"] = newJArray()
+    for joint in skin.joints:
+      let jointKey = cast[pointer](joint)
+      if jointKey in nodeIds:
+        skinObj["joints"].add(newJInt(nodeIds[jointKey]))
+    if skin.skeleton != nil:
+      let skeletonKey = cast[pointer](skin.skeleton)
+      if skeletonKey in nodeIds:
+        skinObj["skeleton"] = newJInt(nodeIds[skeletonKey])
+    if skin.inverseBindMatrices.len > 0:
+      skinObj["inverseBindMatrices"] = newJInt(
+        addMat4Accessor(skin.inverseBindMatrices)
+      )
+
+    skinsJson.add(skinObj)
+    let idx = skinsJson.len - 1
+    skinIds[key] = idx
+    idx
+
+  proc animationInterpolation(value: AnimInterpolation): string =
+    ## Converts one runtime interpolation to glTF sampler text.
+    case value
+    of aiStep:
+      "STEP"
+    of aiLinear:
+      "LINEAR"
+    of aiCubicSpline:
+      "LINEAR"
+
+  proc addAnimationChannel(
+    samplers,
+    channels: JsonNode,
+    channel: AnimationChannel
+  ) =
+    ## Adds one animation channel when it maps to core glTF animation data.
+    if channel.target == nil or channel.times.len == 0:
+      return
+    let targetKey = cast[pointer](channel.target)
+    if targetKey notin nodeIds:
+      return
+
+    var
+      outputAccessor = -1
+      path = ""
+      valueCount = 0
+    case channel.path
+    of AnimTranslation:
+      if channel.valuesVec3.len != channel.times.len:
+        return
+      outputAccessor = addVec3Accessor(channel.valuesVec3)
+      path = "translation"
+      valueCount = channel.valuesVec3.len
+    of AnimRotation:
+      if channel.valuesQuat.len != channel.times.len:
+        return
+      outputAccessor = addQuatAccessor(channel.valuesQuat)
+      path = "rotation"
+      valueCount = channel.valuesQuat.len
+    of AnimScale:
+      if channel.valuesVec3.len != channel.times.len:
+        return
+      outputAccessor = addVec3Accessor(channel.valuesVec3)
+      path = "scale"
+      valueCount = channel.valuesVec3.len
+    of AnimWeights:
+      if channel.valuesWeights.len != channel.times.len:
+        return
+      return
+    of AnimVisibility:
+      return
+    if valueCount == 0:
+      return
+
+    let samplerIndex = samplers.len
+    samplers.add(%*{
+      "input": addFloatAccessor(channel.times),
+      "output": outputAccessor,
+      "interpolation": channel.interpolation.animationInterpolation()
+    })
+    channels.add(%*{
+      "sampler": samplerIndex,
+      "target": {
+        "node": nodeIds[targetKey],
+        "path": path
+      }
+    })
+
+  proc addAnimation(clip: AnimationClip) =
+    ## Adds one glTF animation object.
+    var
+      samplers = newJArray()
+      channels = newJArray()
+    for channel in clip.channels:
+      addAnimationChannel(samplers, channels, channel)
+    if channels.len == 0:
+      return
+
+    var animObj = newJObject()
+    animObj["name"] = newJString(clip.name)
+    animObj["samplers"] = samplers
+    animObj["channels"] = channels
+    animationsJson.add(animObj)
 
   let rootIdx = walk(root)
+  for n in walkedNodes:
+    if n.skin == nil:
+      continue
+    let
+      key = cast[pointer](n)
+      skinIdx = skinIndex(n.skin)
+    if key in nodeIds and skinIdx >= 0:
+      nodesJson[nodeIds[key]]["skin"] = newJInt(skinIdx)
+
+  for clip in root.animations:
+    addAnimation(clip)
 
   var jsonRoot = newJObject()
   jsonRoot["asset"] = %*{"version": "2.0"}
@@ -685,6 +931,10 @@ proc writeGLB*(
     jsonRoot["images"] = %*images
   if materials.len > 0:
     jsonRoot["materials"] = %*materials
+  if skinsJson.len > 0:
+    jsonRoot["skins"] = %*skinsJson
+  if animationsJson.len > 0:
+    jsonRoot["animations"] = %*animationsJson
 
   jsonRoot["meshes"] = %*meshes
   jsonRoot["nodes"] = %*nodesJson
