@@ -59,8 +59,9 @@ proc setupPbr*() =
   ## Sets up the PBR rendering system.
   ## * Create Environment Map and Framebuffer.
 
-  # Reduce visible seams when sampling blurred cubemap mip levels.
-  glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS)
+  when not defined(emscripten):
+    # Reduce visible seams when sampling blurred cubemap mip levels.
+    glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS)
 
   glGenTextures(1, addr environmentMapId)
   glBindTexture(GL_TEXTURE_CUBE_MAP, environmentMapId)
@@ -131,12 +132,17 @@ proc setupPbr*() =
   )
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER)
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER)
+  when defined(emscripten):
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+  else:
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER)
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE.cint)
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL.cint)
-  var borderColor = [1.0.GLfloat, 1.0, 1.0, 1.0]
-  glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor[0].addr)
+  when not defined(emscripten):
+    var borderColor = [1.0.GLfloat, 1.0, 1.0, 1.0]
+    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor[0].addr)
 
   glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFbo)
   glFramebufferTexture2D(
