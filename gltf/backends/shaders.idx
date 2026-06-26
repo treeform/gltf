@@ -59,33 +59,32 @@ nim	cameraPosition	gltf/backends/shaders.html#cameraPosition	var cameraPosition	
 nim	debugViewMode	gltf/backends/shaders.html#debugViewMode	var debugViewMode		76
 nim	shadowBias	gltf/backends/shaders.html#shadowBias	var shadowBias		77
 nim	gltfPbrVert	gltf/backends/shaders.html#gltfPbrVert,Vec3,Vec4,Vec3,Vec2,Vec4,UVec4,Vec4,Vec2,Vec4,Vec3,Vec4,Vec3,Vec2,Vec2,Vec3,Vec3,Vec4	proc gltfPbrVert(vertexPosition: Vec3; vertexColor: Vec4; vertexNormal: Vec3;\n            vertexUV: Vec2; vertexTangent: Vec4; vertexJoints: UVec4;\n            vertexWeights: Vec4; vertexUV1: Vec2; gl_Position: var Vec4;\n            worldPos: var Vec3; color: var Vec4; normal: var Vec3; uv: var Vec2;\n            uv1: var Vec2; tangent: var Vec3; bitangent: var Vec3;\n            vPosLightSpace: var Vec4)		112
-nim	gltfPbrShade	gltf/backends/shaders.html#gltfPbrShade,Vec3,Vec3,Vec4,Vec3,float32,float32,float32,float32,float32,Vec3,Vec4	proc gltfPbrShade(worldPos: Vec3; shadingNormal: Vec3; vPosLightSpace: Vec4;\n             albedo: Vec3; alpha: float32; roughness: float32;\n             metallic: float32; transmission: float32;\n             ambientOcclusion: float32; emissiveValue: Vec3; fragColor: var Vec4)		157
-nim	gltfPbrFrag	gltf/backends/shaders.html#gltfPbrFrag,Vec3,Vec4,Vec3,Vec2,Vec2,Vec3,Vec3,Vec4,Vec4	proc gltfPbrFrag(worldPos: Vec3; color: Vec4; normal: Vec3; uv: Vec2; uv1: Vec2;\n            tangent: Vec3; bitangent: Vec3; vPosLightSpace: Vec4;\n            fragColor: var Vec4)		301
-nim	gltfSkyboxVert	gltf/backends/shaders.html#gltfSkyboxVert,Vec2,Vec4,Vec3	proc gltfSkyboxVert(vertexPosition: Vec2; gl_Position: var Vec4; rayDir: var Vec3)		398
-nim	gltfSkyboxFrag	gltf/backends/shaders.html#gltfSkyboxFrag,Vec3,Vec4	proc gltfSkyboxFrag(rayDir: Vec3; fragColor: var Vec4)		408
-nim	gltfShadowDepthVert	gltf/backends/shaders.html#gltfShadowDepthVert,Vec3,Vec2,UVec4,Vec4,Vec4,Vec2	proc gltfShadowDepthVert(vertexPosition: Vec3; vertexUV: Vec2; vertexJoints: UVec4;\n                    vertexWeights: Vec4; gl_Position: var Vec4;\n                    fragmentUv: var Vec2)		431
-nim	gltfShadowDepthFrag	gltf/backends/shaders.html#gltfShadowDepthFrag,Vec2	proc gltfShadowDepthFrag(fragmentUv: Vec2)		447
-nim	PbrVertSrc	gltf/backends/shaders.html#PbrVertSrc	const PbrVertSrc		454
-nim	PbrFragSrc	gltf/backends/shaders.html#PbrFragSrc	const PbrFragSrc		455
-nim	SkyboxVertSrc	gltf/backends/shaders.html#SkyboxVertSrc	const SkyboxVertSrc		456
-nim	SkyboxFragSrc	gltf/backends/shaders.html#SkyboxFragSrc	const SkyboxFragSrc		457
-nim	ShadowDepthVertSrc	gltf/backends/shaders.html#ShadowDepthVertSrc	const ShadowDepthVertSrc		458
-nim	ShadowDepthFragSrc	gltf/backends/shaders.html#ShadowDepthFragSrc	const ShadowDepthFragSrc		460
-nim	PbrVertHlsl	gltf/backends/shaders.html#PbrVertHlsl	const PbrVertHlsl		463
-nim	PbrFragHlsl	gltf/backends/shaders.html#PbrFragHlsl	const PbrFragHlsl		464
-nim	SkyboxVertHlsl	gltf/backends/shaders.html#SkyboxVertHlsl	const SkyboxVertHlsl		465
-nim	SkyboxFragHlsl	gltf/backends/shaders.html#SkyboxFragHlsl	const SkyboxFragHlsl		466
-nim	ShadowDepthVertHlsl	gltf/backends/shaders.html#ShadowDepthVertHlsl	const ShadowDepthVertHlsl		467
-nim	ShadowDepthFragHlsl	gltf/backends/shaders.html#ShadowDepthFragHlsl	const ShadowDepthFragHlsl		469
-nim	PbrVertVulkan	gltf/backends/shaders.html#PbrVertVulkan	const PbrVertVulkan		472
-nim	PbrFragVulkan	gltf/backends/shaders.html#PbrFragVulkan	const PbrFragVulkan		473
-nim	SkyboxVertVulkan	gltf/backends/shaders.html#SkyboxVertVulkan	const SkyboxVertVulkan		474
-nim	SkyboxFragVulkan	gltf/backends/shaders.html#SkyboxFragVulkan	const SkyboxFragVulkan		475
-nim	ShadowDepthVertVulkan	gltf/backends/shaders.html#ShadowDepthVertVulkan	const ShadowDepthVertVulkan		476
-nim	ShadowDepthFragVulkan	gltf/backends/shaders.html#ShadowDepthFragVulkan	const ShadowDepthFragVulkan		478
-nim	PbrVertMsl	gltf/backends/shaders.html#PbrVertMsl	const PbrVertMsl		481
-nim	PbrFragMsl	gltf/backends/shaders.html#PbrFragMsl	const PbrFragMsl		482
-nim	SkyboxVertMsl	gltf/backends/shaders.html#SkyboxVertMsl	const SkyboxVertMsl		483
-nim	SkyboxFragMsl	gltf/backends/shaders.html#SkyboxFragMsl	const SkyboxFragMsl		484
-nim	ShadowDepthVertMsl	gltf/backends/shaders.html#ShadowDepthVertMsl	const ShadowDepthVertMsl		485
-nim	ShadowDepthFragMsl	gltf/backends/shaders.html#ShadowDepthFragMsl	const ShadowDepthFragMsl		487
+nim	gltfPbrFrag	gltf/backends/shaders.html#gltfPbrFrag,Vec3,Vec4,Vec3,Vec2,Vec2,Vec3,Vec3,Vec4,Vec4	proc gltfPbrFrag(worldPos: Vec3; color: Vec4; normal: Vec3; uv: Vec2; uv1: Vec2;\n            tangent: Vec3; bitangent: Vec3; vPosLightSpace: Vec4;\n            fragColor: var Vec4)		157
+nim	gltfSkyboxVert	gltf/backends/shaders.html#gltfSkyboxVert,Vec2,Vec4,Vec3	proc gltfSkyboxVert(vertexPosition: Vec2; gl_Position: var Vec4; rayDir: var Vec3)		362
+nim	gltfSkyboxFrag	gltf/backends/shaders.html#gltfSkyboxFrag,Vec3,Vec4	proc gltfSkyboxFrag(rayDir: Vec3; fragColor: var Vec4)		372
+nim	gltfShadowDepthVert	gltf/backends/shaders.html#gltfShadowDepthVert,Vec3,Vec2,UVec4,Vec4,Vec4,Vec2	proc gltfShadowDepthVert(vertexPosition: Vec3; vertexUV: Vec2; vertexJoints: UVec4;\n                    vertexWeights: Vec4; gl_Position: var Vec4;\n                    fragmentUv: var Vec2)		395
+nim	gltfShadowDepthFrag	gltf/backends/shaders.html#gltfShadowDepthFrag,Vec2	proc gltfShadowDepthFrag(fragmentUv: Vec2)		411
+nim	PbrVertSrc	gltf/backends/shaders.html#PbrVertSrc	const PbrVertSrc		418
+nim	PbrFragSrc	gltf/backends/shaders.html#PbrFragSrc	const PbrFragSrc		419
+nim	SkyboxVertSrc	gltf/backends/shaders.html#SkyboxVertSrc	const SkyboxVertSrc		420
+nim	SkyboxFragSrc	gltf/backends/shaders.html#SkyboxFragSrc	const SkyboxFragSrc		421
+nim	ShadowDepthVertSrc	gltf/backends/shaders.html#ShadowDepthVertSrc	const ShadowDepthVertSrc		422
+nim	ShadowDepthFragSrc	gltf/backends/shaders.html#ShadowDepthFragSrc	const ShadowDepthFragSrc		424
+nim	PbrVertHlsl	gltf/backends/shaders.html#PbrVertHlsl	const PbrVertHlsl		427
+nim	PbrFragHlsl	gltf/backends/shaders.html#PbrFragHlsl	const PbrFragHlsl		428
+nim	SkyboxVertHlsl	gltf/backends/shaders.html#SkyboxVertHlsl	const SkyboxVertHlsl		429
+nim	SkyboxFragHlsl	gltf/backends/shaders.html#SkyboxFragHlsl	const SkyboxFragHlsl		430
+nim	ShadowDepthVertHlsl	gltf/backends/shaders.html#ShadowDepthVertHlsl	const ShadowDepthVertHlsl		431
+nim	ShadowDepthFragHlsl	gltf/backends/shaders.html#ShadowDepthFragHlsl	const ShadowDepthFragHlsl		433
+nim	PbrVertVulkan	gltf/backends/shaders.html#PbrVertVulkan	const PbrVertVulkan		436
+nim	PbrFragVulkan	gltf/backends/shaders.html#PbrFragVulkan	const PbrFragVulkan		437
+nim	SkyboxVertVulkan	gltf/backends/shaders.html#SkyboxVertVulkan	const SkyboxVertVulkan		438
+nim	SkyboxFragVulkan	gltf/backends/shaders.html#SkyboxFragVulkan	const SkyboxFragVulkan		439
+nim	ShadowDepthVertVulkan	gltf/backends/shaders.html#ShadowDepthVertVulkan	const ShadowDepthVertVulkan		440
+nim	ShadowDepthFragVulkan	gltf/backends/shaders.html#ShadowDepthFragVulkan	const ShadowDepthFragVulkan		442
+nim	PbrVertMsl	gltf/backends/shaders.html#PbrVertMsl	const PbrVertMsl		445
+nim	PbrFragMsl	gltf/backends/shaders.html#PbrFragMsl	const PbrFragMsl		446
+nim	SkyboxVertMsl	gltf/backends/shaders.html#SkyboxVertMsl	const SkyboxVertMsl		447
+nim	SkyboxFragMsl	gltf/backends/shaders.html#SkyboxFragMsl	const SkyboxFragMsl		448
+nim	ShadowDepthVertMsl	gltf/backends/shaders.html#ShadowDepthVertMsl	const ShadowDepthVertMsl		449
+nim	ShadowDepthFragMsl	gltf/backends/shaders.html#ShadowDepthFragMsl	const ShadowDepthFragMsl		451
