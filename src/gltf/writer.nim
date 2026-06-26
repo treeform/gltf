@@ -1,7 +1,8 @@
 import
-  std/[json, os, osproc, strutils, tables, uri],
+  std/[json, os, strutils, tables, uri],
   flatty/binny, pixie, pixie/fileformats/png, vmath,
-  common, internal
+  opengl,
+  common, internal, ktx2
 
 export common
 
@@ -119,13 +120,55 @@ proc resolveImageFileName(
     return preferred
   uniqueImageFileName(name, fallbackStem, usedImageFileNames, ext)
 
-proc findKtxExe(): string =
-  result = findExe("ktx")
-  if result.len == 0:
-    raise newException(
-      GltfError,
-      "KTX2 writing requires `ktx` on PATH"
-    )
+proc vkFormatForSemantic(semantic: TextureSemantic): uint32 =
+  ## Picks the GPU KTX2 target format used for one glTF texture semantic.
+  case semantic
+  of tsColor:
+    VkFormatBc3SrgbBlock
+  of tsData, tsNormal:
+    VkFormatBc3UnormBlock
+
+proc glInternalFormatForSemantic(semantic: TextureSemantic): GLint =
+  ## Picks the source texture format used before OpenGL compression.
+  case semantic
+  of tsColor:
+    GL_SRGB8_ALPHA8.GLint
+  of tsData, tsNormal:
+    GL_RGBA8.GLint
+
+proc rgbaBytes(img: Image): string =
+  ## Copies a Pixie image into tightly packed RGBA bytes.
+  result = newString(img.width * img.height * 4)
+  for i, pixel in img.data:
+    let offset = i * 4
+    result[offset + 0] = char(pixel.r)
+    result[offset + 1] = char(pixel.g)
+    result[offset + 2] = char(pixel.b)
+    result[offset + 3] = char(pixel.a)
+
+proc uploadImageForKtx2(img: Image, semantic: TextureSemantic): GLuint =
+  ## Uploads one image so the KTX2 module can serialize it without a CLI.
+  let bytes = img.rgbaBytes()
+  glGenTextures(1, result.addr)
+  glBindTexture(GL_TEXTURE_2D, result)
+  glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
+  glTexImage2D(
+    GL_TEXTURE_2D,
+    0,
+    semantic.glInternalFormatForSemantic(),
+    img.width.GLsizei,
+    img.height.GLsizei,
+    0,
+    GL_RGBA,
+    GL_UNSIGNED_BYTE,
+    cast[pointer](bytes[0].unsafeAddr)
+  )
+  glPixelStorei(GL_UNPACK_ALIGNMENT, 4)
+  glBindTexture(GL_TEXTURE_2D, 0)
 
 proc writeImageKtx2(
   images: var seq[JsonNode],
@@ -145,77 +188,21 @@ proc writeImageKtx2(
       ".ktx2"
     )
     outPath = joinPath(outputDir, fileName)
-    tempPngPath = joinPath(outputDir, fileName & ".tmp.png")
-    tempEncodedPath = joinPath(outputDir, fileName & ".encoded.ktx2")
-    ktxExe = findKtxExe()
 
   if not fileExists(outPath):
-    writeFile(tempPngPath, img.encodePng())
+    let texture = img.uploadImageForKtx2(semantic)
     try:
-      var createArgs = @[
-        "create",
-        "--generate-mipmap"
-      ]
-      var transcodeTarget = "bc3"
-      case semantic
-      of tsColor:
-        createArgs.add(@[
-          "--format", "R8G8B8A8_SRGB",
-          "--encode", "basis-lz"
-        ])
-        transcodeTarget = "bc3"
-      of tsData:
-        createArgs.add(@[
-          "--format", "R8G8B8A8_UNORM",
-          "--assign-oetf", "linear",
-          "--assign-primaries", "none",
-          "--encode", "uastc",
-          "--uastc-quality", "3"
-        ])
-        transcodeTarget = "bc3"
-      of tsNormal:
-        createArgs.add(@[
-          "--format", "R8G8B8A8_UNORM",
-          "--assign-oetf", "linear",
-          "--assign-primaries", "none",
-          "--encode", "uastc",
-          "--uastc-quality", "4",
-          "--normal-mode"
-        ])
-        transcodeTarget = "bc5"
-      createArgs.add(@[tempPngPath, tempEncodedPath])
-
-      var process = startProcess(
-        ktxExe,
-        args = createArgs,
-        options = {poUsePath}
+      writeKtx2TextureFile(
+        GL_TEXTURE_2D,
+        texture,
+        outPath,
+        semantic.vkFormatForSemantic(),
+        GL_RGBA,
+        GL_UNSIGNED_BYTE
       )
-      var exitCode = waitForExit(process)
-      close(process)
-      if exitCode != 0 or not fileExists(tempEncodedPath):
-        raise newException(
-          GltfError,
-          "ktx.exe failed to create encoded " & fileName & " (exit " & $exitCode & ")"
-        )
-
-      process = startProcess(
-        ktxExe,
-        args = @["transcode", "--target", transcodeTarget, tempEncodedPath, outPath],
-        options = {poUsePath}
-      )
-      exitCode = waitForExit(process)
-      close(process)
-      if exitCode != 0 or not fileExists(outPath):
-        raise newException(
-          GltfError,
-          "ktx.exe failed to transcode " & fileName & " to " & transcodeTarget &
-            " (exit " & $exitCode & ")"
-        )
     finally:
-      if fileExists(tempPngPath):
-        removeFile(tempPngPath)
-      if fileExists(tempEncodedPath):
-        removeFile(tempEncodedPath)
+      if texture != 0:
+        glDeleteTextures(1, texture.unsafeAddr)
 
   var node = newJObject()
   node["name"] = newJString(fileName)
