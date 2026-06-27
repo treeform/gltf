@@ -415,14 +415,20 @@ proc gltfShadowDepthFrag*(fragmentUv: Vec2) =
       discardFragment()
 
 const
-  PbrVertSrc* = toShader(gltfPbrVert, glsl4Desktop, shaderVertex)
-  PbrFragSrc* = toShader(gltfPbrFrag, glsl4Desktop, shaderFragment)
-  SkyboxVertSrc* = toShader(gltfSkyboxVert, glsl4Desktop, shaderVertex)
-  SkyboxFragSrc* = toShader(gltfSkyboxFrag, glsl4Desktop, shaderFragment)
+  OpenGlShaderTarget =
+    when defined(emscripten):
+      glsl3WebGL
+    else:
+      glsl4Desktop
+  PbrVertSrc* = toShader(gltfPbrVert, OpenGlShaderTarget, shaderVertex)
+  PbrFragSrc* = toShader(gltfPbrFrag, OpenGlShaderTarget, shaderFragment)
+  SkyboxVertSrc* = toShader(gltfSkyboxVert, OpenGlShaderTarget, shaderVertex)
+  SkyboxFragSrc* =
+    toShader(gltfSkyboxFrag, OpenGlShaderTarget, shaderFragment)
   ShadowDepthVertSrc* =
-    toShader(gltfShadowDepthVert, glsl4Desktop, shaderVertex)
+    toShader(gltfShadowDepthVert, OpenGlShaderTarget, shaderVertex)
   ShadowDepthFragSrc* =
-    toShader(gltfShadowDepthFrag, glsl4Desktop, shaderFragment)
+    toShader(gltfShadowDepthFrag, OpenGlShaderTarget, shaderFragment)
 
   PbrVertHlsl* = toShader(gltfPbrVert, hlslDX12, shaderVertex)
   PbrFragHlsl* = toShader(gltfPbrFrag, hlslDX12, shaderFragment)
