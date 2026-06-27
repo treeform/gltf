@@ -68,13 +68,21 @@ jobs:
       - run: nim r -d:release tests/draco/tests.nim
       - name: Run tests (Linux)
         if: runner.os == 'Linux'
-        run: xvfb-run -s "-screen 0 1024x768x24" env LIBGL_ALWAYS_SOFTWARE=1 nim r -d:release tests/tests.nim
+        run: |
+          xvfb-run -s "-screen 0 1024x768x24" \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            nim r -d:release tests/tests.nim
+          xvfb-run -s "-screen 0 1024x768x24" \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            nim r -d:release tests/test_ktx2.nim
       - name: Run tests (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           nim c -d:release -o:tests.exe tests/tests.nim
           .\tests.exe
+          nim c -d:release -o:test_ktx2.exe tests/test_ktx2.nim
+          .\test_ktx2.exe
 
   backend-compile:
     strategy:

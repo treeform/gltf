@@ -1,7 +1,7 @@
 import
-  std/[json, os, osproc, strutils, tables, uri],
+  std/[json, os, strutils, tables, uri],
   flatty/binny, pixie, pixie/fileformats/png, vmath,
-  common, internal
+  common, internal, ktx2
 
 export common
 
@@ -119,13 +119,15 @@ proc resolveImageFileName(
     return preferred
   uniqueImageFileName(name, fallbackStem, usedImageFileNames, ext)
 
-proc findKtxExe(): string =
-  result = findExe("ktx")
-  if result.len == 0:
-    raise newException(
-      GltfError,
-      "KTX2 writing requires `ktx` on PATH"
-    )
+proc ktx2FormatForSemantic(semantic: TextureSemantic): uint32 =
+  ## Returns the native KTX2 format for one material texture semantic.
+  case semantic
+  of tsColor:
+    VkFormatBc3SrgbBlock
+  of tsData:
+    VkFormatBc3UnormBlock
+  of tsNormal:
+    VkFormatBc5UnormBlock
 
 proc writeImageKtx2(
   images: var seq[JsonNode],
@@ -145,77 +147,9 @@ proc writeImageKtx2(
       ".ktx2"
     )
     outPath = joinPath(outputDir, fileName)
-    tempPngPath = joinPath(outputDir, fileName & ".tmp.png")
-    tempEncodedPath = joinPath(outputDir, fileName & ".encoded.ktx2")
-    ktxExe = findKtxExe()
 
   if not fileExists(outPath):
-    writeFile(tempPngPath, img.encodePng())
-    try:
-      var createArgs = @[
-        "create",
-        "--generate-mipmap"
-      ]
-      var transcodeTarget = "bc3"
-      case semantic
-      of tsColor:
-        createArgs.add(@[
-          "--format", "R8G8B8A8_SRGB",
-          "--encode", "basis-lz"
-        ])
-        transcodeTarget = "bc3"
-      of tsData:
-        createArgs.add(@[
-          "--format", "R8G8B8A8_UNORM",
-          "--assign-oetf", "linear",
-          "--assign-primaries", "none",
-          "--encode", "uastc",
-          "--uastc-quality", "3"
-        ])
-        transcodeTarget = "bc3"
-      of tsNormal:
-        createArgs.add(@[
-          "--format", "R8G8B8A8_UNORM",
-          "--assign-oetf", "linear",
-          "--assign-primaries", "none",
-          "--encode", "uastc",
-          "--uastc-quality", "4",
-          "--normal-mode"
-        ])
-        transcodeTarget = "bc5"
-      createArgs.add(@[tempPngPath, tempEncodedPath])
-
-      var process = startProcess(
-        ktxExe,
-        args = createArgs,
-        options = {poUsePath}
-      )
-      var exitCode = waitForExit(process)
-      close(process)
-      if exitCode != 0 or not fileExists(tempEncodedPath):
-        raise newException(
-          GltfError,
-          "ktx.exe failed to create encoded " & fileName & " (exit " & $exitCode & ")"
-        )
-
-      process = startProcess(
-        ktxExe,
-        args = @["transcode", "--target", transcodeTarget, tempEncodedPath, outPath],
-        options = {poUsePath}
-      )
-      exitCode = waitForExit(process)
-      close(process)
-      if exitCode != 0 or not fileExists(outPath):
-        raise newException(
-          GltfError,
-          "ktx.exe failed to transcode " & fileName & " to " & transcodeTarget &
-            " (exit " & $exitCode & ")"
-        )
-    finally:
-      if fileExists(tempPngPath):
-        removeFile(tempPngPath)
-      if fileExists(tempEncodedPath):
-        removeFile(tempEncodedPath)
+    writeKtx2ImageFile(outPath, img, ktx2FormatForSemantic(semantic))
 
   var node = newJObject()
   node["name"] = newJString(fileName)

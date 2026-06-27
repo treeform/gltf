@@ -2,6 +2,7 @@ import
   std/strutils,
   flatty/binny,
   opengl,
+  pixie,
   common
 
 const
@@ -132,6 +133,10 @@ proc appendUint32Le(data: var string, value: uint32) =
   data.add(char((value shr 16) and 0xFF'u32))
   data.add(char((value shr 24) and 0xFF'u32))
 
+proc appendUint16Le(data: var string, value: uint16) =
+  data.add(char(value and 0xFF'u16))
+  data.add(char((value shr 8) and 0xFF'u16))
+
 proc appendUint64Le(data: var string, value: uint64) =
   for shift in countup(0, 56, 8):
     data.add(char((value shr shift) and 0xFF'u64))
@@ -156,6 +161,237 @@ proc clearGlErrors() =
 
 proc mipDimension(size, level: int): int =
   max(1, size shr level)
+
+proc channelToFloat32(value: uint8): float32 =
+  value.float32 / 255.0'f32
+
+proc appendFloat32Le(data: var string, value: float32) =
+  data.appendUint32Le(cast[uint32](value))
+
+proc straightChannel(value, alpha: uint8): int =
+  if alpha == 0:
+    0
+  else:
+    min(255, (value.int * 255 + alpha.int div 2) div alpha.int)
+
+proc straightRgb(pixel: ColorRGBX): array[3, int] =
+  [
+    straightChannel(pixel.r, pixel.a),
+    straightChannel(pixel.g, pixel.a),
+    straightChannel(pixel.b, pixel.a)
+  ]
+
+proc rgb565(r, g, b: int): uint16 =
+  let
+    r5 = (r * 31 + 127) div 255
+    g6 = (g * 63 + 127) div 255
+    b5 = (b * 31 + 127) div 255
+  ((r5 shl 11) or (g6 shl 5) or b5).uint16
+
+proc unpackRgb565(value: uint16): array[3, int] =
+  let
+    r5 = (value.int shr 11) and 0x1F
+    g6 = (value.int shr 5) and 0x3F
+    b5 = value.int and 0x1F
+  [
+    (r5 * 255 + 15) div 31,
+    (g6 * 255 + 31) div 63,
+    (b5 * 255 + 15) div 31
+  ]
+
+proc colorDistanceSq(a, b: array[3, int]): int =
+  let
+    dr = a[0] - b[0]
+    dg = a[1] - b[1]
+    db = a[2] - b[2]
+  dr * dr + dg * dg + db * db
+
+proc nearestColorIndex(
+  color: array[3, int],
+  palette: array[4, array[3, int]],
+  count: int
+): int =
+  var bestDistance = high(int)
+  for i in 0 ..< count:
+    let distance = colorDistanceSq(color, palette[i])
+    if distance < bestDistance:
+      result = i
+      bestDistance = distance
+
+proc colorPalette(
+  color0, color1: uint16,
+  transparentMode: bool
+): array[4, array[3, int]] =
+  let
+    c0 = unpackRgb565(color0)
+    c1 = unpackRgb565(color1)
+  result[0] = c0
+  result[1] = c1
+  if not transparentMode:
+    result[2] = [
+      (2 * c0[0] + c1[0]) div 3,
+      (2 * c0[1] + c1[1]) div 3,
+      (2 * c0[2] + c1[2]) div 3
+    ]
+    result[3] = [
+      (c0[0] + 2 * c1[0]) div 3,
+      (c0[1] + 2 * c1[1]) div 3,
+      (c0[2] + 2 * c1[2]) div 3
+    ]
+  else:
+    result[2] = [
+      (c0[0] + c1[0]) div 2,
+      (c0[1] + c1[1]) div 2,
+      (c0[2] + c1[2]) div 2
+    ]
+    result[3] = [0, 0, 0]
+
+proc appendBc1ColorBlock(
+  data: var string,
+  pixels: array[16, ColorRGBX],
+  transparentMode: bool
+) =
+  var
+    minRgb = [255, 255, 255]
+    maxRgb = [0, 0, 0]
+    hasColor = false
+
+  for pixel in pixels:
+    if transparentMode and pixel.a < 128:
+      continue
+    let rgb = straightRgb(pixel)
+    for i in 0 .. 2:
+      minRgb[i] = min(minRgb[i], rgb[i])
+      maxRgb[i] = max(maxRgb[i], rgb[i])
+    hasColor = true
+
+  if not hasColor:
+    minRgb = [0, 0, 0]
+    maxRgb = [0, 0, 0]
+
+  var
+    color0 = rgb565(maxRgb[0], maxRgb[1], maxRgb[2])
+    color1 = rgb565(minRgb[0], minRgb[1], minRgb[2])
+
+  if transparentMode:
+    if color0 > color1:
+      swap(color0, color1)
+  elif color0 < color1:
+    swap(color0, color1)
+
+  let palette = colorPalette(color0, color1, transparentMode)
+  var bits = 0'u32
+  for i, pixel in pixels:
+    let index =
+      if transparentMode and pixel.a < 128:
+        3
+      else:
+        nearestColorIndex(
+          straightRgb(pixel),
+          palette,
+          if transparentMode: 3 else: 4
+        )
+    bits = bits or (index.uint32 shl (i * 2))
+
+  data.appendUint16Le(color0)
+  data.appendUint16Le(color1)
+  data.appendUint32Le(bits)
+
+proc bc4Palette(value0, value1: uint8): array[8, int] =
+  result[0] = value0.int
+  result[1] = value1.int
+  if value0 > value1:
+    for i in 1 .. 6:
+      result[i + 1] =
+        (((7 - i) * value0.int + i * value1.int) + 3) div 7
+  else:
+    for i in 1 .. 4:
+      result[i + 1] =
+        (((5 - i) * value0.int + i * value1.int) + 2) div 5
+    result[6] = 0
+    result[7] = 255
+
+proc nearestScalarIndex(value: uint8, palette: array[8, int]): int =
+  var bestDistance = high(int)
+  for i in 0 .. 7:
+    let distance = abs(value.int - palette[i])
+    if distance < bestDistance:
+      result = i
+      bestDistance = distance
+
+proc appendBc4Block(data: var string, values: array[16, uint8]) =
+  var
+    minValue = 255'u8
+    maxValue = 0'u8
+  for value in values:
+    minValue = min(minValue, value)
+    maxValue = max(maxValue, value)
+
+  let palette = bc4Palette(maxValue, minValue)
+  var bits = 0'u64
+  for i, value in values:
+    let index = nearestScalarIndex(value, palette)
+    bits = bits or (index.uint64 shl (i * 3))
+
+  data.add(char(maxValue))
+  data.add(char(minValue))
+  for i in 0 .. 5:
+    data.add(char((bits shr (i * 8)) and 0xFF'u64))
+
+proc appendBc2AlphaBlock(data: var string, values: array[16, uint8]) =
+  var bits = 0'u64
+  for i, value in values:
+    let alpha = ((value.int * 15 + 127) div 255).uint64
+    bits = bits or (alpha shl (i * 4))
+  for i in 0 .. 7:
+    data.add(char((bits shr (i * 8)) and 0xFF'u64))
+
+proc readBlockPixels(
+  image: Image,
+  x, y: int
+): array[16, ColorRGBX] =
+  for py in 0 .. 3:
+    for px in 0 .. 3:
+      let
+        sx = min(image.width - 1, x + px)
+        sy = min(image.height - 1, y + py)
+      result[py * 4 + px] = image[sx, sy]
+
+proc blockChannel(
+  pixels: array[16, ColorRGBX],
+  channel: int
+): array[16, uint8] =
+  for i, pixel in pixels:
+    result[i] =
+      case channel
+      of 0: pixel.r
+      of 1: pixel.g
+      of 2: pixel.b
+      else: pixel.a
+
+proc downsample2x(image: Image): Image =
+  result = newImage(max(1, image.width div 2), max(1, image.height div 2))
+  for y in 0 ..< result.height:
+    for x in 0 ..< result.width:
+      var sums: array[4, int]
+      var count = 0
+      for py in 0 .. 1:
+        for px in 0 .. 1:
+          let
+            sx = min(image.width - 1, x * 2 + px)
+            sy = min(image.height - 1, y * 2 + py)
+            pixel = image[sx, sy]
+          sums[0] += pixel.r.int
+          sums[1] += pixel.g.int
+          sums[2] += pixel.b.int
+          sums[3] += pixel.a.int
+          inc count
+      result[x, y] = rgbx(
+        ((sums[0] + count div 2) div count).uint8,
+        ((sums[1] + count div 2) div count).uint8,
+        ((sums[2] + count div 2) div count).uint8,
+        ((sums[3] + count div 2) div count).uint8
+      )
 
 proc isCompressedVkFormat*(vkFormat: uint32): bool =
   case vkFormat
@@ -300,11 +536,11 @@ proc dfdForVkFormat(vkFormat: uint32): string =
     result.overwriteByte(14, 2)
   of VkFormatBc1RgbaUnormBlock:
     result = dfdFromWords(DfdBc1LinearWords)
-    result.overwriteByte(12, 0x80)
+    result.overwriteByte(31, 1)
   of VkFormatBc1RgbaSrgbBlock:
     result = dfdFromWords(DfdBc1LinearWords)
-    result.overwriteByte(12, 0x80)
     result.overwriteByte(14, 2)
+    result.overwriteByte(31, 1)
   of VkFormatBc2UnormBlock:
     result = dfdFromWords(DfdBc3LinearWords)
     result.overwriteByte(12, 0x81)
@@ -312,11 +548,13 @@ proc dfdForVkFormat(vkFormat: uint32): string =
     result = dfdFromWords(DfdBc3LinearWords)
     result.overwriteByte(12, 0x81)
     result.overwriteByte(14, 2)
+    result.overwriteByte(31, 0x1F)
   of VkFormatBc3UnormBlock:
     result = dfdFromWords(DfdBc3LinearWords)
   of VkFormatBc3SrgbBlock:
     result = dfdFromWords(DfdBc3LinearWords)
     result.overwriteByte(14, 2)
+    result.overwriteByte(31, 0x1F)
   of VkFormatBc4UnormBlock:
     result = dfdFromWords(DfdBc4LinearWords)
   of VkFormatBc4SnormBlock:
@@ -348,6 +586,46 @@ proc bytesPerPixelForVkFormat(vkFormat: uint32): int =
   else:
     raiseKtx2Error("no bytes-per-pixel defined for " & vkFormatName(vkFormat))
 
+proc blockBytesForVkFormat(vkFormat: uint32): int =
+  ## Returns the byte size of one compressed block.
+  case vkFormat
+  of VkFormatBc1RgbUnormBlock, VkFormatBc1RgbSrgbBlock,
+     VkFormatBc1RgbaUnormBlock, VkFormatBc1RgbaSrgbBlock,
+     VkFormatBc4UnormBlock, VkFormatBc4SnormBlock:
+    8
+  of VkFormatBc2UnormBlock, VkFormatBc2SrgbBlock,
+     VkFormatBc3UnormBlock, VkFormatBc3SrgbBlock,
+     VkFormatBc5UnormBlock, VkFormatBc5SnormBlock:
+    16
+  else:
+    raiseKtx2Error("no block size defined for " & vkFormatName(vkFormat))
+
+proc typeSizeForVkFormat(vkFormat: uint32): uint32 =
+  ## Returns the KTX2 type size for a supported Vulkan format.
+  if isCompressedVkFormat(vkFormat):
+    1'u32
+  else:
+    bytesPerPixelForVkFormat(vkFormat).uint32
+
+proc expectedLevelByteLength(
+  vkFormat: uint32,
+  width, height: int
+): uint64 =
+  ## Returns the exact payload size for one supported 2D mip level.
+  if isCompressedVkFormat(vkFormat):
+    let
+      blocksWide = (width.uint64 + 3'u64) div 4'u64
+      blocksHigh = (height.uint64 + 3'u64) div 4'u64
+    blocksWide * blocksHigh * blockBytesForVkFormat(vkFormat).uint64
+  else:
+    width.uint64 * height.uint64 * bytesPerPixelForVkFormat(vkFormat).uint64
+
+proc checkedInt(value: uint64, name: string): int =
+  ## Converts a KTX2 uint64 field to a platform int.
+  if value > high(int).uint64:
+    raiseKtx2Error(name & " is too large")
+  value.int
+
 proc levelAlignmentForVkFormat(vkFormat: uint32): int =
   case vkFormat
   of VkFormatBc1RgbUnormBlock, VkFormatBc1RgbSrgbBlock,
@@ -368,7 +646,7 @@ proc parseKtx2*(data: string): Ktx2TextureInfo =
     raiseKtx2Error("invalid identifier")
 
   result.vkFormat = data.readUint32(12)
-  discard data.readUint32(16) # typeSize
+  let typeSize = data.readUint32(16)
   result.width = data.readUint32(20).int
   result.height = data.readUint32(24).int
   result.depth = data.readUint32(28).int
@@ -376,7 +654,6 @@ proc parseKtx2*(data: string): Ktx2TextureInfo =
   result.faceCount = data.readUint32(36).int
   result.levelCount = data.readUint32(40).int
   result.supercompressionScheme = data.readUint32(44)
-  result.glInternalFormat = glInternalFormatForVkFormat(result.vkFormat)
 
   if result.width <= 0 or result.height <= 0:
     raiseKtx2Error("only 2D textures with width and height are supported")
@@ -390,6 +667,15 @@ proc parseKtx2*(data: string): Ktx2TextureInfo =
     raiseKtx2Error("KTX2 textures must include at least one mip level")
   if result.supercompressionScheme != Ktx2NoSupercompression:
     raiseKtx2Error("supercompressed KTX2 textures are not supported")
+  if not isSupportedVkFormat(result.vkFormat):
+    raiseKtx2Error("unsupported vkFormat " & vkFormatName(result.vkFormat))
+  let expectedTypeSize = typeSizeForVkFormat(result.vkFormat)
+  if typeSize != expectedTypeSize:
+    raiseKtx2Error(
+      "typeSize " & $typeSize & " does not match " &
+      vkFormatName(result.vkFormat)
+    )
+  result.glInternalFormat = glInternalFormatForVkFormat(result.vkFormat)
 
   let levelIndexEnd = Ktx2HeaderSize + result.levelCount * Ktx2LevelSize
   if levelIndexEnd > data.len:
@@ -398,13 +684,34 @@ proc parseKtx2*(data: string): Ktx2TextureInfo =
   result.levels.setLen(result.levelCount)
   for level in 0 ..< result.levelCount:
     let offset = Ktx2HeaderSize + level * Ktx2LevelSize
-    let byteOffset = data.readUint64(offset).int
-    let byteLength = data.readUint64(offset + 8).int
-    let uncompressedByteLength = data.readUint64(offset + 16).int
-    if byteOffset < 0 or byteLength <= 0:
+    let
+      byteOffsetRaw = data.readUint64(offset)
+      byteLengthRaw = data.readUint64(offset + 8)
+      uncompressedByteLengthRaw = data.readUint64(offset + 16)
+      byteOffset = checkedInt(byteOffsetRaw, "level byteOffset")
+      byteLength = checkedInt(byteLengthRaw, "level byteLength")
+      uncompressedByteLength = checkedInt(
+        uncompressedByteLengthRaw,
+        "level uncompressedByteLength"
+      )
+    if byteLength <= 0:
       raiseKtx2Error("invalid level index entry")
-    if byteOffset + byteLength > data.len:
+    if byteOffsetRaw > data.len.uint64 or
+       byteLengthRaw > data.len.uint64 - byteOffsetRaw:
       raiseKtx2Error("level data extends past end of file")
+    let
+      levelWidth = mipDimension(result.width, level)
+      levelHeight = mipDimension(result.height, level)
+      expectedByteLength = expectedLevelByteLength(
+        result.vkFormat,
+        levelWidth,
+        levelHeight
+      )
+    if byteLengthRaw != expectedByteLength:
+      raiseKtx2Error(
+        "level " & $level & " byteLength " & $byteLengthRaw &
+        " does not match expected " & $expectedByteLength
+      )
     result.levels[level] = Ktx2LevelInfo(
       byteOffset: byteOffset,
       byteLength: byteLength,
@@ -414,13 +721,32 @@ proc parseKtx2*(data: string): Ktx2TextureInfo =
 proc readKtx2File*(file: string): Ktx2TextureInfo =
   parseKtx2(readFile(file))
 
-proc encodeKtx2*(vkFormat: uint32, width, height: int, levelsData: openArray[string]): string =
+proc encodeKtx2*(
+  vkFormat: uint32,
+  width, height: int,
+  levelsData: openArray[string]
+): string =
   if not isSupportedVkFormat(vkFormat):
     raiseKtx2Error("unsupported write format " & vkFormatName(vkFormat))
   if width <= 0 or height <= 0:
     raiseKtx2Error("width and height must be positive")
   if levelsData.len == 0:
     raiseKtx2Error("at least one mip level is required")
+
+  for level, levelBytes in levelsData:
+    let
+      levelWidth = mipDimension(width, level)
+      levelHeight = mipDimension(height, level)
+      expectedByteLength = expectedLevelByteLength(
+        vkFormat,
+        levelWidth,
+        levelHeight
+      )
+    if levelBytes.len.uint64 != expectedByteLength:
+      raiseKtx2Error(
+        "level " & $level & " byteLength " & $levelBytes.len &
+        " does not match expected " & $expectedByteLength
+      )
 
   let
     dfd = dfdForVkFormat(vkFormat)
@@ -431,9 +757,12 @@ proc encodeKtx2*(vkFormat: uint32, width, height: int, levelsData: openArray[str
 
   result = Ktx2Identifier
   result.appendUint32Le(vkFormat)
-  result.appendUint32Le(
-    if isCompressedVkFormat(vkFormat): 1'u32 else: bytesPerPixelForVkFormat(vkFormat).uint32
-  )
+  let ktxTypeSize =
+    if isCompressedVkFormat(vkFormat):
+      1'u32
+    else:
+      bytesPerPixelForVkFormat(vkFormat).uint32
+  result.appendUint32Le(ktxTypeSize)
   result.appendUint32Le(width.uint32)
   result.appendUint32Le(height.uint32)
   result.appendUint32Le(0)
@@ -465,6 +794,125 @@ proc encodeKtx2*(vkFormat: uint32, width, height: int, levelsData: openArray[str
   for levelBytes in levelsData:
     result.add(levelBytes)
     result.padTo(levelAlignment)
+
+proc encodeKtx2ImageLevel*(image: Image, vkFormat: uint32): string =
+  ## Encodes one image level into one supported KTX2 payload level.
+  if image == nil:
+    raiseKtx2Error("cannot encode a nil image")
+  if image.width <= 0 or image.height <= 0:
+    raiseKtx2Error("image width and height must be positive")
+
+  case vkFormat
+  of VkFormatR32Sfloat:
+    for y in 0 ..< image.height:
+      for x in 0 ..< image.width:
+        result.appendFloat32Le(channelToFloat32(image[x, y].r))
+  of
+    VkFormatBc1RgbUnormBlock,
+    VkFormatBc1RgbSrgbBlock:
+    for y in countup(0, image.height - 1, 4):
+      for x in countup(0, image.width - 1, 4):
+        result.appendBc1ColorBlock(image.readBlockPixels(x, y), false)
+  of
+    VkFormatBc1RgbaUnormBlock,
+    VkFormatBc1RgbaSrgbBlock:
+    for y in countup(0, image.height - 1, 4):
+      for x in countup(0, image.width - 1, 4):
+        result.appendBc1ColorBlock(image.readBlockPixels(x, y), true)
+  of
+    VkFormatBc2UnormBlock,
+    VkFormatBc2SrgbBlock:
+    for y in countup(0, image.height - 1, 4):
+      for x in countup(0, image.width - 1, 4):
+        let pixels = image.readBlockPixels(x, y)
+        result.appendBc2AlphaBlock(pixels.blockChannel(3))
+        result.appendBc1ColorBlock(pixels, false)
+  of
+    VkFormatBc3UnormBlock,
+    VkFormatBc3SrgbBlock:
+    for y in countup(0, image.height - 1, 4):
+      for x in countup(0, image.width - 1, 4):
+        let pixels = image.readBlockPixels(x, y)
+        result.appendBc4Block(pixels.blockChannel(3))
+        result.appendBc1ColorBlock(pixels, false)
+  of VkFormatBc4UnormBlock:
+    for y in countup(0, image.height - 1, 4):
+      for x in countup(0, image.width - 1, 4):
+        result.appendBc4Block(image.readBlockPixels(x, y).blockChannel(0))
+  of VkFormatBc5UnormBlock:
+    for y in countup(0, image.height - 1, 4):
+      for x in countup(0, image.width - 1, 4):
+        let pixels = image.readBlockPixels(x, y)
+        result.appendBc4Block(pixels.blockChannel(0))
+        result.appendBc4Block(pixels.blockChannel(1))
+  of
+    VkFormatBc4SnormBlock,
+    VkFormatBc5SnormBlock:
+    raiseKtx2Error("image encoding does not support signed BC formats")
+  else:
+    raiseKtx2Error("unsupported image write format " & vkFormatName(vkFormat))
+
+proc encodeKtx2Image*(
+  image: Image,
+  vkFormat: uint32,
+  generateMipmaps = true
+): string =
+  ## Encodes an image into a supported KTX2 texture.
+  if image == nil:
+    raiseKtx2Error("cannot encode a nil image")
+
+  var
+    levelsData: seq[string]
+    levelImage = image
+  while true:
+    levelsData.add(encodeKtx2ImageLevel(levelImage, vkFormat))
+    if not generateMipmaps or
+       (levelImage.width == 1 and levelImage.height == 1):
+      break
+    levelImage = downsample2x(levelImage)
+
+  encodeKtx2(vkFormat, image.width, image.height, levelsData)
+
+proc encodeKtx2R32Sfloat*(
+  width, height: int,
+  values: openArray[float32]
+): string =
+  ## Encodes one R32 float level into a KTX2 texture.
+  if width <= 0 or height <= 0:
+    raiseKtx2Error("width and height must be positive")
+  if values.len != width * height:
+    raiseKtx2Error("R32 float data length does not match width and height")
+
+  var levelData: string
+  for value in values:
+    levelData.appendFloat32Le(value)
+  encodeKtx2(VkFormatR32Sfloat, width, height, [levelData])
+
+proc writeKtx2File*(
+  file: string,
+  vkFormat: uint32,
+  width, height: int,
+  levelsData: openArray[string]
+) =
+  ## Writes supported raw KTX2 level data to a file.
+  writeFile(file, encodeKtx2(vkFormat, width, height, levelsData))
+
+proc writeKtx2ImageFile*(
+  file: string,
+  image: Image,
+  vkFormat: uint32,
+  generateMipmaps = true
+) =
+  ## Encodes an image as a supported KTX2 texture file.
+  writeFile(file, encodeKtx2Image(image, vkFormat, generateMipmaps))
+
+proc writeKtx2R32SfloatFile*(
+  file: string,
+  width, height: int,
+  values: openArray[float32]
+) =
+  ## Encodes R32 float data as a KTX2 texture file.
+  writeFile(file, encodeKtx2R32Sfloat(width, height, values))
 
 proc readTextureBytes(target: GLenum, level: int, format: GLenum, pixelType: GLenum, byteCount: int): string =
   result = newString(byteCount)
