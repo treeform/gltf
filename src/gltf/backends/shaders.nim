@@ -278,6 +278,22 @@ proc gltfPbrFrag*(
       (0.15'f + 0.35'f * ambientOcclusion)
     mipLevel = roughness * environmentMipCount
     envColor: Vec3 = textureLod(environmentMap, reflectDir, mipLevel).rgb
+    skyDiffuse: Vec3 = textureLod(
+      environmentMap,
+      computedNormal,
+      min(environmentMipCount, 6.0'f)
+    ).rgb
+    envDiffuse: Vec3 =
+      skyDiffuse *
+      albedo *
+      ambientOcclusion *
+      (1.0'f - metallic) *
+      (0.32'f + ambientLightColor.a * 0.18'f)
+    envSpecular: Vec3 =
+      envColor *
+      fresnel *
+      (1.0'f - roughness * 0.72'f) *
+      mix(0.28'f, 0.08'f, metallic)
   var shadow = 0.0'f
   if useShadow:
     var projCoords = vPosLightSpace.xyz / vPosLightSpace.w
@@ -341,7 +357,9 @@ proc gltfPbrFrag*(
       lo: Vec3 =
         direct +
         ambient +
-        rimLight
+        rimLight +
+        envDiffuse +
+        envSpecular
     var litColor: Vec3 = mix(lo, envColor, fresnel * metallic)
 
     if transmission > 0.0'f:

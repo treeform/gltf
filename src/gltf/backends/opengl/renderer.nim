@@ -867,6 +867,10 @@ proc renderPbrPrimitive(
   let primitiveData = primitive.data
   glBindVertexArray(primitiveData.vertexArrayId)
 
+  glActiveTexture(GL_TEXTURE5)
+  glUniform1i(glGetUniformLocation(pbrShader, "environmentMap"), 5)
+  glBindTexture(GL_TEXTURE_CUBE_MAP, environmentMapId)
+
   if primitive.material != nil:
     let materialData = primitive.material.ensureData()
     let useNormalTexture =
@@ -922,10 +926,6 @@ proc renderPbrPrimitive(
       primitive.material.emissiveFactor.b
     )
     setTextureTransformUniform(pbrShader, "emissive", primitive.material.emissiveTransform)
-
-    glActiveTexture(GL_TEXTURE5)
-    glUniform1i(glGetUniformLocation(pbrShader, "environmentMap"), 5)
-    glBindTexture(GL_TEXTURE_CUBE_MAP, environmentMapId)
 
     let activeShadowTex =
       if shadowTex != 0.GLuint:
