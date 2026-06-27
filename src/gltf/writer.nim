@@ -1,0 +1,902 @@
+import
+  std/[json, os, strutils, tables, uri],
+  flatty/binny, pixie, pixie/fileformats/png, vmath,
+  common, internal, ktx2
+
+export common
+
+type
+  ImageWriteMode* = enum
+    iwmEmbedded, iwmExternal, iwmExternalKtx2
+
+  TextureSemantic = enum
+    tsColor, tsData, tsNormal
+
+proc pad4(data: var string) =
+  ## Pads a string to a 4-byte boundary.
+  while data.len mod 4 != 0:
+    data.add(char(0))
+
+proc writeUint32Le(s: var string, v: uint32) =
+  ## Writes a little-endian uint32 value.
+  s.add(char(v and 0xFF))
+  s.add(char((v shr 8) and 0xFF))
+  s.add(char((v shr 16) and 0xFF))
+  s.add(char((v shr 24) and 0xFF))
+
+proc writeUint16AtLe(s: var string, offset: int, v: uint16) =
+  ## Writes a little-endian uint16 at an offset.
+  s[offset] = char(v and 0xFF)
+  s[offset + 1] = char((v shr 8) and 0xFF)
+
+proc writeUint32AtLe(s: var string, offset: int, v: uint32) =
+  ## Writes a little-endian uint32 at an offset.
+  s[offset + 0] = char(v and 0xFF)
+  s[offset + 1] = char((v shr 8) and 0xFF)
+  s[offset + 2] = char((v shr 16) and 0xFF)
+  s[offset + 3] = char((v shr 24) and 0xFF)
+
+proc addView(
+  data: var string,
+  payload: string,
+  stride = 0
+): BufferView =
+  ## Appends payload bytes and returns a buffer view.
+  let offset = data.len
+  data.add(payload)
+  pad4(data)
+  BufferView(
+    buffer: 0,
+    byteOffset: offset,
+    byteLength: payload.len,
+    byteStride: stride
+  )
+
+proc addAccessor(
+  accessors: var seq[Accessor],
+  bufferViews: var seq[BufferView],
+  data: var string,
+  payload: string,
+  kind: AccessorKind,
+  component: ComponentType,
+  count: int,
+  stride = 0
+): int =
+  ## Adds an accessor and its backing buffer view.
+  bufferViews.add(addView(data, payload, stride))
+  let
+    viewIdx = bufferViews.len - 1
+    accessor = Accessor(
+      bufferView: viewIdx,
+      byteOffset: 0,
+      count: count,
+      componentType: component,
+      kind: kind
+    )
+  accessors.add(accessor)
+  accessors.len - 1
+
+proc normalizeImageFileName(
+  name, fallbackStem: string,
+  ext = ".png"
+): string =
+  ## Converts an internal image name into a sidecar image file name.
+  let fileName = extractFilename(name.strip())
+  let parts = splitFile(fileName)
+  let stem =
+    if parts.name.len > 0:
+      parts.name
+    elif fileName.len > 0:
+      fileName
+    else:
+      fallbackStem
+  stem & ext
+
+proc uniqueImageFileName(
+  name, fallbackStem: string,
+  usedImageFileNames: var Table[string, int],
+  ext = ".png"
+): string =
+  ## Returns a stable unique sidecar image file name.
+  let preferred = normalizeImageFileName(name, fallbackStem, ext)
+  let seen = usedImageFileNames.getOrDefault(preferred, 0)
+  if seen == 0:
+    result = preferred
+  else:
+    let parts = splitFile(preferred)
+    result = parts.name & "_" & $seen & parts.ext
+  usedImageFileNames[preferred] = seen + 1
+
+proc resolveImageFileName(
+  name, fallbackStem, outputDir: string,
+  usedImageFileNames: var Table[string, int],
+  ext = ".png"
+): string =
+  ## Reuses an existing sidecar file when present, otherwise creates a unique name.
+  let preferred = normalizeImageFileName(name, fallbackStem, ext)
+  if fileExists(joinPath(outputDir, preferred)):
+    usedImageFileNames[preferred] = max(usedImageFileNames.getOrDefault(preferred, 0), 1)
+    return preferred
+  uniqueImageFileName(name, fallbackStem, usedImageFileNames, ext)
+
+proc ktx2FormatForSemantic(semantic: TextureSemantic): uint32 =
+  ## Returns the native KTX2 format for one material texture semantic.
+  case semantic
+  of tsColor:
+    VkFormatBc3SrgbBlock
+  of tsData:
+    VkFormatBc3UnormBlock
+  of tsNormal:
+    VkFormatBc5UnormBlock
+
+proc writeImageKtx2(
+  images: var seq[JsonNode],
+  img: Image,
+  imageName: string,
+  semantic: TextureSemantic,
+  outputDir: string,
+  usedImageFileNames: var Table[string, int]
+): int =
+  ## Encodes an image as external KTX2 with settings based on texture semantic.
+  let
+    fileName = resolveImageFileName(
+      imageName,
+      "image_" & $images.len,
+      outputDir,
+      usedImageFileNames,
+      ".ktx2"
+    )
+    outPath = joinPath(outputDir, fileName)
+
+  if not fileExists(outPath):
+    writeKtx2ImageFile(outPath, img, ktx2FormatForSemantic(semantic))
+
+  var node = newJObject()
+  node["name"] = newJString(fileName)
+  node["uri"] = newJString(encodeUrl(fileName, usePlus = false))
+  node["mimeType"] = newJString("image/ktx2")
+  images.add(node)
+  images.len - 1
+
+proc writeImagePng(
+  images: var seq[JsonNode],
+  bufferViews: var seq[BufferView],
+  data: var string,
+  img: Image,
+  imageName: string,
+  imageWriteMode: ImageWriteMode,
+  outputDir: string,
+  usedImageFileNames: var Table[string, int]
+): int =
+  ## Encodes an image as PNG and writes it embedded or as a sidecar file.
+  let pngData = img.encodePng()
+  var node = newJObject()
+  case imageWriteMode
+  of iwmEmbedded:
+    bufferViews.add(addView(data, pngData))
+    let viewIdx = bufferViews.len - 1
+    let fileName = normalizeImageFileName(imageName, "image_" & $images.len)
+    node["name"] = newJString(fileName)
+    node["bufferView"] = newJInt(viewIdx)
+    node["mimeType"] = newJString("image/png")
+  of iwmExternal:
+    let fileName = resolveImageFileName(
+      imageName,
+      "image_" & $images.len,
+      outputDir,
+      usedImageFileNames
+    )
+    let outPath = joinPath(outputDir, fileName)
+    node["name"] = newJString(fileName)
+    node["uri"] = newJString(encodeUrl(fileName, usePlus = false))
+    if not fileExists(outPath):
+      writeFile(outPath, pngData)
+  of iwmExternalKtx2:
+    raise newException(
+      GltfError,
+      "writeImagePng called with iwmExternalKtx2; use writeImageKtx2 instead"
+    )
+  images.add(node)
+  images.len - 1
+
+proc writeGLB*(
+  root: Node,
+  path: string,
+  imageWriteMode = iwmEmbedded
+) =
+  ## Writes a node hierarchy to a binary glTF file.
+  var
+    data = newString(0)
+    bufferViews: seq[BufferView]
+    accessors: seq[Accessor]
+    samplers: seq[Sampler]
+    textures: seq[JsonNode]
+    images: seq[JsonNode]
+    materials: seq[JsonNode]
+    meshes: seq[JsonNode]
+    nodesJson: seq[JsonNode]
+    usesNodeVisibility = false
+    usesKhrTextureBasisu = false
+    outputDir = path.parentDir()
+    usedImageFileNames = initTable[string, int]()
+
+  samplers.add(Sampler(
+    magFilter: LinearMagFilter,
+    minFilter: LinearMipmapLinearMinFilter,
+    wrapS: RepeatWrap,
+    wrapT: RepeatWrap
+  ))
+
+  var materialIds = initTable[pointer, int]()
+  var imageIds = initTable[(pointer, TextureSemantic), int]()
+  var textureIds = initTable[(pointer, TextureSemantic), int]()
+
+  proc textureIndex(img: Image, imageName: string, semantic: TextureSemantic): int =
+    ## Returns the output texture index for an exported image.
+    if img == nil:
+      return -1
+    let key = (cast[pointer](img), semantic)
+    if key in textureIds:
+      return textureIds[key]
+
+    var imgIdx: int
+    if key in imageIds:
+      imgIdx = imageIds[key]
+    else:
+      case imageWriteMode
+      of iwmEmbedded:
+        imgIdx = writeImagePng(
+          images,
+          bufferViews,
+          data,
+          img,
+          imageName,
+          imageWriteMode,
+          outputDir,
+          usedImageFileNames
+        )
+      of iwmExternal:
+        imgIdx = writeImagePng(
+          images,
+          bufferViews,
+          data,
+          img,
+          imageName,
+          imageWriteMode,
+          outputDir,
+          usedImageFileNames
+        )
+      of iwmExternalKtx2:
+        imgIdx = writeImageKtx2(
+          images,
+          img,
+          imageName,
+          semantic,
+          outputDir,
+          usedImageFileNames
+        )
+      imageIds[key] = imgIdx
+
+    if imageWriteMode == iwmExternalKtx2:
+      usesKhrTextureBasisu = true
+      textures.add(%*{
+        "sampler": 0,
+        "extensions": {
+          "KHR_texture_basisu": {
+            "source": imgIdx
+          }
+        }
+      })
+    else:
+      textures.add(%*{"source": imgIdx, "sampler": 0})
+    let idx = textures.len - 1
+    textureIds[key] = idx
+    idx
+
+  proc materialIndex(mat: Material): int =
+    ## Returns the output material index for a material.
+    if mat == nil:
+      return -1
+    let key = cast[pointer](mat)
+    if key in materialIds:
+      return materialIds[key]
+
+    var matNode = newJObject()
+    matNode["name"] = newJString(mat.name)
+    var pbr = newJObject()
+    let cf = mat.baseColorFactor
+    pbr["baseColorFactor"] = newJArray()
+    pbr["baseColorFactor"].add(newJFloat(cf.r))
+    pbr["baseColorFactor"].add(newJFloat(cf.g))
+    pbr["baseColorFactor"].add(newJFloat(cf.b))
+    pbr["baseColorFactor"].add(newJFloat(cf.a))
+    pbr["metallicFactor"] = newJFloat(mat.metallicFactor)
+    pbr["roughnessFactor"] = newJFloat(mat.roughnessFactor)
+
+    if mat.baseColor != nil and mat.baseColorName.len > 0:
+      let texIdx = textureIndex(mat.baseColor, mat.baseColorName, tsColor)
+      pbr["baseColorTexture"] = %*{"index": texIdx}
+
+    if mat.metallicRoughness != nil and mat.metallicRoughnessName.len > 0:
+      let texIdx = textureIndex(
+        mat.metallicRoughness,
+        mat.metallicRoughnessName,
+        tsData
+      )
+      pbr["metallicRoughnessTexture"] = %*{"index": texIdx}
+
+    matNode["pbrMetallicRoughness"] = pbr
+    matNode["doubleSided"] = newJBool(mat.doubleSided)
+
+    if mat.normal != nil and mat.normalName.len > 0 and mat.hasNormalTexture:
+      let texIdx = textureIndex(mat.normal, mat.normalName, tsNormal)
+      matNode["normalTexture"] = %*{
+        "index": texIdx,
+        "scale": mat.normalScale
+      }
+
+    if mat.occlusion != nil and mat.occlusionName.len > 0:
+      let texIdx = textureIndex(mat.occlusion, mat.occlusionName, tsData)
+      matNode["occlusionTexture"] = %*{
+        "index": texIdx,
+        "strength": mat.occlusionStrength
+      }
+
+    if mat.emissive != nil and mat.emissiveName.len > 0:
+      let texIdx = textureIndex(mat.emissive, mat.emissiveName, tsColor)
+      matNode["emissiveTexture"] = %*{"index": texIdx}
+      matNode["emissiveFactor"] = %*[
+        mat.emissiveFactor.r,
+        mat.emissiveFactor.g,
+        mat.emissiveFactor.b
+      ]
+
+    case mat.alphaMode
+    of OpaqueAlphaMode:
+      matNode["alphaMode"] = newJString("OPAQUE")
+    of MaskAlphaMode:
+      matNode["alphaMode"] = newJString("MASK")
+      let cutoff =
+        if mat.alphaCutoff > 0:
+          mat.alphaCutoff
+        else:
+          0.5
+      matNode["alphaCutoff"] = newJFloat(cutoff)
+    of BlendAlphaMode:
+      matNode["alphaMode"] = newJString("BLEND")
+    materials.add(matNode)
+    let idx = materials.len - 1
+    materialIds[key] = idx
+    idx
+
+  var meshIds = initTable[pointer, int]()
+  var
+    nodeIds = initTable[pointer, int]()
+    skinIds = initTable[pointer, int]()
+    walkedNodes: seq[Node]
+    skinsJson: seq[JsonNode]
+    animationsJson: seq[JsonNode]
+
+  proc addFloatAccessor(values: seq[float32]): int =
+    ## Adds one scalar float accessor.
+    var payload = newString(values.len * 4)
+    for i, value in values:
+      payload.writeFloat32(i * 4, value)
+    addAccessor(
+      accessors,
+      bufferViews,
+      data,
+      payload,
+      atSCALAR,
+      FloatComponent,
+      values.len,
+      0
+    )
+
+  proc addVec3Accessor(values: seq[Vec3]): int =
+    ## Adds one Vec3 float accessor.
+    var payload = newString(values.len * 12)
+    for i, value in values:
+      payload.writeFloat32(i * 12 + 0, value.x)
+      payload.writeFloat32(i * 12 + 4, value.y)
+      payload.writeFloat32(i * 12 + 8, value.z)
+    addAccessor(
+      accessors,
+      bufferViews,
+      data,
+      payload,
+      atVEC3,
+      FloatComponent,
+      values.len,
+      0
+    )
+
+  proc addVec4Accessor(values: seq[Vec4]): int =
+    ## Adds one Vec4 float accessor.
+    var payload = newString(values.len * 16)
+    for i, value in values:
+      payload.writeFloat32(i * 16 + 0, value.x)
+      payload.writeFloat32(i * 16 + 4, value.y)
+      payload.writeFloat32(i * 16 + 8, value.z)
+      payload.writeFloat32(i * 16 + 12, value.w)
+    addAccessor(
+      accessors,
+      bufferViews,
+      data,
+      payload,
+      atVEC4,
+      FloatComponent,
+      values.len,
+      0
+    )
+
+  proc addQuatAccessor(values: seq[Quat]): int =
+    ## Adds one quaternion accessor.
+    var payload = newString(values.len * 16)
+    for i, value in values:
+      payload.writeFloat32(i * 16 + 0, value.x)
+      payload.writeFloat32(i * 16 + 4, value.y)
+      payload.writeFloat32(i * 16 + 8, value.z)
+      payload.writeFloat32(i * 16 + 12, value.w)
+    addAccessor(
+      accessors,
+      bufferViews,
+      data,
+      payload,
+      atVEC4,
+      FloatComponent,
+      values.len,
+      0
+    )
+
+  proc addMat4Accessor(values: seq[Mat4]): int =
+    ## Adds one Mat4 float accessor.
+    var payload = newString(values.len * 64)
+    for i, value in values:
+      let floats = cast[ptr UncheckedArray[float32]](value.addr)
+      for j in 0 ..< 16:
+        payload.writeFloat32(i * 64 + j * 4, floats[j])
+    addAccessor(
+      accessors,
+      bufferViews,
+      data,
+      payload,
+      atMAT4,
+      FloatComponent,
+      values.len,
+      0
+    )
+
+  proc primitiveJson(primitive: Primitive): JsonNode =
+    ## Builds one glTF primitive entry from runtime data.
+    var attributes = newJObject()
+
+    if primitive.points.len > 0:
+      var payload = newString(primitive.points.len * 12)
+      for i, p in primitive.points:
+        payload.writeFloat32(i * 12 + 0, p.x)
+        payload.writeFloat32(i * 12 + 4, p.y)
+        payload.writeFloat32(i * 12 + 8, p.z)
+      let acc = addAccessor(
+        accessors,
+        bufferViews,
+        data,
+        payload,
+        atVEC3,
+        FloatComponent,
+        primitive.points.len,
+        0
+      )
+      attributes["POSITION"] = newJInt(acc)
+
+    if primitive.normals.len == primitive.points.len and
+      primitive.normals.len > 0:
+      var payload = newString(primitive.normals.len * 12)
+      for i, p in primitive.normals:
+        payload.writeFloat32(i * 12 + 0, p.x)
+        payload.writeFloat32(i * 12 + 4, p.y)
+        payload.writeFloat32(i * 12 + 8, p.z)
+      let acc = addAccessor(
+        accessors,
+        bufferViews,
+        data,
+        payload,
+        atVEC3,
+        FloatComponent,
+        primitive.normals.len,
+        0
+      )
+      attributes["NORMAL"] = newJInt(acc)
+
+    if primitive.uvs.len == primitive.points.len and primitive.uvs.len > 0:
+      var payload = newString(primitive.uvs.len * 8)
+      for i, p in primitive.uvs:
+        payload.writeFloat32(i * 8 + 0, p.x)
+        payload.writeFloat32(i * 8 + 4, p.y)
+      let acc = addAccessor(
+        accessors,
+        bufferViews,
+        data,
+        payload,
+        atVEC2,
+        FloatComponent,
+        primitive.uvs.len,
+        0
+      )
+      attributes["TEXCOORD_0"] = newJInt(acc)
+
+    if primitive.colors.len == primitive.points.len and
+      primitive.colors.len > 0:
+      var payload = newString(primitive.colors.len * 4)
+      for i, c in primitive.colors:
+        payload[i * 4 + 0] = char(c.r)
+        payload[i * 4 + 1] = char(c.g)
+        payload[i * 4 + 2] = char(c.b)
+        payload[i * 4 + 3] = char(c.a)
+      let acc = addAccessor(
+        accessors,
+        bufferViews,
+        data,
+        payload,
+        atVEC4,
+        UnsignedByteComponent,
+        primitive.colors.len,
+        0
+      )
+      attributes["COLOR_0"] = newJInt(acc)
+
+    if primitive.jointIds.len == primitive.points.len and
+      primitive.jointIds.len > 0:
+      var payload = newString(primitive.jointIds.len * 8)
+      for i, ids in primitive.jointIds:
+        for j in 0 ..< 4:
+          payload.writeUint16AtLe(i * 8 + j * 2, ids[j])
+      let acc = addAccessor(
+        accessors,
+        bufferViews,
+        data,
+        payload,
+        atVEC4,
+        UnsignedShortComponent,
+        primitive.jointIds.len,
+        0
+      )
+      attributes["JOINTS_0"] = newJInt(acc)
+
+    if primitive.jointWeights.len == primitive.points.len and
+      primitive.jointWeights.len > 0:
+      attributes["WEIGHTS_0"] = newJInt(
+        addVec4Accessor(primitive.jointWeights)
+      )
+
+    var indicesAcc = -1
+    if primitive.indices16.len > 0:
+      var fitsUint8 = true
+      for idxVal in primitive.indices16:
+        if idxVal > 255:
+          fitsUint8 = false
+          break
+      if fitsUint8:
+        var payload = newString(primitive.indices16.len)
+        for i, idxVal in primitive.indices16:
+          payload[i] = char(idxVal.uint8)
+        indicesAcc = addAccessor(
+          accessors,
+          bufferViews,
+          data,
+          payload,
+          atSCALAR,
+          UnsignedByteComponent,
+          primitive.indices16.len,
+          0
+        )
+      else:
+        var payload = newString(primitive.indices16.len * 2)
+        for i, idxVal in primitive.indices16:
+          payload.writeUint16AtLe(i * 2, idxVal)
+        indicesAcc = addAccessor(
+          accessors,
+          bufferViews,
+          data,
+          payload,
+          atSCALAR,
+          UnsignedShortComponent,
+          primitive.indices16.len,
+          0
+        )
+    elif primitive.indices32.len > 0:
+      var payload = newString(primitive.indices32.len * 4)
+      for i, idxVal in primitive.indices32:
+        payload.writeUint32AtLe(i * 4, idxVal)
+      indicesAcc = addAccessor(
+        accessors,
+        bufferViews,
+        data,
+        payload,
+        atSCALAR,
+        UnsignedIntComponent,
+        primitive.indices32.len,
+        0
+      )
+
+    result = newJObject()
+    result["attributes"] = attributes
+    if indicesAcc >= 0:
+      result["indices"] = newJInt(indicesAcc)
+    result["mode"] = newJInt(primitive.mode.int)
+    let matIdx = materialIndex(primitive.material)
+    if matIdx >= 0:
+      result["material"] = newJInt(matIdx)
+
+  proc addMeshForNode(n: Node): int =
+    ## Adds mesh data for a node and returns its index.
+    if n.mesh == nil or n.mesh.primitives.len == 0:
+      return -1
+    let key = cast[pointer](n.mesh)
+    if key in meshIds:
+      return meshIds[key]
+
+    var meshObj = newJObject()
+    let meshName =
+      if n.mesh.name.len > 0:
+        n.mesh.name
+      else:
+        n.name
+    meshObj["name"] = newJString(meshName)
+    meshObj["primitives"] = newJArray()
+    for primitive in n.mesh.primitives:
+      meshObj["primitives"].add(primitiveJson(primitive))
+    meshes.add(meshObj)
+    let idx = meshes.len - 1
+    meshIds[key] = idx
+    idx
+
+  proc walk(n: Node): int =
+    ## Walks the node tree and returns the node index.
+    var nodeObj = newJObject()
+    nodeObj["name"] = newJString(n.name)
+    nodeObj["translation"] = %*[n.pos.x, n.pos.y, n.pos.z]
+    nodeObj["rotation"] = %*[n.rot.x, n.rot.y, n.rot.z, n.rot.w]
+    nodeObj["scale"] = %*[n.scale.x, n.scale.y, n.scale.z]
+    if not n.visible:
+      usesNodeVisibility = true
+      nodeObj["extensions"] = %*{
+        "KHR_node_visibility": {
+          "visible": false
+        }
+      }
+
+    let meshIdx = addMeshForNode(n)
+    if meshIdx >= 0:
+      nodeObj["mesh"] = newJInt(meshIdx)
+
+    if n.nodes.len > 0:
+      nodeObj["children"] = newJArray()
+      for child in n.nodes:
+        let childIdx = walk(child)
+        nodeObj["children"].add(newJInt(childIdx))
+
+    nodesJson.add(nodeObj)
+    result = nodesJson.len - 1
+    nodeIds[cast[pointer](n)] = result
+    walkedNodes.add(n)
+
+  proc skinIndex(skin: Skin): int =
+    ## Returns the output glTF skin index for one runtime skin.
+    if skin == nil:
+      return -1
+    let key = cast[pointer](skin)
+    if key in skinIds:
+      return skinIds[key]
+
+    var skinObj = newJObject()
+    skinObj["name"] = newJString(skin.name)
+    skinObj["joints"] = newJArray()
+    for joint in skin.joints:
+      let jointKey = cast[pointer](joint)
+      if jointKey in nodeIds:
+        skinObj["joints"].add(newJInt(nodeIds[jointKey]))
+    if skin.skeleton != nil:
+      let skeletonKey = cast[pointer](skin.skeleton)
+      if skeletonKey in nodeIds:
+        skinObj["skeleton"] = newJInt(nodeIds[skeletonKey])
+    if skin.inverseBindMatrices.len > 0:
+      skinObj["inverseBindMatrices"] = newJInt(
+        addMat4Accessor(skin.inverseBindMatrices)
+      )
+
+    skinsJson.add(skinObj)
+    let idx = skinsJson.len - 1
+    skinIds[key] = idx
+    idx
+
+  proc animationInterpolation(value: AnimInterpolation): string =
+    ## Converts one runtime interpolation to glTF sampler text.
+    case value
+    of aiStep:
+      "STEP"
+    of aiLinear:
+      "LINEAR"
+    of aiCubicSpline:
+      "LINEAR"
+
+  proc addAnimationChannel(
+    samplers,
+    channels: JsonNode,
+    channel: AnimationChannel
+  ) =
+    ## Adds one animation channel when it maps to core glTF animation data.
+    if channel.target == nil or channel.times.len == 0:
+      return
+    let targetKey = cast[pointer](channel.target)
+    if targetKey notin nodeIds:
+      return
+
+    var
+      outputAccessor = -1
+      path = ""
+      valueCount = 0
+    case channel.path
+    of AnimTranslation:
+      if channel.valuesVec3.len != channel.times.len:
+        return
+      outputAccessor = addVec3Accessor(channel.valuesVec3)
+      path = "translation"
+      valueCount = channel.valuesVec3.len
+    of AnimRotation:
+      if channel.valuesQuat.len != channel.times.len:
+        return
+      outputAccessor = addQuatAccessor(channel.valuesQuat)
+      path = "rotation"
+      valueCount = channel.valuesQuat.len
+    of AnimScale:
+      if channel.valuesVec3.len != channel.times.len:
+        return
+      outputAccessor = addVec3Accessor(channel.valuesVec3)
+      path = "scale"
+      valueCount = channel.valuesVec3.len
+    of AnimWeights:
+      if channel.valuesWeights.len != channel.times.len:
+        return
+      return
+    of AnimVisibility:
+      return
+    if valueCount == 0:
+      return
+
+    let samplerIndex = samplers.len
+    samplers.add(%*{
+      "input": addFloatAccessor(channel.times),
+      "output": outputAccessor,
+      "interpolation": channel.interpolation.animationInterpolation()
+    })
+    channels.add(%*{
+      "sampler": samplerIndex,
+      "target": {
+        "node": nodeIds[targetKey],
+        "path": path
+      }
+    })
+
+  proc addAnimation(clip: AnimationClip) =
+    ## Adds one glTF animation object.
+    var
+      samplers = newJArray()
+      channels = newJArray()
+    for channel in clip.channels:
+      addAnimationChannel(samplers, channels, channel)
+    if channels.len == 0:
+      return
+
+    var animObj = newJObject()
+    animObj["name"] = newJString(clip.name)
+    animObj["samplers"] = samplers
+    animObj["channels"] = channels
+    animationsJson.add(animObj)
+
+  let rootIdx = walk(root)
+  for n in walkedNodes:
+    if n.skin == nil:
+      continue
+    let
+      key = cast[pointer](n)
+      skinIdx = skinIndex(n.skin)
+    if key in nodeIds and skinIdx >= 0:
+      nodesJson[nodeIds[key]]["skin"] = newJInt(skinIdx)
+
+  for clip in root.animations:
+    addAnimation(clip)
+
+  var jsonRoot = newJObject()
+  jsonRoot["asset"] = %*{"version": "2.0"}
+  var extensionsUsed: seq[string]
+  var extensionsRequired: seq[string]
+  if usesNodeVisibility:
+    extensionsUsed.add("KHR_node_visibility")
+  if usesKhrTextureBasisu:
+    extensionsUsed.add("KHR_texture_basisu")
+    extensionsRequired.add("KHR_texture_basisu")
+  if extensionsUsed.len > 0:
+    jsonRoot["extensionsUsed"] = %*extensionsUsed
+  if extensionsRequired.len > 0:
+    jsonRoot["extensionsRequired"] = %*extensionsRequired
+  jsonRoot["buffers"] = %*[{"byteLength": data.len}]
+
+  jsonRoot["bufferViews"] = newJArray()
+  for bv in bufferViews:
+    jsonRoot["bufferViews"].add(%*{
+      "buffer": bv.buffer,
+      "byteOffset": bv.byteOffset,
+      "byteLength": bv.byteLength,
+      "byteStride": bv.byteStride
+    })
+
+  jsonRoot["accessors"] = newJArray()
+  for acc in accessors:
+    jsonRoot["accessors"].add(%*{
+      "bufferView": acc.bufferView,
+      "byteOffset": acc.byteOffset,
+      "componentType": acc.componentType.int,
+      "count": acc.count,
+      "type": (
+        case acc.kind
+        of atSCALAR: "SCALAR"
+        of atVEC2: "VEC2"
+        of atVEC3: "VEC3"
+        of atVEC4: "VEC4"
+        of atMAT2: "MAT2"
+        of atMAT3: "MAT3"
+        of atMAT4: "MAT4"
+      )
+    })
+
+  jsonRoot["samplers"] = newJArray()
+  for s in samplers:
+    jsonRoot["samplers"].add(%*{
+      "magFilter": s.magFilter.int,
+      "minFilter": s.minFilter.int,
+      "wrapS": s.wrapS.int,
+      "wrapT": s.wrapT.int
+    })
+
+  if textures.len > 0:
+    jsonRoot["textures"] = %*textures
+  if images.len > 0:
+    jsonRoot["images"] = %*images
+  if materials.len > 0:
+    jsonRoot["materials"] = %*materials
+  if skinsJson.len > 0:
+    jsonRoot["skins"] = %*skinsJson
+  if animationsJson.len > 0:
+    jsonRoot["animations"] = %*animationsJson
+
+  jsonRoot["meshes"] = %*meshes
+  jsonRoot["nodes"] = %*nodesJson
+  jsonRoot["scenes"] = %*[{"nodes": %*[rootIdx]}]
+  jsonRoot["scene"] = newJInt(0)
+
+  var jsonStr = $jsonRoot
+  while jsonStr.len mod 4 != 0:
+    jsonStr.add(' ')
+
+  var glb = newString(0)
+  writeUint32Le(glb, 0x46546C67)
+  writeUint32Le(glb, 2)
+  writeUint32Le(glb, 0)
+
+  writeUint32Le(glb, jsonStr.len.uint32)
+  writeUint32Le(glb, 0x4E4F534A)
+  glb.add(jsonStr)
+
+  pad4(data)
+  writeUint32Le(glb, data.len.uint32)
+  writeUint32Le(glb, 0x004E4942)
+  glb.add(data)
+
+  let totalLen = glb.len
+  glb[8] = char(totalLen and 0xFF)
+  glb[9] = char((totalLen shr 8) and 0xFF)
+  glb[10] = char((totalLen shr 16) and 0xFF)
+  glb[11] = char((totalLen shr 24) and 0xFF)
+
+  writeFile(path, glb)

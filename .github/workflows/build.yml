@@ -1,0 +1,129 @@
+name: Github Actions
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    env:
+      KTX_VERSION: 4.4.2
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/checkout@v5
+        with:
+          repository: treeform/shady
+          ref: shady-backends
+          path: shady
+      - uses: treeform/setup-nim-action@v6
+      - run: nimby install shady/shady.nimble
+      - run: nimby install gltf/gltf.nimble
+        working-directory: ${{ github.workspace }}/..
+      - name: Install OpenGL test dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y xvfb libgl1-mesa-dri libglx-mesa0 mesa-utils
+      - name: Install KTX tools (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          set -euxo pipefail
+          archive="$RUNNER_TEMP/ktx.tar.bz2"
+          install_root="$RUNNER_TEMP/ktx"
+          curl -L --fail \
+            "https://github.com/KhronosGroup/KTX-Software/releases/download/v${KTX_VERSION}/KTX-Software-${KTX_VERSION}-Linux-x86_64.tar.bz2" \
+            -o "$archive"
+          mkdir -p "$install_root"
+          tar -xjf "$archive" -C "$install_root" --strip-components=1
+          echo "$install_root/bin" >> "$GITHUB_PATH"
+      - name: Install KTX tools (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $installer = Join-Path $env:RUNNER_TEMP "KTX-Software-$env:KTX_VERSION-Windows-x64.exe"
+          $installRoot = Join-Path $env:RUNNER_TEMP "KTX-Software"
+          Invoke-WebRequest "https://github.com/KhronosGroup/KTX-Software/releases/download/v$env:KTX_VERSION/KTX-Software-$env:KTX_VERSION-Windows-x64.exe" -OutFile $installer
+          $process = Start-Process -FilePath $installer -ArgumentList '/S', "/D=$installRoot" -Wait -PassThru
+          if ($process.ExitCode -ne 0) {
+            throw "KTX installer failed with exit code $($process.ExitCode)"
+          }
+          "$installRoot\\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Install Mesa OpenGL (Windows)
+        if: runner.os == 'Windows'
+        uses: f3d-app/install-mesa-windows-action@v1
+        with:
+          path: ${{ github.workspace }}
+      - run: nim check src/gltf.nim
+      - run: nim check tests/draco/tests.nim
+      - run: nim r -d:release tests/backend_shaders.nim
+      - run: nim r -d:release tests/draco/tests.nim
+      - name: Run tests (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          xvfb-run -s "-screen 0 1024x768x24" \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            nim r -d:release tests/tests.nim
+          xvfb-run -s "-screen 0 1024x768x24" \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            nim r -d:release tests/test_ktx2.nim
+      - name: Run tests (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          nim c -d:release -o:tests.exe tests/tests.nim
+          .\tests.exe
+          nim c -d:release -o:test_ktx2.exe tests/test_ktx2.nim
+          .\test_ktx2.exe
+
+  backend-compile:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            backend: opengl
+            flags: -d:useOpenGL
+          - os: windows-latest
+            backend: opengl
+            flags: -d:useOpenGL
+          - os: windows-latest
+            backend: directx
+            flags: -d:useDirectX
+          - os: windows-latest
+            backend: vulkan
+            flags: -d:useVulkan
+          - os: macos-latest
+            backend: opengl
+            flags: -d:useOpenGL
+          - os: macos-latest
+            backend: metal
+            flags: -d:useMetal4
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/checkout@v5
+        with:
+          repository: treeform/shady
+          ref: shady-backends
+          path: shady
+      - uses: treeform/setup-nim-action@v6
+      - run: nimby install shady/shady.nimble
+      - run: nimby install gltf/gltf.nimble
+        working-directory: ${{ github.workspace }}/..
+      - name: Generate viewer atlas
+        run: nim r tools/gen_atlas.nim
+      - name: Validate backend shaders (${{ matrix.backend }})
+        run: nim r -d:release ${{ matrix.flags }} tests/backend_shaders.nim
+      - name: Compile sample assets (${{ matrix.backend }})
+        run: nim c --compileOnly -d:release -d:shadyBinaryShaders ${{ matrix.flags }} tests/sample_assets.nim
+      - name: Compile viewer (${{ matrix.backend }})
+        run: nim c --compileOnly -d:release -d:shadyBinaryShaders ${{ matrix.flags }} tools/gltf_viewer.nim
