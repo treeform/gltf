@@ -39,6 +39,119 @@ var
 const
   ShadowMapSize = 2048
 
+type
+  TextureTransformUniforms = object
+    texCoord: GLint
+    offset: GLint
+    scale: GLint
+    rotation: GLint
+
+  PbrUniforms = object
+    model: GLint
+    normalMatrix: GLint
+    view: GLint
+    proj: GLint
+    lightSpace: GLint
+    useSkinning: GLint
+    jointMatrices: GLint
+    environmentMap: GLint
+    environmentMipCount: GLint
+    baseColorTexture: GLint
+    baseColorFactor: GLint
+    baseColorTransform: TextureTransformUniforms
+    metallicRoughnessTexture: GLint
+    metallicFactor: GLint
+    roughnessFactor: GLint
+    transmissionFactor: GLint
+    metallicRoughnessTransform: TextureTransformUniforms
+    normalTexture: GLint
+    normalScale: GLint
+    normalTransform: TextureTransformUniforms
+    useNormalTexture: GLint
+    occlusionTexture: GLint
+    occlusionStrength: GLint
+    occlusionTransform: TextureTransformUniforms
+    emissiveTexture: GLint
+    emissiveFactor: GLint
+    emissiveTransform: TextureTransformUniforms
+    shadowMap: GLint
+    shadowBias: GLint
+    shadowMapTexelSize: GLint
+    alphaCutoff: GLint
+    ambientLightColor: GLint
+    sunLightDirection: GLint
+    sunLightColor: GLint
+    rimLightDirection: GLint
+    rimLightColor: GLint
+    debugViewMode: GLint
+    cameraPosition: GLint
+    tint: GLint
+    useShadow: GLint
+
+var
+  pbrUniforms: PbrUniforms
+
+proc uniformLocation(shader: GLuint, name: cstring): GLint =
+  ## Returns one shader uniform location.
+  glGetUniformLocation(shader, name)
+
+proc loadTextureTransformUniforms(
+  shader: GLuint,
+  prefix: cstring
+): TextureTransformUniforms =
+  ## Caches one texture transform uniform group.
+  let base = $prefix
+  result.texCoord = uniformLocation(shader, (base & "TexCoord").cstring)
+  result.offset = uniformLocation(shader, (base & "UvOffset").cstring)
+  result.scale = uniformLocation(shader, (base & "UvScale").cstring)
+  result.rotation = uniformLocation(shader, (base & "UvRotation").cstring)
+
+proc loadPbrUniforms(shader: GLuint): PbrUniforms =
+  ## Caches PBR shader uniform locations.
+  result.model = uniformLocation(shader, "model")
+  result.normalMatrix = uniformLocation(shader, "normalMatrix")
+  result.view = uniformLocation(shader, "view")
+  result.proj = uniformLocation(shader, "proj")
+  result.lightSpace = uniformLocation(shader, "lightSpace")
+  result.useSkinning = uniformLocation(shader, "useSkinning")
+  result.jointMatrices = uniformLocation(shader, "jointMatrices")
+  result.environmentMap = uniformLocation(shader, "environmentMap")
+  result.environmentMipCount = uniformLocation(shader, "environmentMipCount")
+  result.baseColorTexture = uniformLocation(shader, "baseColorTexture")
+  result.baseColorFactor = uniformLocation(shader, "baseColorFactor")
+  result.baseColorTransform =
+    loadTextureTransformUniforms(shader, "baseColor")
+  result.metallicRoughnessTexture =
+    uniformLocation(shader, "metallicRoughnessTexture")
+  result.metallicFactor = uniformLocation(shader, "metallicFactor")
+  result.roughnessFactor = uniformLocation(shader, "roughnessFactor")
+  result.transmissionFactor = uniformLocation(shader, "transmissionFactor")
+  result.metallicRoughnessTransform =
+    loadTextureTransformUniforms(shader, "metallicRoughness")
+  result.normalTexture = uniformLocation(shader, "normalTexture")
+  result.normalScale = uniformLocation(shader, "normalScale")
+  result.normalTransform = loadTextureTransformUniforms(shader, "normal")
+  result.useNormalTexture = uniformLocation(shader, "useNormalTexture")
+  result.occlusionTexture = uniformLocation(shader, "occlusionTexture")
+  result.occlusionStrength = uniformLocation(shader, "occlusionStrength")
+  result.occlusionTransform = loadTextureTransformUniforms(shader, "occlusion")
+  result.emissiveTexture = uniformLocation(shader, "emissiveTexture")
+  result.emissiveFactor = uniformLocation(shader, "emissiveFactor")
+  result.emissiveTransform = loadTextureTransformUniforms(shader, "emissive")
+  result.shadowMap = uniformLocation(shader, "shadowMap")
+  result.shadowBias = uniformLocation(shader, "shadowBias")
+  result.shadowMapTexelSize = uniformLocation(shader, "shadowMapTexelSize")
+  result.alphaCutoff = uniformLocation(shader, "alphaCutoff")
+  result.ambientLightColor = uniformLocation(shader, "ambientLightColor")
+  result.sunLightDirection = uniformLocation(shader, "sunLightDirection")
+  result.sunLightColor = uniformLocation(shader, "sunLightColor")
+  result.rimLightDirection = uniformLocation(shader, "rimLightDirection")
+  result.rimLightColor = uniformLocation(shader, "rimLightColor")
+  result.debugViewMode = uniformLocation(shader, "debugViewMode")
+  result.cameraPosition = uniformLocation(shader, "cameraPosition")
+  result.tint = uniformLocation(shader, "tint")
+  result.useShadow = uniformLocation(shader, "useShadow")
+
 proc mipCountForSize(size: int): float32 =
   if size <= 1:
     0.0'f32
@@ -50,7 +163,7 @@ proc updateEnvironmentMipUniform() =
     return
   glUseProgram(pbrShader)
   glUniform1f(
-    glGetUniformLocation(pbrShader, "environmentMipCount"),
+    pbrUniforms.environmentMipCount,
     environmentMipCount
   )
   glUseProgram(0)
@@ -104,6 +217,7 @@ proc setupPbr*() =
     PbrVertexShader,
     PbrFragmentShader
   )
+  pbrUniforms = loadPbrUniforms(pbrShader)
 
   skyboxShader = compileShaderFiles(
     SkyboxVertexShader,
@@ -159,18 +273,15 @@ proc setupPbr*() =
   # Bind shadow map to texture unit 6 so the sampler2DShadow uniform always
   # points to a valid depth texture, even when shadows are disabled.
   glUseProgram(pbrShader)
-  glUniform1i(glGetUniformLocation(pbrShader, "shadowMap"), 6)
-  glUniform1f(glGetUniformLocation(pbrShader, "shadowBias"), 0.0015'f32)
+  glUniform1i(pbrUniforms.shadowMap, 6)
+  glUniform1f(pbrUniforms.shadowBias, 0.0015'f32)
   glUniform2f(
-    glGetUniformLocation(pbrShader, "shadowMapTexelSize"),
+    pbrUniforms.shadowMapTexelSize,
     1.0'f32 / ShadowMapSize.float32,
     1.0'f32 / ShadowMapSize.float32
   )
   environmentMipCount = mipCountForSize(envMapSize)
-  glUniform1f(
-    glGetUniformLocation(pbrShader, "environmentMipCount"),
-    environmentMipCount
-  )
+  glUniform1f(pbrUniforms.environmentMipCount, environmentMipCount)
   glActiveTexture(GL_TEXTURE6)
   glBindTexture(GL_TEXTURE_2D, shadowMapTex)
   glUseProgram(0)
@@ -769,31 +880,23 @@ proc clearFromGpu*(node: Node) =
   for child in node.nodes:
     child.clearFromGpu()
 
-proc setTextureTransformUniform(shader: GLuint, prefix: string, transform: TextureTransform) =
+proc setTextureTransformUniform(
+  uniforms: TextureTransformUniforms,
+  transform: TextureTransform
+) =
   ## Sets UV transform uniforms for a texture input.
-  let
-    texCoordName = (prefix & "TexCoord").cstring
-    offsetName = (prefix & "UvOffset").cstring
-    scaleName = (prefix & "UvScale").cstring
-    rotationName = (prefix & "UvRotation").cstring
-  glUniform1i(
-    glGetUniformLocation(shader, texCoordName),
-    transform.texCoord.GLint
-  )
+  glUniform1i(uniforms.texCoord, transform.texCoord.GLint)
   glUniform2f(
-    glGetUniformLocation(shader, offsetName),
+    uniforms.offset,
     transform.offset.x,
     transform.offset.y
   )
   glUniform2f(
-    glGetUniformLocation(shader, scaleName),
+    uniforms.scale,
     transform.scale.x,
     transform.scale.y
   )
-  glUniform1f(
-    glGetUniformLocation(shader, rotationName),
-    transform.rotation
-  )
+  glUniform1f(uniforms.rotation, transform.rotation)
 
 proc renderPbrPrimitive(
   primitive: Primitive,
@@ -826,38 +929,49 @@ proc renderPbrPrimitive(
 
   glUseProgram(pbrShader)
 
-  let
-    modelUniform = glGetUniformLocation(pbrShader, "model")
-    viewUniform = glGetUniformLocation(pbrShader, "view")
-    projUniform = glGetUniformLocation(pbrShader, "proj")
-    lightSpaceUniform = glGetUniformLocation(pbrShader, "lightSpace")
-
   var
     modelArray = transform
     normalArray = transform.normalMatrix
     viewArray = view
     projArray = proj
     lightSpaceArray = lightSpace
-  glUniformMatrix4fv(modelUniform, 1, GL_FALSE, cast[ptr float32](modelArray.addr))
+  glUniformMatrix4fv(
+    pbrUniforms.model,
+    1,
+    GL_FALSE,
+    cast[ptr float32](modelArray.addr)
+  )
   glUniformMatrix3fv(
-    glGetUniformLocation(pbrShader, "normalMatrix"),
+    pbrUniforms.normalMatrix,
     1,
     GL_FALSE,
     cast[ptr float32](normalArray.addr)
   )
-  glUniformMatrix4fv(viewUniform, 1, GL_FALSE, cast[ptr float32](viewArray.addr))
-  glUniformMatrix4fv(projUniform, 1, GL_FALSE, cast[ptr float32](projArray.addr))
-  glUniformMatrix4fv(lightSpaceUniform, 1, GL_FALSE, cast[ptr float32](lightSpaceArray.addr))
+  glUniformMatrix4fv(
+    pbrUniforms.view,
+    1,
+    GL_FALSE,
+    cast[ptr float32](viewArray.addr)
+  )
+  glUniformMatrix4fv(
+    pbrUniforms.proj,
+    1,
+    GL_FALSE,
+    cast[ptr float32](projArray.addr)
+  )
+  glUniformMatrix4fv(
+    pbrUniforms.lightSpace,
+    1,
+    GL_FALSE,
+    cast[ptr float32](lightSpaceArray.addr)
+  )
 
   let jointMatrices = root.skinMatrices(owner)
   let useSkinning = jointMatrices.len > 0
-  glUniform1i(
-    glGetUniformLocation(pbrShader, "useSkinning"),
-    useSkinning.ord.GLint
-  )
+  glUniform1i(pbrUniforms.useSkinning, useSkinning.ord.GLint)
   if useSkinning:
     glUniformMatrix4fv(
-      glGetUniformLocation(pbrShader, "jointMatrices"),
+      pbrUniforms.jointMatrices,
       jointMatrices.len.GLsizei,
       GL_FALSE,
       cast[ptr float32](jointMatrices[0].addr)
@@ -868,7 +982,7 @@ proc renderPbrPrimitive(
   glBindVertexArray(primitiveData.vertexArrayId)
 
   glActiveTexture(GL_TEXTURE5)
-  glUniform1i(glGetUniformLocation(pbrShader, "environmentMap"), 5)
+  glUniform1i(pbrUniforms.environmentMap, 5)
   glBindTexture(GL_TEXTURE_CUBE_MAP, environmentMapId)
 
   if primitive.material != nil:
@@ -879,53 +993,70 @@ proc renderPbrPrimitive(
       primitive.tangents.len > 0
 
     glActiveTexture(GL_TEXTURE0)
-    glUniform1i(glGetUniformLocation(pbrShader, "baseColorTexture"), 0)
+    glUniform1i(pbrUniforms.baseColorTexture, 0)
     glBindTexture(GL_TEXTURE_2D, materialData.baseColorId)
 
     glUniform4f(
-      glGetUniformLocation(pbrShader, "baseColorFactor"),
+      pbrUniforms.baseColorFactor,
       primitive.material.baseColorFactor.r,
       primitive.material.baseColorFactor.g,
       primitive.material.baseColorFactor.b,
       primitive.material.baseColorFactor.a
     )
-    setTextureTransformUniform(pbrShader, "baseColor", primitive.material.baseColorTransform)
+    setTextureTransformUniform(
+      pbrUniforms.baseColorTransform,
+      primitive.material.baseColorTransform
+    )
 
     glActiveTexture(GL_TEXTURE1)
-    glUniform1i(glGetUniformLocation(pbrShader, "metallicRoughnessTexture"), 1)
+    glUniform1i(pbrUniforms.metallicRoughnessTexture, 1)
     glBindTexture(GL_TEXTURE_2D, materialData.metallicRoughnessId)
-    glUniform1f(glGetUniformLocation(pbrShader, "metallicFactor"), primitive.material.metallicFactor)
-    glUniform1f(glGetUniformLocation(pbrShader, "roughnessFactor"), primitive.material.roughnessFactor)
-    glUniform1f(glGetUniformLocation(pbrShader, "transmissionFactor"), primitive.material.transmissionFactor)
+    glUniform1f(pbrUniforms.metallicFactor, primitive.material.metallicFactor)
+    glUniform1f(pbrUniforms.roughnessFactor, primitive.material.roughnessFactor)
+    glUniform1f(
+      pbrUniforms.transmissionFactor,
+      primitive.material.transmissionFactor
+    )
     setTextureTransformUniform(
-      pbrShader,
-      "metallicRoughness",
+      pbrUniforms.metallicRoughnessTransform,
       primitive.material.metallicRoughnessTransform
     )
 
     glActiveTexture(GL_TEXTURE2)
-    glUniform1i(glGetUniformLocation(pbrShader, "normalTexture"), 2)
+    glUniform1i(pbrUniforms.normalTexture, 2)
     glBindTexture(GL_TEXTURE_2D, materialData.normalId)
-    glUniform1f(glGetUniformLocation(pbrShader, "normalScale"), primitive.material.normalScale)
-    setTextureTransformUniform(pbrShader, "normal", primitive.material.normalTransform)
-    glUniform1i(glGetUniformLocation(pbrShader, "useNormalTexture"), useNormalTexture.ord.GLint)
+    glUniform1f(pbrUniforms.normalScale, primitive.material.normalScale)
+    setTextureTransformUniform(
+      pbrUniforms.normalTransform,
+      primitive.material.normalTransform
+    )
+    glUniform1i(pbrUniforms.useNormalTexture, useNormalTexture.ord.GLint)
 
     glActiveTexture(GL_TEXTURE3)
-    glUniform1i(glGetUniformLocation(pbrShader, "occlusionTexture"), 3)
+    glUniform1i(pbrUniforms.occlusionTexture, 3)
     glBindTexture(GL_TEXTURE_2D, materialData.occlusionId)
-    glUniform1f(glGetUniformLocation(pbrShader, "occlusionStrength"), primitive.material.occlusionStrength)
-    setTextureTransformUniform(pbrShader, "occlusion", primitive.material.occlusionTransform)
+    glUniform1f(
+      pbrUniforms.occlusionStrength,
+      primitive.material.occlusionStrength
+    )
+    setTextureTransformUniform(
+      pbrUniforms.occlusionTransform,
+      primitive.material.occlusionTransform
+    )
 
     glActiveTexture(GL_TEXTURE4)
-    glUniform1i(glGetUniformLocation(pbrShader, "emissiveTexture"), 4)
+    glUniform1i(pbrUniforms.emissiveTexture, 4)
     glBindTexture(GL_TEXTURE_2D, materialData.emissiveId)
     glUniform3f(
-      glGetUniformLocation(pbrShader, "emissiveFactor"),
+      pbrUniforms.emissiveFactor,
       primitive.material.emissiveFactor.r,
       primitive.material.emissiveFactor.g,
       primitive.material.emissiveFactor.b
     )
-    setTextureTransformUniform(pbrShader, "emissive", primitive.material.emissiveTransform)
+    setTextureTransformUniform(
+      pbrUniforms.emissiveTransform,
+      primitive.material.emissiveTransform
+    )
 
     let activeShadowTex =
       if shadowTex != 0.GLuint:
@@ -933,7 +1064,7 @@ proc renderPbrPrimitive(
       else:
         shadowMapTex
     glActiveTexture(GL_TEXTURE6)
-    glUniform1i(glGetUniformLocation(pbrShader, "shadowMap"), 6)
+    glUniform1i(pbrUniforms.shadowMap, 6)
     glBindTexture(GL_TEXTURE_2D, activeShadowTex)
 
     var cutoff = primitive.material.alphaCutoff
@@ -951,7 +1082,7 @@ proc renderPbrPrimitive(
       glDisable(GL_BLEND)
       glDepthMask(GL_TRUE)
       cutoff = -1.0
-    glUniform1f(glGetUniformLocation(pbrShader, "alphaCutoff"), cutoff)
+    glUniform1f(pbrUniforms.alphaCutoff, cutoff)
 
     if primitive.material.doubleSided:
       glDisable(GL_CULL_FACE)
@@ -961,47 +1092,47 @@ proc renderPbrPrimitive(
     glBindTexture(GL_TEXTURE_2D, 0)
 
   glUniform4f(
-    glGetUniformLocation(pbrShader, "ambientLightColor"),
+    pbrUniforms.ambientLightColor,
     ambientLightColor.r,
     ambientLightColor.g,
     ambientLightColor.b,
     ambientLightColor.a
   )
   glUniform3f(
-    glGetUniformLocation(pbrShader, "sunLightDirection"),
+    pbrUniforms.sunLightDirection,
     sunLightDirection.x,
     sunLightDirection.y,
     sunLightDirection.z
   )
   glUniform4f(
-    glGetUniformLocation(pbrShader, "sunLightColor"),
+    pbrUniforms.sunLightColor,
     sunLightColor.r,
     sunLightColor.g,
     sunLightColor.b,
     sunLightColor.a
   )
   glUniform3f(
-    glGetUniformLocation(pbrShader, "rimLightDirection"),
+    pbrUniforms.rimLightDirection,
     rimLightDirection.x,
     rimLightDirection.y,
     rimLightDirection.z
   )
   glUniform4f(
-    glGetUniformLocation(pbrShader, "rimLightColor"),
+    pbrUniforms.rimLightColor,
     rimLightColor.r,
     rimLightColor.g,
     rimLightColor.b,
     rimLightColor.a
   )
-  glUniform1i(glGetUniformLocation(pbrShader, "debugViewMode"), debugView.int.GLint)
+  glUniform1i(pbrUniforms.debugViewMode, debugView.int.GLint)
   glUniform3f(
-    glGetUniformLocation(pbrShader, "cameraPosition"),
+    pbrUniforms.cameraPosition,
     cameraPosition.x,
     cameraPosition.y,
     cameraPosition.z
   )
-  glUniform4f(glGetUniformLocation(pbrShader, "tint"), tint.r, tint.g, tint.b, tint.a)
-  glUniform1i(glGetUniformLocation(pbrShader, "useShadow"), useShadow.Glint)
+  glUniform4f(pbrUniforms.tint, tint.r, tint.g, tint.b, tint.a)
+  glUniform1i(pbrUniforms.useShadow, useShadow.Glint)
 
   let glMode = primitive.mode.glValue
   setFrontFace(transform, primitive.mode)
