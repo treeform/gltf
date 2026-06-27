@@ -475,6 +475,18 @@
 <li><a class="reference external"
           data-doc-search-tag="ktx2: proc encodeKtx2(vkFormat: uint32; width, height: int; levelsData: openArray[string]): string" href="gltf/ktx2.html#encodeKtx2%2Cuint32%2Cint%2Cint%2CopenArray%5Bstring%5D">ktx2: proc encodeKtx2(vkFormat: uint32; width, height: int; levelsData: openArray[string]): string</a></li>
           </ul></dd>
+<dt><a name="encodeKtx2Image" href="#encodeKtx2Image"><span>encodeKtx2Image:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ktx2: proc encodeKtx2Image(image: Image; vkFormat: uint32; generateMipmaps = true): string" href="gltf/ktx2.html#encodeKtx2Image%2CImage%2Cuint32">ktx2: proc encodeKtx2Image(image: Image; vkFormat: uint32; generateMipmaps = true): string</a></li>
+          </ul></dd>
+<dt><a name="encodeKtx2ImageLevel" href="#encodeKtx2ImageLevel"><span>encodeKtx2ImageLevel:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ktx2: proc encodeKtx2ImageLevel(image: Image; vkFormat: uint32): string" href="gltf/ktx2.html#encodeKtx2ImageLevel%2CImage%2Cuint32">ktx2: proc encodeKtx2ImageLevel(image: Image; vkFormat: uint32): string</a></li>
+          </ul></dd>
+<dt><a name="encodeKtx2R32Sfloat" href="#encodeKtx2R32Sfloat"><span>encodeKtx2R32Sfloat:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ktx2: proc encodeKtx2R32Sfloat(width, height: int; values: openArray[float32]): string" href="gltf/ktx2.html#encodeKtx2R32Sfloat%2Cint%2Cint%2CopenArray%5Bfloat32%5D">ktx2: proc encodeKtx2R32Sfloat(width, height: int; values: openArray[float32]): string</a></li>
+          </ul></dd>
 <dt><a name="EncodingData" href="#EncodingData"><span>EncodingData:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="meshes: object EncodingData" href="gltf/draco/meshes.html#EncodingData">meshes: object EncodingData</a></li>
@@ -1587,6 +1599,24 @@
 <li><a class="reference external"
           data-doc-search-tag="writer: proc writeGLB(root: Node; path: string; imageWriteMode = iwmEmbedded)" href="gltf/writer.html#writeGLB%2CNode%2Cstring">writer: proc writeGLB(root: Node; path: string; imageWriteMode = iwmEmbedded)</a></li>
           </ul></dd>
+<dt><a name="writeKtx2File" href="#writeKtx2File"><span>writeKtx2File:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ktx2: proc writeKtx2File(file: string; vkFormat: uint32; width, height: int;
+              levelsData: openArray[string])" href="gltf/ktx2.html#writeKtx2File%2Cstring%2Cuint32%2Cint%2Cint%2CopenArray%5Bstring%5D">ktx2: proc writeKtx2File(file: string; vkFormat: uint32; width, height: int;
+              levelsData: openArray[string])</a></li>
+          </ul></dd>
+<dt><a name="writeKtx2ImageFile" href="#writeKtx2ImageFile"><span>writeKtx2ImageFile:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ktx2: proc writeKtx2ImageFile(file: string; image: Image; vkFormat: uint32;
+                   generateMipmaps = true)" href="gltf/ktx2.html#writeKtx2ImageFile%2Cstring%2CImage%2Cuint32">ktx2: proc writeKtx2ImageFile(file: string; image: Image; vkFormat: uint32;
+                   generateMipmaps = true)</a></li>
+          </ul></dd>
+<dt><a name="writeKtx2R32SfloatFile" href="#writeKtx2R32SfloatFile"><span>writeKtx2R32SfloatFile:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ktx2: proc writeKtx2R32SfloatFile(file: string; width, height: int;
+                       values: openArray[float32])" href="gltf/ktx2.html#writeKtx2R32SfloatFile%2Cstring%2Cint%2Cint%2CopenArray%5Bfloat32%5D">ktx2: proc writeKtx2R32SfloatFile(file: string; width, height: int;
+                       values: openArray[float32])</a></li>
+          </ul></dd>
 <dt><a name="writeKtx2TextureFile" href="#writeKtx2TextureFile"><span>writeKtx2TextureFile:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="ktx2: proc writeKtx2TextureFile(target: GLenum; texture: GLuint; file: string;
@@ -1599,7 +1629,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-06-26 03:36:05 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-06-27 02:39:24 UTC</small>
       </div>
     </div>
   </div>
