@@ -19,28 +19,28 @@ nim	shadowMapFbo	gltf/backends/opengl/renderer.html#shadowMapFbo	var shadowMapFb
 nim	shadowMapTex	gltf/backends/opengl/renderer.html#shadowMapTex	var shadowMapTex		35
 nim	shadowDepthShader	gltf/backends/opengl/renderer.html#shadowDepthShader	var shadowDepthShader		36
 nim	environmentMipCount	gltf/backends/opengl/renderer.html#environmentMipCount	var environmentMipCount		37
-nim	setupPbr	gltf/backends/opengl/renderer.html#setupPbr	proc setupPbr()		58
-nim	loadEnvironmentMap	gltf/backends/opengl/renderer.html#loadEnvironmentMap,string	proc loadEnvironmentMap(cubeMapPath: string)		351
-nim	loadSolidEnvironmentMap	gltf/backends/opengl/renderer.html#loadSolidEnvironmentMap	proc loadSolidEnvironmentMap(color = rgbx(180, 190, 220, 255))		357
-nim	loadDefaultEnvironmentMap	gltf/backends/opengl/renderer.html#loadDefaultEnvironmentMap	proc loadDefaultEnvironmentMap()		363
-nim	drawSkybox	gltf/backends/opengl/renderer.html#drawSkybox,Mat4,Mat4,float32	proc drawSkybox(view, proj: Mat4; lod: float32 = 0.0)		369
-nim	Renderer	gltf/backends/opengl/renderer.html#Renderer	type Renderer		408
-nim	clearFromGpu	gltf/backends/opengl/renderer.html#clearFromGpu,Primitive	proc clearFromGpu(primitive: Primitive)		580
-nim	uploadToGpu	gltf/backends/opengl/renderer.html#uploadToGpu,Primitive	proc uploadToGpu(primitive: Primitive)		582
-nim	clearFromGpu	gltf/backends/opengl/renderer.html#clearFromGpu,Mesh	proc clearFromGpu(mesh: Mesh)		759
-nim	clearFromGpu	gltf/backends/opengl/renderer.html#clearFromGpu,Node	proc clearFromGpu(node: Node)		765
-nim	drawPbr	gltf/backends/opengl/renderer.html#drawPbr,Node,Mat4,Mat4,Mat4,Color	proc drawPbr(node: Node; transform, view, proj: Mat4; tint: Color; useTrs = true;\n        ambientLightColor = color(0.1, 0.1, 0.1, 1);\n        sunLightDirection = vec3(1, 4, 2); sunLightColor = color(1, 1, 1, 1);\n        rimLightDirection = vec3(-1, 1, -1); rimLightColor = color(0, 0, 0, 0);\n        debugView = dvLit; cameraPosition = vec3(0, 0, 10))		1121
-nim	drawPbrWithShadow	gltf/backends/opengl/renderer.html#drawPbrWithShadow,Node,Mat4,Mat4,Mat4,Color	proc drawPbrWithShadow(node: Node; transform, view, proj: Mat4; tint: Color;\n                  sunLightDirection = vec3(1, 4, 2); useTrs = true;\n                  ambientLightColor = color(0.1, 0.1, 0.1, 1);\n                  sunLightColor = color(1, 1, 1, 1);\n                  rimLightDirection = vec3(-1, 1, -1);\n                  rimLightColor = color(0, 0, 0, 0); debugView = dvLit;\n                  cameraPosition = vec3(0, 0, 10))		1343
-nim	newRenderer	gltf/backends/opengl/renderer.html#newRenderer,Window	proc newRenderer(window: Window): Renderer		1448
-nim	beginFrame	gltf/backends/opengl/renderer.html#beginFrame,Renderer,Window,IVec2	proc beginFrame(renderer: Renderer; window: Window; size: IVec2)		1452
-nim	clearScreen	gltf/backends/opengl/renderer.html#clearScreen,Renderer,ColorRGBX	proc clearScreen(renderer: Renderer; color: ColorRGBX)		1462
-nim	clearScreen	gltf/backends/opengl/renderer.html#clearScreen,Renderer,Color	proc clearScreen(renderer: Renderer; color: Color)		1468
-nim	render	gltf/backends/opengl/renderer.html#render,Renderer,Node,RenderParams	proc render(renderer: Renderer; node: Node; params: RenderParams)		1473
-nim	render	gltf/backends/opengl/renderer.html#render,Renderer,GltfFile,RenderParams	proc render(renderer: Renderer; file: GltfFile; params: RenderParams)		1510
-nim	endFrame	gltf/backends/opengl/renderer.html#endFrame,Renderer	proc endFrame(renderer: Renderer)		1514
-nim	captureScreenshot	gltf/backends/opengl/renderer.html#captureScreenshot,Renderer	proc captureScreenshot(renderer: Renderer): Image		1517
-nim	release	gltf/backends/opengl/renderer.html#release,Renderer,Node	proc release(renderer: Renderer; node: Node)		1550
-nim	shutdown	gltf/backends/opengl/renderer.html#shutdown,Renderer	proc shutdown(renderer: Renderer)		1554
-nimgrp	clearscreen	gltf/backends/opengl/renderer.html#clearScreen-procs-all	proc		1462
-nimgrp	clearfromgpu	gltf/backends/opengl/renderer.html#clearFromGpu-procs-all	proc		580
-nimgrp	render	gltf/backends/opengl/renderer.html#render-procs-all	proc		1473
+nim	setupPbr	gltf/backends/opengl/renderer.html#setupPbr	proc setupPbr()		171
+nim	loadEnvironmentMap	gltf/backends/opengl/renderer.html#loadEnvironmentMap,string	proc loadEnvironmentMap(cubeMapPath: string)		462
+nim	loadSolidEnvironmentMap	gltf/backends/opengl/renderer.html#loadSolidEnvironmentMap	proc loadSolidEnvironmentMap(color = rgbx(180, 190, 220, 255))		468
+nim	loadDefaultEnvironmentMap	gltf/backends/opengl/renderer.html#loadDefaultEnvironmentMap	proc loadDefaultEnvironmentMap()		474
+nim	drawSkybox	gltf/backends/opengl/renderer.html#drawSkybox,Mat4,Mat4,float32	proc drawSkybox(view, proj: Mat4; lod: float32 = 0.0)		480
+nim	Renderer	gltf/backends/opengl/renderer.html#Renderer	type Renderer		519
+nim	clearFromGpu	gltf/backends/opengl/renderer.html#clearFromGpu,Primitive	proc clearFromGpu(primitive: Primitive)		691
+nim	uploadToGpu	gltf/backends/opengl/renderer.html#uploadToGpu,Primitive	proc uploadToGpu(primitive: Primitive)		693
+nim	clearFromGpu	gltf/backends/opengl/renderer.html#clearFromGpu,Mesh	proc clearFromGpu(mesh: Mesh)		870
+nim	clearFromGpu	gltf/backends/opengl/renderer.html#clearFromGpu,Node	proc clearFromGpu(node: Node)		876
+nim	drawPbr	gltf/backends/opengl/renderer.html#drawPbr,Node,Mat4,Mat4,Mat4,Color	proc drawPbr(node: Node; transform, view, proj: Mat4; tint: Color; useTrs = true;\n        ambientLightColor = color(0.1, 0.1, 0.1, 1);\n        sunLightDirection = vec3(1, 4, 2); sunLightColor = color(1, 1, 1, 1);\n        rimLightDirection = vec3(-1, 1, -1); rimLightColor = color(0, 0, 0, 0);\n        debugView = dvLit; cameraPosition = vec3(0, 0, 10))		1252
+nim	drawPbrWithShadow	gltf/backends/opengl/renderer.html#drawPbrWithShadow,Node,Mat4,Mat4,Mat4,Color	proc drawPbrWithShadow(node: Node; transform, view, proj: Mat4; tint: Color;\n                  sunLightDirection = vec3(1, 4, 2); useTrs = true;\n                  ambientLightColor = color(0.1, 0.1, 0.1, 1);\n                  sunLightColor = color(1, 1, 1, 1);\n                  rimLightDirection = vec3(-1, 1, -1);\n                  rimLightColor = color(0, 0, 0, 0); debugView = dvLit;\n                  cameraPosition = vec3(0, 0, 10))		1474
+nim	newRenderer	gltf/backends/opengl/renderer.html#newRenderer,Window	proc newRenderer(window: Window): Renderer		1579
+nim	beginFrame	gltf/backends/opengl/renderer.html#beginFrame,Renderer,Window,IVec2	proc beginFrame(renderer: Renderer; window: Window; size: IVec2)		1583
+nim	clearScreen	gltf/backends/opengl/renderer.html#clearScreen,Renderer,ColorRGBX	proc clearScreen(renderer: Renderer; color: ColorRGBX)		1593
+nim	clearScreen	gltf/backends/opengl/renderer.html#clearScreen,Renderer,Color	proc clearScreen(renderer: Renderer; color: Color)		1599
+nim	render	gltf/backends/opengl/renderer.html#render,Renderer,Node,RenderParams	proc render(renderer: Renderer; node: Node; params: RenderParams)		1604
+nim	render	gltf/backends/opengl/renderer.html#render,Renderer,GltfFile,RenderParams	proc render(renderer: Renderer; file: GltfFile; params: RenderParams)		1641
+nim	endFrame	gltf/backends/opengl/renderer.html#endFrame,Renderer	proc endFrame(renderer: Renderer)		1645
+nim	captureScreenshot	gltf/backends/opengl/renderer.html#captureScreenshot,Renderer	proc captureScreenshot(renderer: Renderer): Image		1648
+nim	release	gltf/backends/opengl/renderer.html#release,Renderer,Node	proc release(renderer: Renderer; node: Node)		1681
+nim	shutdown	gltf/backends/opengl/renderer.html#shutdown,Renderer	proc shutdown(renderer: Renderer)		1685
+nimgrp	clearscreen	gltf/backends/opengl/renderer.html#clearScreen-procs-all	proc		1593
+nimgrp	clearfromgpu	gltf/backends/opengl/renderer.html#clearFromGpu-procs-all	proc		691
+nimgrp	render	gltf/backends/opengl/renderer.html#render-procs-all	proc		1604
