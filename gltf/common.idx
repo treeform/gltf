@@ -72,4 +72,3 @@ nim	dvAoBake	gltf/common.html#dvAoBake	DebugView.dvAoBake		246
 nim	dvMetallic	gltf/common.html#dvMetallic	DebugView.dvMetallic		246
 nim	dvSpecular	gltf/common.html#dvSpecular	DebugView.dvSpecular		246
 nim	DebugView	gltf/common.html#DebugView	enum DebugView		246
-nim	RenderParams	gltf/common.html#RenderParams	object RenderParams		254

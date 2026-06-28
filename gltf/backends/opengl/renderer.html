@@ -61,27 +61,40 @@
   <details open>
     <summary><a class="reference reference-toplevel" href="#7" id="57">Types</a></summary>
     <ul class="simple simple-toc-section">
-      <li><a class="reference" href="#Renderer" title="Renderer = ref object
+      <li><a class="reference" href="#EnvironmentMap" title="EnvironmentMap = object
+  textureId*: GLuint
+  mipCount*: float32">EnvironmentMap</a></li>
+<li><a class="reference" href="#PbrContext" title="PbrContext = ref object
+  size*: IVec2
+  clearColor*: Color
+  transform*: Mat4
+  view*: Mat4
+  proj*: Mat4
+  tint*: Color
+  useTrs*: bool
+  ambientLightColor*: Color
+  sunLightDirection*: Vec3
+  sunLightColor*: Color
+  rimLightDirection*: Vec3
+  rimLightColor*: Color
+  debugView*: DebugView
+  cameraPosition*: Vec3
+  environmentMap*: EnvironmentMap
+  useShadows*: bool
+  drawSkybox*: bool
+  skyboxLod*: float32
+  vsync*: bool
+  pbrShader*: GLuint
+  skyboxShader*: GLuint
+  skyboxVao*: GLuint
+  skyboxVbo*: GLuint
+  shadowMapFbo*: GLuint
+  shadowMapTex*: GLuint
+  shadowDepthShader*: GLuint
+  shadowMapSize*: int
+  shadowBias*: float32">PbrContext</a></li>
+<li><a class="reference" href="#Renderer" title="Renderer = ref object
   window*: Window">Renderer</a></li>
-
-    </ul>
-  </details>
-</li>
-<li>
-  <details open>
-    <summary><a class="reference reference-toplevel" href="#8" id="58">Vars</a></summary>
-    <ul class="simple simple-toc-section">
-      <li><a class="reference" href="#environmentMapId" title="environmentMapId: GLuint">environmentMapId</a></li>
-<li><a class="reference" href="#environmentMipCount" title="environmentMipCount: float32">environmentMipCount</a></li>
-<li><a class="reference" href="#envMapFBO" title="envMapFBO: GLuint">envMapFBO</a></li>
-<li><a class="reference" href="#pbrShader" title="pbrShader: GLuint">pbrShader</a></li>
-<li><a class="reference" href="#rboDepth" title="rboDepth: GLuint">rboDepth</a></li>
-<li><a class="reference" href="#shadowDepthShader" title="shadowDepthShader: GLuint">shadowDepthShader</a></li>
-<li><a class="reference" href="#shadowMapFbo" title="shadowMapFbo: GLuint">shadowMapFbo</a></li>
-<li><a class="reference" href="#shadowMapTex" title="shadowMapTex: GLuint">shadowMapTex</a></li>
-<li><a class="reference" href="#skyboxShader" title="skyboxShader: GLuint">skyboxShader</a></li>
-<li><a class="reference" href="#skyboxVao" title="skyboxVao: GLuint">skyboxVao</a></li>
-<li><a class="reference" href="#skyboxVbo" title="skyboxVbo: GLuint">skyboxVbo</a></li>
 
     </ul>
   </details>
@@ -107,7 +120,13 @@
   <details open>
     <summary><a class="reference reference-toplevel" href="#12" id="62">Procs</a></summary>
     <ul class="simple simple-toc-section">
-      <ul class="simple nested-toc-section">beginFrame
+      <ul class="simple nested-toc-section">attachEnvironmentMap
+  <li><a class="reference" href="#attachEnvironmentMap%2CPbrContext%2CEnvironmentMap" title="attachEnvironmentMap(ctx: PbrContext; environmentMap: EnvironmentMap;
+                     owned = true)">attachEnvironmentMap(ctx: PbrContext; environmentMap: EnvironmentMap;
+                     owned = true)</a></li>
+
+</ul>
+<ul class="simple nested-toc-section">beginFrame
   <li><a class="reference" href="#beginFrame%2CRenderer%2CWindow%2CIVec2" title="beginFrame(renderer: Renderer; window: Window; size: IVec2)">beginFrame(renderer: Renderer; window: Window; size: IVec2)</a></li>
 
 </ul>
@@ -126,36 +145,20 @@
 <li><a class="reference" href="#clearScreen%2CRenderer%2CColorRGBX" title="clearScreen(renderer: Renderer; color: ColorRGBX)">clearScreen(renderer: Renderer; color: ColorRGBX)</a></li>
 
 </ul>
-<ul class="simple nested-toc-section">drawPbr
-  <li><a class="reference" href="#drawPbr%2CNode%2CMat4%2CMat4%2CMat4%2CColor" title="drawPbr(node: Node; transform, view, proj: Mat4; tint: Color; useTrs = true;
-        ambientLightColor = color(0.1, 0.1, 0.1, 1);
-        sunLightDirection = vec3(1, 4, 2); sunLightColor = color(1, 1, 1, 1);
-        rimLightDirection = vec3(-1, 1, -1); rimLightColor = color(0, 0, 0, 0);
-        debugView = dvLit; cameraPosition = vec3(0, 0, 10))">drawPbr(node: Node; transform, view, proj: Mat4; tint: Color; useTrs = true;
-        ambientLightColor = color(0.1, 0.1, 0.1, 1);
-        sunLightDirection = vec3(1, 4, 2); sunLightColor = color(1, 1, 1, 1);
-        rimLightDirection = vec3(-1, 1, -1); rimLightColor = color(0, 0, 0, 0);
-        debugView = dvLit; cameraPosition = vec3(0, 0, 10))</a></li>
+<ul class="simple nested-toc-section">destroy
+  <li><a class="reference" href="#destroy%2CPbrContext" title="destroy(ctx: PbrContext)">destroy(ctx: PbrContext)</a></li>
+<li><a class="reference" href="#destroy%2CEnvironmentMap" title="destroy(environmentMap: var EnvironmentMap)">destroy(environmentMap: var EnvironmentMap)</a></li>
 
 </ul>
-<ul class="simple nested-toc-section">drawPbrWithShadow
-  <li><a class="reference" href="#drawPbrWithShadow%2CNode%2CMat4%2CMat4%2CMat4%2CColor" title="drawPbrWithShadow(node: Node; transform, view, proj: Mat4; tint: Color;
-                  sunLightDirection = vec3(1, 4, 2); useTrs = true;
-                  ambientLightColor = color(0.1, 0.1, 0.1, 1);
-                  sunLightColor = color(1, 1, 1, 1);
-                  rimLightDirection = vec3(-1, 1, -1);
-                  rimLightColor = color(0, 0, 0, 0); debugView = dvLit;
-                  cameraPosition = vec3(0, 0, 10))">drawPbrWithShadow(node: Node; transform, view, proj: Mat4; tint: Color;
-                  sunLightDirection = vec3(1, 4, 2); useTrs = true;
-                  ambientLightColor = color(0.1, 0.1, 0.1, 1);
-                  sunLightColor = color(1, 1, 1, 1);
-                  rimLightDirection = vec3(-1, 1, -1);
-                  rimLightColor = color(0, 0, 0, 0); debugView = dvLit;
-                  cameraPosition = vec3(0, 0, 10))</a></li>
+<ul class="simple nested-toc-section">draw
+  <li><a class="reference" href="#draw%2CPbrContext%2CGltfFile" title="draw(ctx: PbrContext; file: GltfFile)">draw(ctx: PbrContext; file: GltfFile)</a></li>
+<li><a class="reference" href="#draw%2CPbrContext%2CNode" title="draw(ctx: PbrContext; node: Node)">draw(ctx: PbrContext; node: Node)</a></li>
 
 </ul>
 <ul class="simple nested-toc-section">drawSkybox
-  <li><a class="reference" href="#drawSkybox%2CMat4%2CMat4%2Cfloat32" title="drawSkybox(view, proj: Mat4; lod: float32 = 0.0)">drawSkybox(view, proj: Mat4; lod: float32 = 0.0)</a></li>
+  <li><a class="reference" href="#drawSkybox%2CPbrContext%2CMat4%2CMat4%2CEnvironmentMap%2Cfloat32" title="drawSkybox(ctx: PbrContext; view, proj: Mat4; environmentMap: EnvironmentMap;
+           lod: float32 = 0.0)">drawSkybox(ctx: PbrContext; view, proj: Mat4; environmentMap: EnvironmentMap;
+           lod: float32 = 0.0)</a></li>
 
 </ul>
 <ul class="simple nested-toc-section">endFrame
@@ -163,15 +166,24 @@
 
 </ul>
 <ul class="simple nested-toc-section">loadDefaultEnvironmentMap
-  <li><a class="reference" href="#loadDefaultEnvironmentMap" title="loadDefaultEnvironmentMap()">loadDefaultEnvironmentMap()</a></li>
+  <li><a class="reference" href="#loadDefaultEnvironmentMap" title="loadDefaultEnvironmentMap(): EnvironmentMap">loadDefaultEnvironmentMap(): EnvironmentMap</a></li>
 
 </ul>
 <ul class="simple nested-toc-section">loadEnvironmentMap
-  <li><a class="reference" href="#loadEnvironmentMap%2Cstring" title="loadEnvironmentMap(cubeMapPath: string)">loadEnvironmentMap(cubeMapPath: string)</a></li>
+  <li><a class="reference" href="#loadEnvironmentMap%2Cstring" title="loadEnvironmentMap(cubeMapPath: string): EnvironmentMap">loadEnvironmentMap(cubeMapPath: string): EnvironmentMap</a></li>
 
 </ul>
 <ul class="simple nested-toc-section">loadSolidEnvironmentMap
-  <li><a class="reference" href="#loadSolidEnvironmentMap" title="loadSolidEnvironmentMap(color = rgbx(180, 190, 220, 255))">loadSolidEnvironmentMap(color = rgbx(180, 190, 220, 255))</a></li>
+  <li><a class="reference" href="#loadSolidEnvironmentMap" title="loadSolidEnvironmentMap(color = rgbx(180, 190, 220, 255)): EnvironmentMap">loadSolidEnvironmentMap(color = rgbx(180, 190, 220, 255)): EnvironmentMap</a></li>
+
+</ul>
+<ul class="simple nested-toc-section">newEnvironmentMap
+  <li><a class="reference" href="#newEnvironmentMap%2CGLuint%2Cfloat32" title="newEnvironmentMap(textureId: GLuint; mipCount: float32): EnvironmentMap">newEnvironmentMap(textureId: GLuint; mipCount: float32): EnvironmentMap</a></li>
+
+</ul>
+<ul class="simple nested-toc-section">newPbrContext
+  <li><a class="reference" href="#newPbrContext%2CRenderer" title="newPbrContext(renderer: Renderer): PbrContext">newPbrContext(renderer: Renderer): PbrContext</a></li>
+<li><a class="reference" href="#newPbrContext%2Cfloat32" title="newPbrContext(shadowMapSize = ShadowMapSize; shadowBias = 0.0015'f32): PbrContext">newPbrContext(shadowMapSize = ShadowMapSize; shadowBias = 0.0015'f32): PbrContext</a></li>
 
 </ul>
 <ul class="simple nested-toc-section">newRenderer
@@ -180,15 +192,6 @@
 </ul>
 <ul class="simple nested-toc-section">release
   <li><a class="reference" href="#release%2CRenderer%2CNode" title="release(renderer: Renderer; node: Node)">release(renderer: Renderer; node: Node)</a></li>
-
-</ul>
-<ul class="simple nested-toc-section">render
-  <li><a class="reference" href="#render%2CRenderer%2CGltfFile%2CRenderParams" title="render(renderer: Renderer; file: GltfFile; params: RenderParams)">render(renderer: Renderer; file: GltfFile; params: RenderParams)</a></li>
-<li><a class="reference" href="#render%2CRenderer%2CNode%2CRenderParams" title="render(renderer: Renderer; node: Node; params: RenderParams)">render(renderer: Renderer; node: Node; params: RenderParams)</a></li>
-
-</ul>
-<ul class="simple nested-toc-section">setupPbr
-  <li><a class="reference" href="#setupPbr" title="setupPbr()">setupPbr()</a></li>
 
 </ul>
 <ul class="simple nested-toc-section">shutdown
@@ -223,130 +226,64 @@
 <div class="section" id="7">
   <h1><a class="toc-backref" href="#7">Types</a></h1>
   <dl class="item">
-    <div id="Renderer">
+    <div id="EnvironmentMap">
+  <dt><pre><a href="#EnvironmentMap"><span class="Identifier">EnvironmentMap</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <span class="Identifier">textureId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
+  <span class="Identifier">mipCount</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span></pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L28" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L28" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="PbrContext">
+  <dt><pre><a href="#PbrContext"><span class="Identifier">PbrContext</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
+  <span class="Identifier">size</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">IVec2</span>
+  <span class="Identifier">clearColor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Color</span>
+  <span class="Identifier">transform</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Mat4</span>
+  <span class="Identifier">view</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Mat4</span>
+  <span class="Identifier">proj</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Mat4</span>
+  <span class="Identifier">tint</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Color</span>
+  <span class="Identifier">useTrs</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">ambientLightColor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Color</span>
+  <span class="Identifier">sunLightDirection</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec3</span>
+  <span class="Identifier">sunLightColor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Color</span>
+  <span class="Identifier">rimLightDirection</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec3</span>
+  <span class="Identifier">rimLightColor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Color</span>
+  <span class="Identifier">debugView</span><span class="Operator">*</span><span class="Other">:</span> <a href="../../common.html#DebugView"><span class="Identifier">DebugView</span></a>
+  <span class="Identifier">cameraPosition</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec3</span>
+  <span class="Identifier">environmentMap</span><span class="Operator">*</span><span class="Other">:</span> <a href="#EnvironmentMap"><span class="Identifier">EnvironmentMap</span></a>
+  <span class="Identifier">useShadows</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">drawSkybox</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">skyboxLod</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">vsync</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">pbrShader</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
+  <span class="Identifier">skyboxShader</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
+  <span class="Identifier">skyboxVao</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
+  <span class="Identifier">skyboxVbo</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
+  <span class="Identifier">shadowMapFbo</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
+  <span class="Identifier">shadowMapTex</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
+  <span class="Identifier">shadowDepthShader</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
+  <span class="Identifier">shadowMapSize</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
+  <span class="Identifier">shadowBias</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span></pre></dt>
+  <dd>
+    
+    Reusable state for PBR rendering.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L102" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L102" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="Renderer">
   <dt><pre><a href="#Renderer"><span class="Identifier">Renderer</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
   <span class="Identifier">window</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Window</span></pre></dt>
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L519" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L519" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-
-  </dl>
-</div>
-<div class="section" id="8">
-  <h1><a class="toc-backref" href="#8">Vars</a></h1>
-  <dl class="item">
-    <div id="environmentMapId">
-  <dt><pre><a href="#environmentMapId"><span class="Identifier">environmentMapId</span></a><span class="Other">:</span> <span class="Identifier">GLuint</span></pre></dt>
-  <dd>
-    
-    
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L26" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L26" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-<div id="environmentMipCount">
-  <dt><pre><a href="#environmentMipCount"><span class="Identifier">environmentMipCount</span></a><span class="Other">:</span> <span class="Identifier">float32</span></pre></dt>
-  <dd>
-    
-    
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L37" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L37" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-<div id="envMapFBO">
-  <dt><pre><a href="#envMapFBO"><span class="Identifier">envMapFBO</span></a><span class="Other">:</span> <span class="Identifier">GLuint</span></pre></dt>
-  <dd>
-    
-    
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L25" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L25" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-<div id="pbrShader">
-  <dt><pre><a href="#pbrShader"><span class="Identifier">pbrShader</span></a><span class="Other">:</span> <span class="Identifier">GLuint</span></pre></dt>
-  <dd>
-    
-    
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L29" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L29" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-<div id="rboDepth">
-  <dt><pre><a href="#rboDepth"><span class="Identifier">rboDepth</span></a><span class="Other">:</span> <span class="Identifier">GLuint</span></pre></dt>
-  <dd>
-    
-    
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L27" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L27" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-<div id="shadowDepthShader">
-  <dt><pre><a href="#shadowDepthShader"><span class="Identifier">shadowDepthShader</span></a><span class="Other">:</span> <span class="Identifier">GLuint</span></pre></dt>
-  <dd>
-    
-    
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L36" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L36" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-<div id="shadowMapFbo">
-  <dt><pre><a href="#shadowMapFbo"><span class="Identifier">shadowMapFbo</span></a><span class="Other">:</span> <span class="Identifier">GLuint</span></pre></dt>
-  <dd>
-    
-    
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L34" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L34" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-<div id="shadowMapTex">
-  <dt><pre><a href="#shadowMapTex"><span class="Identifier">shadowMapTex</span></a><span class="Other">:</span> <span class="Identifier">GLuint</span></pre></dt>
-  <dd>
-    
-    
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L35" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L35" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-<div id="skyboxShader">
-  <dt><pre><a href="#skyboxShader"><span class="Identifier">skyboxShader</span></a><span class="Other">:</span> <span class="Identifier">GLuint</span></pre></dt>
-  <dd>
-    
-    
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L30" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L30" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-<div id="skyboxVao">
-  <dt><pre><a href="#skyboxVao"><span class="Identifier">skyboxVao</span></a><span class="Other">:</span> <span class="Identifier">GLuint</span></pre></dt>
-  <dd>
-    
-    
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L31" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L31" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-<div id="skyboxVbo">
-  <dt><pre><a href="#skyboxVbo"><span class="Identifier">skyboxVbo</span></a><span class="Other">:</span> <span class="Identifier">GLuint</span></pre></dt>
-  <dd>
-    
-    
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L32" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L32" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L94" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L94" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -452,15 +389,30 @@
 <div class="section" id="12">
   <h1><a class="toc-backref" href="#12">Procs</a></h1>
   <dl class="item">
-    <div id="beginFrame-procs-all">
+    <div id="attachEnvironmentMap-procs-all">
+  <div id="attachEnvironmentMap,PbrContext,EnvironmentMap">
+  <dt><pre><span class="Keyword">proc</span> <a href="#attachEnvironmentMap%2CPbrContext%2CEnvironmentMap"><span class="Identifier">attachEnvironmentMap</span></a><span class="Other">(</span><span class="Identifier">ctx</span><span class="Other">:</span> <a href="#PbrContext"><span class="Identifier">PbrContext</span></a><span class="Other">;</span> <span class="Identifier">environmentMap</span><span class="Other">:</span> <a href="#EnvironmentMap"><span class="Identifier">EnvironmentMap</span></a><span class="Other">;</span>
+                          <span class="Identifier">owned</span> <span class="Other">=</span> <span class="Identifier">true</span><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Attaches an environment map to a PBR context.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L580" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L580" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="beginFrame-procs-all">
   <div id="beginFrame,Renderer,Window,IVec2">
   <dt><pre><span class="Keyword">proc</span> <a href="#beginFrame%2CRenderer%2CWindow%2CIVec2"><span class="Identifier">beginFrame</span></a><span class="Other">(</span><span class="Identifier">renderer</span><span class="Other">:</span> <a href="#Renderer"><span class="Identifier">Renderer</span></a><span class="Other">;</span> <span class="Identifier">window</span><span class="Other">:</span> <span class="Identifier">Window</span><span class="Other">;</span> <span class="Identifier">size</span><span class="Other">:</span> <span class="Identifier">IVec2</span><span class="Other">)</span> {.
     <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1583" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1583" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1738" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1738" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -473,8 +425,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1648" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1648" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1762" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1762" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -486,8 +438,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L870" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L870" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L964" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L964" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -496,8 +448,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L876" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L876" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L970" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L970" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -507,8 +459,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L691" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L691" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L785" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L785" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -521,8 +473,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1599" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1599" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1754" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1754" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -532,62 +484,72 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1593" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1593" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1748" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1748" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
 
 </div>
-<div id="drawPbr-procs-all">
-  <div id="drawPbr,Node,Mat4,Mat4,Mat4,Color">
-  <dt><pre><span class="Keyword">proc</span> <a href="#drawPbr%2CNode%2CMat4%2CMat4%2CMat4%2CColor"><span class="Identifier">drawPbr</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="../../common.html#Node"><span class="Identifier">Node</span></a><span class="Other">;</span> <span class="Identifier">transform</span><span class="Other">,</span> <span class="Identifier">view</span><span class="Other">,</span> <span class="Identifier">proj</span><span class="Other">:</span> <span class="Identifier">Mat4</span><span class="Other">;</span> <span class="Identifier">tint</span><span class="Other">:</span> <span class="Identifier">Color</span><span class="Other">;</span>
-             <span class="Identifier">useTrs</span> <span class="Other">=</span> <span class="Identifier">true</span><span class="Other">;</span> <span class="Identifier">ambientLightColor</span> <span class="Other">=</span> <span class="Identifier">color</span><span class="Other">(</span><span class="FloatNumber">0.1</span><span class="Other">,</span> <span class="FloatNumber">0.1</span><span class="Other">,</span> <span class="FloatNumber">0.1</span><span class="Other">,</span> <span class="DecNumber">1</span><span class="Other">)</span><span class="Other">;</span>
-             <span class="Identifier">sunLightDirection</span> <span class="Other">=</span> <span class="Identifier">vec3</span><span class="Other">(</span><span class="DecNumber">1</span><span class="Other">,</span> <span class="DecNumber">4</span><span class="Other">,</span> <span class="DecNumber">2</span><span class="Other">)</span><span class="Other">;</span>
-             <span class="Identifier">sunLightColor</span> <span class="Other">=</span> <span class="Identifier">color</span><span class="Other">(</span><span class="DecNumber">1</span><span class="Other">,</span> <span class="DecNumber">1</span><span class="Other">,</span> <span class="DecNumber">1</span><span class="Other">,</span> <span class="DecNumber">1</span><span class="Other">)</span><span class="Other">;</span>
-             <span class="Identifier">rimLightDirection</span> <span class="Other">=</span> <span class="Identifier">vec3</span><span class="Other">(</span><span class="DecNumber">-1</span><span class="Other">,</span> <span class="DecNumber">1</span><span class="Other">,</span> <span class="DecNumber">-1</span><span class="Other">)</span><span class="Other">;</span>
-             <span class="Identifier">rimLightColor</span> <span class="Other">=</span> <span class="Identifier">color</span><span class="Other">(</span><span class="DecNumber">0</span><span class="Other">,</span> <span class="DecNumber">0</span><span class="Other">,</span> <span class="DecNumber">0</span><span class="Other">,</span> <span class="DecNumber">0</span><span class="Other">)</span><span class="Other">;</span> <span class="Identifier">debugView</span> <span class="Other">=</span> <span class="Identifier">dvLit</span><span class="Other">;</span>
-             <span class="Identifier">cameraPosition</span> <span class="Other">=</span> <span class="Identifier">vec3</span><span class="Other">(</span><span class="DecNumber">0</span><span class="Other">,</span> <span class="DecNumber">0</span><span class="Other">,</span> <span class="DecNumber">10</span><span class="Other">)</span><span class="Other">)</span> {.
-    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">GLerror</span><span class="Other">,</span> <span class="Identifier">GltfError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+<div id="destroy-procs-all">
+  <div id="destroy,PbrContext">
+  <dt><pre><span class="Keyword">proc</span> <a href="#destroy%2CPbrContext"><span class="Identifier">destroy</span></a><span class="Other">(</span><span class="Identifier">ctx</span><span class="Other">:</span> <a href="#PbrContext"><span class="Identifier">PbrContext</span></a><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
-    Draws a node tree with PBR shading.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1252" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1252" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    Deletes the OpenGL resources owned by a PBR context.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L592" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L592" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="destroy,EnvironmentMap">
+  <dt><pre><span class="Keyword">proc</span> <a href="#destroy%2CEnvironmentMap"><span class="Identifier">destroy</span></a><span class="Other">(</span><span class="Identifier">environmentMap</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="#EnvironmentMap"><span class="Identifier">EnvironmentMap</span></a><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Deletes the OpenGL texture owned by an environment map.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L332" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L332" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
 
 </div>
-<div id="drawPbrWithShadow-procs-all">
-  <div id="drawPbrWithShadow,Node,Mat4,Mat4,Mat4,Color">
-  <dt><pre><span class="Keyword">proc</span> <a href="#drawPbrWithShadow%2CNode%2CMat4%2CMat4%2CMat4%2CColor"><span class="Identifier">drawPbrWithShadow</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="../../common.html#Node"><span class="Identifier">Node</span></a><span class="Other">;</span> <span class="Identifier">transform</span><span class="Other">,</span> <span class="Identifier">view</span><span class="Other">,</span> <span class="Identifier">proj</span><span class="Other">:</span> <span class="Identifier">Mat4</span><span class="Other">;</span> <span class="Identifier">tint</span><span class="Other">:</span> <span class="Identifier">Color</span><span class="Other">;</span>
-                       <span class="Identifier">sunLightDirection</span> <span class="Other">=</span> <span class="Identifier">vec3</span><span class="Other">(</span><span class="DecNumber">1</span><span class="Other">,</span> <span class="DecNumber">4</span><span class="Other">,</span> <span class="DecNumber">2</span><span class="Other">)</span><span class="Other">;</span> <span class="Identifier">useTrs</span> <span class="Other">=</span> <span class="Identifier">true</span><span class="Other">;</span>
-                       <span class="Identifier">ambientLightColor</span> <span class="Other">=</span> <span class="Identifier">color</span><span class="Other">(</span><span class="FloatNumber">0.1</span><span class="Other">,</span> <span class="FloatNumber">0.1</span><span class="Other">,</span> <span class="FloatNumber">0.1</span><span class="Other">,</span> <span class="DecNumber">1</span><span class="Other">)</span><span class="Other">;</span>
-                       <span class="Identifier">sunLightColor</span> <span class="Other">=</span> <span class="Identifier">color</span><span class="Other">(</span><span class="DecNumber">1</span><span class="Other">,</span> <span class="DecNumber">1</span><span class="Other">,</span> <span class="DecNumber">1</span><span class="Other">,</span> <span class="DecNumber">1</span><span class="Other">)</span><span class="Other">;</span>
-                       <span class="Identifier">rimLightDirection</span> <span class="Other">=</span> <span class="Identifier">vec3</span><span class="Other">(</span><span class="DecNumber">-1</span><span class="Other">,</span> <span class="DecNumber">1</span><span class="Other">,</span> <span class="DecNumber">-1</span><span class="Other">)</span><span class="Other">;</span>
-                       <span class="Identifier">rimLightColor</span> <span class="Other">=</span> <span class="Identifier">color</span><span class="Other">(</span><span class="DecNumber">0</span><span class="Other">,</span> <span class="DecNumber">0</span><span class="Other">,</span> <span class="DecNumber">0</span><span class="Other">,</span> <span class="DecNumber">0</span><span class="Other">)</span><span class="Other">;</span> <span class="Identifier">debugView</span> <span class="Other">=</span> <span class="Identifier">dvLit</span><span class="Other">;</span>
-                       <span class="Identifier">cameraPosition</span> <span class="Other">=</span> <span class="Identifier">vec3</span><span class="Other">(</span><span class="DecNumber">0</span><span class="Other">,</span> <span class="DecNumber">0</span><span class="Other">,</span> <span class="DecNumber">10</span><span class="Other">)</span><span class="Other">)</span> {.
-    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">GLerror</span><span class="Other">,</span> <span class="Identifier">GltfError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+<div id="draw-procs-all">
+  <div id="draw,PbrContext,GltfFile">
+  <dt><pre><span class="Keyword">proc</span> <a href="#draw%2CPbrContext%2CGltfFile"><span class="Identifier">draw</span></a><span class="Other">(</span><span class="Identifier">ctx</span><span class="Other">:</span> <a href="#PbrContext"><span class="Identifier">PbrContext</span></a><span class="Other">;</span> <span class="Identifier">file</span><span class="Other">:</span> <a href="../../common.html#GltfFile"><span class="Identifier">GltfFile</span></a><span class="Other">)</span> {.
+    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">GltfError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
-    Draws a node tree with PBR shading and shadows.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1474" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1474" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    Draws a glTF file using PBR context state.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1729" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1729" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="draw,PbrContext,Node">
+  <dt><pre><span class="Keyword">proc</span> <a href="#draw%2CPbrContext%2CNode"><span class="Identifier">draw</span></a><span class="Other">(</span><span class="Identifier">ctx</span><span class="Other">:</span> <a href="#PbrContext"><span class="Identifier">PbrContext</span></a><span class="Other">;</span> <span class="Identifier">node</span><span class="Other">:</span> <a href="../../common.html#Node"><span class="Identifier">Node</span></a><span class="Other">)</span> {.
+    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">GltfError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Draws a node tree using PBR context state.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1711" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1711" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
 
 </div>
 <div id="drawSkybox-procs-all">
-  <div id="drawSkybox,Mat4,Mat4,float32">
-  <dt><pre><span class="Keyword">proc</span> <a href="#drawSkybox%2CMat4%2CMat4%2Cfloat32"><span class="Identifier">drawSkybox</span></a><span class="Other">(</span><span class="Identifier">view</span><span class="Other">,</span> <span class="Identifier">proj</span><span class="Other">:</span> <span class="Identifier">Mat4</span><span class="Other">;</span> <span class="Identifier">lod</span><span class="Other">:</span> <span class="Identifier">float32</span> <span class="Other">=</span> <span class="FloatNumber">0.0</span><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">]</span><span class="Other">,</span>
-    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <div id="drawSkybox,PbrContext,Mat4,Mat4,EnvironmentMap,float32">
+  <dt><pre><span class="Keyword">proc</span> <a href="#drawSkybox%2CPbrContext%2CMat4%2CMat4%2CEnvironmentMap%2Cfloat32"><span class="Identifier">drawSkybox</span></a><span class="Other">(</span><span class="Identifier">ctx</span><span class="Other">:</span> <a href="#PbrContext"><span class="Identifier">PbrContext</span></a><span class="Other">;</span> <span class="Identifier">view</span><span class="Other">,</span> <span class="Identifier">proj</span><span class="Other">:</span> <span class="Identifier">Mat4</span><span class="Other">;</span>
+                <span class="Identifier">environmentMap</span><span class="Other">:</span> <a href="#EnvironmentMap"><span class="Identifier">EnvironmentMap</span></a><span class="Other">;</span> <span class="Identifier">lod</span><span class="Other">:</span> <span class="Identifier">float32</span> <span class="Other">=</span> <span class="FloatNumber">0.0</span><span class="Other">)</span> {.
+    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     Draws the skybox using a full-screen quad.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L480" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L480" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L499" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L499" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -599,8 +561,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1645" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1645" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1759" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1759" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -608,13 +570,13 @@
 </div>
 <div id="loadDefaultEnvironmentMap-procs-all">
   <div id="loadDefaultEnvironmentMap">
-  <dt><pre><span class="Keyword">proc</span> <a href="#loadDefaultEnvironmentMap"><span class="Identifier">loadDefaultEnvironmentMap</span></a><span class="Other">(</span><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">,</span> <span class="Identifier">PixieError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
-                                   <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dt><pre><span class="Keyword">proc</span> <a href="#loadDefaultEnvironmentMap"><span class="Identifier">loadDefaultEnvironmentMap</span></a><span class="Other">(</span><span class="Other">)</span><span class="Other">:</span> <a href="#EnvironmentMap"><span class="Identifier">EnvironmentMap</span></a> {.
+    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">,</span> <span class="Identifier">PixieError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     Loads a small procedural studio cubemap.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L474" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L474" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L495" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L495" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -622,13 +584,14 @@
 </div>
 <div id="loadEnvironmentMap-procs-all">
   <div id="loadEnvironmentMap,string">
-  <dt><pre><span class="Keyword">proc</span> <a href="#loadEnvironmentMap%2Cstring"><span class="Identifier">loadEnvironmentMap</span></a><span class="Other">(</span><span class="Identifier">cubeMapPath</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">,</span> <span class="Identifier">PixieError</span><span class="Other">]</span><span class="Other">,</span>
+  <dt><pre><span class="Keyword">proc</span> <a href="#loadEnvironmentMap%2Cstring"><span class="Identifier">loadEnvironmentMap</span></a><span class="Other">(</span><span class="Identifier">cubeMapPath</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="#EnvironmentMap"><span class="Identifier">EnvironmentMap</span></a> {.
+    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">,</span> <span class="Identifier">PixieError</span><span class="Other">]</span><span class="Other">,</span>
     <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">,</span> <span class="Identifier">ReadIOEffect</span><span class="Other">,</span> <span class="Identifier">WriteIOEffect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     Loads an environment map from a cube texture path.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L462" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L462" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L485" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L485" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -636,13 +599,52 @@
 </div>
 <div id="loadSolidEnvironmentMap-procs-all">
   <div id="loadSolidEnvironmentMap">
-  <dt><pre><span class="Keyword">proc</span> <a href="#loadSolidEnvironmentMap"><span class="Identifier">loadSolidEnvironmentMap</span></a><span class="Other">(</span><span class="Identifier">color</span> <span class="Other">=</span> <span class="Identifier">rgbx</span><span class="Other">(</span><span class="DecNumber">180</span><span class="Other">,</span> <span class="DecNumber">190</span><span class="Other">,</span> <span class="DecNumber">220</span><span class="Other">,</span> <span class="DecNumber">255</span><span class="Other">)</span><span class="Other">)</span> {.
+  <dt><pre><span class="Keyword">proc</span> <a href="#loadSolidEnvironmentMap"><span class="Identifier">loadSolidEnvironmentMap</span></a><span class="Other">(</span><span class="Identifier">color</span> <span class="Other">=</span> <span class="Identifier">rgbx</span><span class="Other">(</span><span class="DecNumber">180</span><span class="Other">,</span> <span class="DecNumber">190</span><span class="Other">,</span> <span class="DecNumber">220</span><span class="Other">,</span> <span class="DecNumber">255</span><span class="Other">)</span><span class="Other">)</span><span class="Other">:</span> <a href="#EnvironmentMap"><span class="Identifier">EnvironmentMap</span></a> {.
     <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     Loads a solid-color cubemap.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L468" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L468" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L489" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L489" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="newEnvironmentMap-procs-all">
+  <div id="newEnvironmentMap,GLuint,float32">
+  <dt><pre><span class="Keyword">proc</span> <a href="#newEnvironmentMap%2CGLuint%2Cfloat32"><span class="Identifier">newEnvironmentMap</span></a><span class="Other">(</span><span class="Identifier">textureId</span><span class="Other">:</span> <span class="Identifier">GLuint</span><span class="Other">;</span> <span class="Identifier">mipCount</span><span class="Other">:</span> <span class="Identifier">float32</span><span class="Other">)</span><span class="Other">:</span> <a href="#EnvironmentMap"><span class="Identifier">EnvironmentMap</span></a> {.
+    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Creates an environment-map handle from an existing texture.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L325" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L325" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="newPbrContext-procs-all">
+  <div id="newPbrContext,Renderer">
+  <dt><pre><span class="Keyword">proc</span> <a href="#newPbrContext%2CRenderer"><span class="Identifier">newPbrContext</span></a><span class="Other">(</span><span class="Identifier">renderer</span><span class="Other">:</span> <a href="#Renderer"><span class="Identifier">Renderer</span></a><span class="Other">)</span><span class="Other">:</span> <a href="#PbrContext"><span class="Identifier">PbrContext</span></a> {.
+    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">,</span> <span class="Identifier">GltfError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Creates reusable state for PBR rendering.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L575" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L575" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="newPbrContext,float32">
+  <dt><pre><span class="Keyword">proc</span> <a href="#newPbrContext%2Cfloat32"><span class="Identifier">newPbrContext</span></a><span class="Other">(</span><span class="Identifier">shadowMapSize</span> <span class="Other">=</span> <span class="Identifier">ShadowMapSize</span><span class="Other">;</span> <span class="Identifier">shadowBias</span> <span class="Other">=</span> <span class="FloatNumber">0.0015'f32</span><span class="Other">)</span><span class="Other">:</span> <a href="#PbrContext"><span class="Identifier">PbrContext</span></a> {.
+    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">,</span> <span class="Identifier">GltfError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Creates reusable state for PBR rendering.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L543" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L543" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -650,13 +652,12 @@
 </div>
 <div id="newRenderer-procs-all">
   <div id="newRenderer,Window">
-  <dt><pre><span class="Keyword">proc</span> <a href="#newRenderer%2CWindow"><span class="Identifier">newRenderer</span></a><span class="Other">(</span><span class="Identifier">window</span><span class="Other">:</span> <span class="Identifier">Window</span><span class="Other">)</span><span class="Other">:</span> <a href="#Renderer"><span class="Identifier">Renderer</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">,</span> <span class="Identifier">GltfError</span><span class="Other">]</span><span class="Other">,</span>
-    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dt><pre><span class="Keyword">proc</span> <a href="#newRenderer%2CWindow"><span class="Identifier">newRenderer</span></a><span class="Other">(</span><span class="Identifier">window</span><span class="Other">:</span> <span class="Identifier">Window</span><span class="Other">)</span><span class="Other">:</span> <a href="#Renderer"><span class="Identifier">Renderer</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
-    
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1579" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1579" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    Creates an OpenGL renderer wrapper.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1734" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1734" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -669,48 +670,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1681" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1681" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-
-</div>
-<div id="render-procs-all">
-  <div id="render,Renderer,GltfFile,RenderParams">
-  <dt><pre><span class="Keyword">proc</span> <a href="#render%2CRenderer%2CGltfFile%2CRenderParams"><span class="Identifier">render</span></a><span class="Other">(</span><span class="Identifier">renderer</span><span class="Other">:</span> <a href="#Renderer"><span class="Identifier">Renderer</span></a><span class="Other">;</span> <span class="Identifier">file</span><span class="Other">:</span> <a href="../../common.html#GltfFile"><span class="Identifier">GltfFile</span></a><span class="Other">;</span> <span class="Identifier">params</span><span class="Other">:</span> <a href="../../common.html#RenderParams"><span class="Identifier">RenderParams</span></a><span class="Other">)</span> {.
-    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">GltfError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
-  <dd>
-    
-    
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1641" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1641" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-<div id="render,Renderer,Node,RenderParams">
-  <dt><pre><span class="Keyword">proc</span> <a href="#render%2CRenderer%2CNode%2CRenderParams"><span class="Identifier">render</span></a><span class="Other">(</span><span class="Identifier">renderer</span><span class="Other">:</span> <a href="#Renderer"><span class="Identifier">Renderer</span></a><span class="Other">;</span> <span class="Identifier">node</span><span class="Other">:</span> <a href="../../common.html#Node"><span class="Identifier">Node</span></a><span class="Other">;</span> <span class="Identifier">params</span><span class="Other">:</span> <a href="../../common.html#RenderParams"><span class="Identifier">RenderParams</span></a><span class="Other">)</span> {.
-    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">GltfError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
-  <dd>
-    
-    
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1604" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1604" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
-
-  </dd>
-</div>
-
-</div>
-<div id="setupPbr-procs-all">
-  <div id="setupPbr">
-  <dt><pre><span class="Keyword">proc</span> <a href="#setupPbr"><span class="Identifier">setupPbr</span></a><span class="Other">(</span><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">,</span> <span class="Identifier">GltfError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
-  <dd>
-    
-    Sets up the PBR rendering system.<ul class="simple"><li>Create Environment Map and Framebuffer.</li>
-</ul>
-
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L171" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L171" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1795" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1795" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -722,8 +683,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1685" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1685" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1799" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1799" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -736,8 +697,8 @@
   <dd>
     
     Uploads primitive data to OpenGL.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L693" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L693" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L787" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L787" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -753,7 +714,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-06-28 00:06:38 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-06-28 01:17:48 UTC</small>
       </div>
     </div>
   </div>

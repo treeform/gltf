@@ -143,6 +143,12 @@
 <li><a class="reference external"
           data-doc-search-tag="internal: AccessorKind.atSCALAR" href="gltf/internal.html#atSCALAR">internal: AccessorKind.atSCALAR</a></li>
           </ul></dd>
+<dt><a name="attachEnvironmentMap" href="#attachEnvironmentMap"><span>attachEnvironmentMap:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="renderer: proc attachEnvironmentMap(ctx: PbrContext; environmentMap: EnvironmentMap;
+                     owned = true)" href="gltf/backends/opengl/renderer.html#attachEnvironmentMap%2CPbrContext%2CEnvironmentMap">renderer: proc attachEnvironmentMap(ctx: PbrContext; environmentMap: EnvironmentMap;
+                     owned = true)</a></li>
+          </ul></dd>
 <dt><a name="AttributeCornerTable" href="#AttributeCornerTable"><span>AttributeCornerTable:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="meshes: object AttributeCornerTable" href="gltf/draco/meshes.html#AttributeCornerTable">meshes: object AttributeCornerTable</a></li>
@@ -339,6 +345,12 @@
 <li><a class="reference external"
           data-doc-search-tag="models: proc defaultTextureSampler(): TextureSampler" href="gltf/models.html#defaultTextureSampler">models: proc defaultTextureSampler(): TextureSampler</a></li>
           </ul></dd>
+<dt><a name="destroy" href="#destroy"><span>destroy:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="renderer: proc destroy(environmentMap: var EnvironmentMap)" href="gltf/backends/opengl/renderer.html#destroy%2CEnvironmentMap">renderer: proc destroy(environmentMap: var EnvironmentMap)</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="renderer: proc destroy(ctx: PbrContext)" href="gltf/backends/opengl/renderer.html#destroy%2CPbrContext">renderer: proc destroy(ctx: PbrContext)</a></li>
+          </ul></dd>
 <dt><a name="DracoAttribute" href="#DracoAttribute"><span>DracoAttribute:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="types: object DracoAttribute" href="gltf/draco/types.html#DracoAttribute">types: object DracoAttribute</a></li>
@@ -383,37 +395,17 @@
 <li><a class="reference external"
           data-doc-search-tag="bitstreams: object DracoStream" href="gltf/draco/bitstreams.html#DracoStream">bitstreams: object DracoStream</a></li>
           </ul></dd>
-<dt><a name="drawPbr" href="#drawPbr"><span>drawPbr:</span></a></dt><dd><ul class="simple">
+<dt><a name="draw" href="#draw"><span>draw:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="renderer: proc drawPbr(node: Node; transform, view, proj: Mat4; tint: Color; useTrs = true;
-        ambientLightColor = color(0.1, 0.1, 0.1, 1);
-        sunLightDirection = vec3(1, 4, 2); sunLightColor = color(1, 1, 1, 1);
-        rimLightDirection = vec3(-1, 1, -1); rimLightColor = color(0, 0, 0, 0);
-        debugView = dvLit; cameraPosition = vec3(0, 0, 10))" href="gltf/backends/opengl/renderer.html#drawPbr%2CNode%2CMat4%2CMat4%2CMat4%2CColor">renderer: proc drawPbr(node: Node; transform, view, proj: Mat4; tint: Color; useTrs = true;
-        ambientLightColor = color(0.1, 0.1, 0.1, 1);
-        sunLightDirection = vec3(1, 4, 2); sunLightColor = color(1, 1, 1, 1);
-        rimLightDirection = vec3(-1, 1, -1); rimLightColor = color(0, 0, 0, 0);
-        debugView = dvLit; cameraPosition = vec3(0, 0, 10))</a></li>
-          </ul></dd>
-<dt><a name="drawPbrWithShadow" href="#drawPbrWithShadow"><span>drawPbrWithShadow:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="renderer: proc drawPbrWithShadow(node: Node; transform, view, proj: Mat4; tint: Color;
-                  sunLightDirection = vec3(1, 4, 2); useTrs = true;
-                  ambientLightColor = color(0.1, 0.1, 0.1, 1);
-                  sunLightColor = color(1, 1, 1, 1);
-                  rimLightDirection = vec3(-1, 1, -1);
-                  rimLightColor = color(0, 0, 0, 0); debugView = dvLit;
-                  cameraPosition = vec3(0, 0, 10))" href="gltf/backends/opengl/renderer.html#drawPbrWithShadow%2CNode%2CMat4%2CMat4%2CMat4%2CColor">renderer: proc drawPbrWithShadow(node: Node; transform, view, proj: Mat4; tint: Color;
-                  sunLightDirection = vec3(1, 4, 2); useTrs = true;
-                  ambientLightColor = color(0.1, 0.1, 0.1, 1);
-                  sunLightColor = color(1, 1, 1, 1);
-                  rimLightDirection = vec3(-1, 1, -1);
-                  rimLightColor = color(0, 0, 0, 0); debugView = dvLit;
-                  cameraPosition = vec3(0, 0, 10))</a></li>
+          data-doc-search-tag="renderer: proc draw(ctx: PbrContext; file: GltfFile)" href="gltf/backends/opengl/renderer.html#draw%2CPbrContext%2CGltfFile">renderer: proc draw(ctx: PbrContext; file: GltfFile)</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="renderer: proc draw(ctx: PbrContext; node: Node)" href="gltf/backends/opengl/renderer.html#draw%2CPbrContext%2CNode">renderer: proc draw(ctx: PbrContext; node: Node)</a></li>
           </ul></dd>
 <dt><a name="drawSkybox" href="#drawSkybox"><span>drawSkybox:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="renderer: proc drawSkybox(view, proj: Mat4; lod: float32 = 0.0)" href="gltf/backends/opengl/renderer.html#drawSkybox%2CMat4%2CMat4%2Cfloat32">renderer: proc drawSkybox(view, proj: Mat4; lod: float32 = 0.0)</a></li>
+          data-doc-search-tag="renderer: proc drawSkybox(ctx: PbrContext; view, proj: Mat4; environmentMap: EnvironmentMap;
+           lod: float32 = 0.0)" href="gltf/backends/opengl/renderer.html#drawSkybox%2CPbrContext%2CMat4%2CMat4%2CEnvironmentMap%2Cfloat32">renderer: proc drawSkybox(ctx: PbrContext; view, proj: Mat4; environmentMap: EnvironmentMap;
+           lod: float32 = 0.0)</a></li>
           </ul></dd>
 <dt><a name="dumpTree" href="#dumpTree"><span>dumpTree:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -503,23 +495,17 @@
 <li><a class="reference external"
           data-doc-search-tag="models: proc ensureNormals(node: Node)" href="gltf/models.html#ensureNormals%2CNode">models: proc ensureNormals(node: Node)</a></li>
           </ul></dd>
+<dt><a name="EnvironmentMap" href="#EnvironmentMap"><span>EnvironmentMap:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="renderer: object EnvironmentMap" href="gltf/backends/opengl/renderer.html#EnvironmentMap">renderer: object EnvironmentMap</a></li>
+          </ul></dd>
 <dt><a name="environmentMap" href="#environmentMap"><span>environmentMap:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="shaders: var environmentMap" href="gltf/backends/shaders.html#environmentMap">shaders: var environmentMap</a></li>
           </ul></dd>
-<dt><a name="environmentMapId" href="#environmentMapId"><span>environmentMapId:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="renderer: var environmentMapId" href="gltf/backends/opengl/renderer.html#environmentMapId">renderer: var environmentMapId</a></li>
-          </ul></dd>
 <dt><a name="environmentMipCount" href="#environmentMipCount"><span>environmentMipCount:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="renderer: var environmentMipCount" href="gltf/backends/opengl/renderer.html#environmentMipCount">renderer: var environmentMipCount</a></li>
-          <li><a class="reference external"
           data-doc-search-tag="shaders: var environmentMipCount" href="gltf/backends/shaders.html#environmentMipCount">shaders: var environmentMipCount</a></li>
-          </ul></dd>
-<dt><a name="envMapFBO" href="#envMapFBO"><span>envMapFBO:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="renderer: var envMapFBO" href="gltf/backends/opengl/renderer.html#envMapFBO">renderer: var envMapFBO</a></li>
           </ul></dd>
 <dt><a name="envMapSize" href="#envMapSize"><span>envMapSize:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -767,11 +753,11 @@
           </ul></dd>
 <dt><a name="loadDefaultEnvironmentMap" href="#loadDefaultEnvironmentMap"><span>loadDefaultEnvironmentMap:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="renderer: proc loadDefaultEnvironmentMap()" href="gltf/backends/opengl/renderer.html#loadDefaultEnvironmentMap">renderer: proc loadDefaultEnvironmentMap()</a></li>
+          data-doc-search-tag="renderer: proc loadDefaultEnvironmentMap(): EnvironmentMap" href="gltf/backends/opengl/renderer.html#loadDefaultEnvironmentMap">renderer: proc loadDefaultEnvironmentMap(): EnvironmentMap</a></li>
           </ul></dd>
 <dt><a name="loadEnvironmentMap" href="#loadEnvironmentMap"><span>loadEnvironmentMap:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="renderer: proc loadEnvironmentMap(cubeMapPath: string)" href="gltf/backends/opengl/renderer.html#loadEnvironmentMap%2Cstring">renderer: proc loadEnvironmentMap(cubeMapPath: string)</a></li>
+          data-doc-search-tag="renderer: proc loadEnvironmentMap(cubeMapPath: string): EnvironmentMap" href="gltf/backends/opengl/renderer.html#loadEnvironmentMap%2Cstring">renderer: proc loadEnvironmentMap(cubeMapPath: string): EnvironmentMap</a></li>
           </ul></dd>
 <dt><a name="loadKtx2Texture" href="#loadKtx2Texture"><span>loadKtx2Texture:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -799,7 +785,7 @@
           </ul></dd>
 <dt><a name="loadSolidEnvironmentMap" href="#loadSolidEnvironmentMap"><span>loadSolidEnvironmentMap:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="renderer: proc loadSolidEnvironmentMap(color = rgbx(180, 190, 220, 255))" href="gltf/backends/opengl/renderer.html#loadSolidEnvironmentMap">renderer: proc loadSolidEnvironmentMap(color = rgbx(180, 190, 220, 255))</a></li>
+          data-doc-search-tag="renderer: proc loadSolidEnvironmentMap(color = rgbx(180, 190, 220, 255)): EnvironmentMap" href="gltf/backends/opengl/renderer.html#loadSolidEnvironmentMap">renderer: proc loadSolidEnvironmentMap(color = rgbx(180, 190, 220, 255)): EnvironmentMap</a></li>
           </ul></dd>
 <dt><a name="lod" href="#lod"><span>lod:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -907,6 +893,16 @@
 <li><a class="reference external"
           data-doc-search-tag="common: TextureMinFilter.NearestMipmapNearestMinFilter" href="gltf/common.html#NearestMipmapNearestMinFilter">common: TextureMinFilter.NearestMipmapNearestMinFilter</a></li>
           </ul></dd>
+<dt><a name="newEnvironmentMap" href="#newEnvironmentMap"><span>newEnvironmentMap:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="renderer: proc newEnvironmentMap(textureId: GLuint; mipCount: float32): EnvironmentMap" href="gltf/backends/opengl/renderer.html#newEnvironmentMap%2CGLuint%2Cfloat32">renderer: proc newEnvironmentMap(textureId: GLuint; mipCount: float32): EnvironmentMap</a></li>
+          </ul></dd>
+<dt><a name="newPbrContext" href="#newPbrContext"><span>newPbrContext:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="renderer: proc newPbrContext(shadowMapSize = ShadowMapSize; shadowBias = 0.0015'f32): PbrContext" href="gltf/backends/opengl/renderer.html#newPbrContext%2Cfloat32">renderer: proc newPbrContext(shadowMapSize = ShadowMapSize; shadowBias = 0.0015'f32): PbrContext</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="renderer: proc newPbrContext(renderer: Renderer): PbrContext" href="gltf/backends/opengl/renderer.html#newPbrContext%2CRenderer">renderer: proc newPbrContext(renderer: Renderer): PbrContext</a></li>
+          </ul></dd>
 <dt><a name="newRenderer" href="#newRenderer"><span>newRenderer:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="renderer: proc newRenderer(window: Window): Renderer" href="gltf/backends/opengl/renderer.html#newRenderer%2CWindow">renderer: proc newRenderer(window: Window): Renderer</a></li>
@@ -997,6 +993,10 @@
 <li><a class="reference external"
           data-doc-search-tag="ktx2: proc parseKtx2(data: string): Ktx2TextureInfo" href="gltf/ktx2.html#parseKtx2%2Cstring">ktx2: proc parseKtx2(data: string): Ktx2TextureInfo</a></li>
           </ul></dd>
+<dt><a name="PbrContext" href="#PbrContext"><span>PbrContext:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="renderer: type PbrContext" href="gltf/backends/opengl/renderer.html#PbrContext">renderer: type PbrContext</a></li>
+          </ul></dd>
 <dt><a name="PbrFragHlsl" href="#PbrFragHlsl"><span>PbrFragHlsl:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="shaders: const PbrFragHlsl" href="gltf/backends/shaders.html#PbrFragHlsl">shaders: const PbrFragHlsl</a></li>
@@ -1020,10 +1020,6 @@
 <dt><a name="PbrMetallicRoughness" href="#PbrMetallicRoughness"><span>PbrMetallicRoughness:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="internal: object PbrMetallicRoughness" href="gltf/internal.html#PbrMetallicRoughness">internal: object PbrMetallicRoughness</a></li>
-          </ul></dd>
-<dt><a name="pbrShader" href="#pbrShader"><span>pbrShader:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="renderer: var pbrShader" href="gltf/backends/opengl/renderer.html#pbrShader">renderer: var pbrShader</a></li>
           </ul></dd>
 <dt><a name="PbrVertexShader" href="#PbrVertexShader"><span>PbrVertexShader:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -1101,10 +1097,6 @@
 <li><a class="reference external"
           data-doc-search-tag="entropy: object RAnsBitDecoder" href="gltf/draco/entropy.html#RAnsBitDecoder">entropy: object RAnsBitDecoder</a></li>
           </ul></dd>
-<dt><a name="rboDepth" href="#rboDepth"><span>rboDepth:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="renderer: var rboDepth" href="gltf/backends/opengl/renderer.html#rboDepth">renderer: var rboDepth</a></li>
-          </ul></dd>
 <dt><a name="readBits" href="#readBits"><span>readBits:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="bitstreams: proc readBits(stream: var DracoStream; count: int): uint32" href="gltf/draco/bitstreams.html#readBits%2CDracoStream%2Cint">bitstreams: proc readBits(stream: var DracoStream; count: int): uint32</a></li>
@@ -1177,19 +1169,9 @@
 <li><a class="reference external"
           data-doc-search-tag="bitstreams: proc remaining(stream: DracoStream): int" href="gltf/draco/bitstreams.html#remaining%2CDracoStream">bitstreams: proc remaining(stream: DracoStream): int</a></li>
           </ul></dd>
-<dt><a name="render" href="#render"><span>render:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="renderer: proc render(renderer: Renderer; file: GltfFile; params: RenderParams)" href="gltf/backends/opengl/renderer.html#render%2CRenderer%2CGltfFile%2CRenderParams">renderer: proc render(renderer: Renderer; file: GltfFile; params: RenderParams)</a></li>
-          <li><a class="reference external"
-          data-doc-search-tag="renderer: proc render(renderer: Renderer; node: Node; params: RenderParams)" href="gltf/backends/opengl/renderer.html#render%2CRenderer%2CNode%2CRenderParams">renderer: proc render(renderer: Renderer; node: Node; params: RenderParams)</a></li>
-          </ul></dd>
 <dt><a name="Renderer" href="#Renderer"><span>Renderer:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="renderer: type Renderer" href="gltf/backends/opengl/renderer.html#Renderer">renderer: type Renderer</a></li>
-          </ul></dd>
-<dt><a name="RenderParams" href="#RenderParams"><span>RenderParams:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="common: object RenderParams" href="gltf/common.html#RenderParams">common: object RenderParams</a></li>
           </ul></dd>
 <dt><a name="RepeatWrap" href="#RepeatWrap"><span>RepeatWrap:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -1223,10 +1205,6 @@
 <li><a class="reference external"
           data-doc-search-tag="common: type Scene" href="gltf/common.html#Scene">common: type Scene</a></li>
           </ul></dd>
-<dt><a name="setupPbr" href="#setupPbr"><span>setupPbr:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="renderer: proc setupPbr()" href="gltf/backends/opengl/renderer.html#setupPbr">renderer: proc setupPbr()</a></li>
-          </ul></dd>
 <dt><a name="shadowBias" href="#shadowBias"><span>shadowBias:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="shaders: var shadowBias" href="gltf/backends/shaders.html#shadowBias">shaders: var shadowBias</a></li>
@@ -1251,10 +1229,6 @@
 <li><a class="reference external"
           data-doc-search-tag="shaders: const ShadowDepthFragVulkan" href="gltf/backends/shaders.html#ShadowDepthFragVulkan">shaders: const ShadowDepthFragVulkan</a></li>
           </ul></dd>
-<dt><a name="shadowDepthShader" href="#shadowDepthShader"><span>shadowDepthShader:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="renderer: var shadowDepthShader" href="gltf/backends/opengl/renderer.html#shadowDepthShader">renderer: var shadowDepthShader</a></li>
-          </ul></dd>
 <dt><a name="ShadowDepthVertexShader" href="#ShadowDepthVertexShader"><span>ShadowDepthVertexShader:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="renderer: const ShadowDepthVertexShader" href="gltf/backends/opengl/renderer.html#ShadowDepthVertexShader">renderer: const ShadowDepthVertexShader</a></li>
@@ -1278,14 +1252,6 @@
 <dt><a name="shadowMap" href="#shadowMap"><span>shadowMap:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="shaders: var shadowMap" href="gltf/backends/shaders.html#shadowMap">shaders: var shadowMap</a></li>
-          </ul></dd>
-<dt><a name="shadowMapFbo" href="#shadowMapFbo"><span>shadowMapFbo:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="renderer: var shadowMapFbo" href="gltf/backends/opengl/renderer.html#shadowMapFbo">renderer: var shadowMapFbo</a></li>
-          </ul></dd>
-<dt><a name="shadowMapTex" href="#shadowMapTex"><span>shadowMapTex:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="renderer: var shadowMapTex" href="gltf/backends/opengl/renderer.html#shadowMapTex">renderer: var shadowMapTex</a></li>
           </ul></dd>
 <dt><a name="shadowMapTexelSize" href="#shadowMapTexelSize"><span>shadowMapTexelSize:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -1315,6 +1281,10 @@
 <li><a class="reference external"
           data-doc-search-tag="models: proc skinMatrices(root, node: Node): seq[Mat4]" href="gltf/models.html#skinMatrices%2CNode%2CNode">models: proc skinMatrices(root, node: Node): seq[Mat4]</a></li>
           </ul></dd>
+<dt><a name="skinMatricesInto" href="#skinMatricesInto"><span>skinMatricesInto:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="models: proc skinMatricesInto(root, node: Node; matrices: var seq[Mat4])" href="gltf/models.html#skinMatricesInto%2CNode%2CNode%2Cseq%5BMat4%5D">models: proc skinMatricesInto(root, node: Node; matrices: var seq[Mat4])</a></li>
+          </ul></dd>
 <dt><a name="SkyboxFragHlsl" href="#SkyboxFragHlsl"><span>SkyboxFragHlsl:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="shaders: const SkyboxFragHlsl" href="gltf/backends/shaders.html#SkyboxFragHlsl">shaders: const SkyboxFragHlsl</a></li>
@@ -1334,18 +1304,6 @@
 <dt><a name="SkyboxFragVulkan" href="#SkyboxFragVulkan"><span>SkyboxFragVulkan:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="shaders: const SkyboxFragVulkan" href="gltf/backends/shaders.html#SkyboxFragVulkan">shaders: const SkyboxFragVulkan</a></li>
-          </ul></dd>
-<dt><a name="skyboxShader" href="#skyboxShader"><span>skyboxShader:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="renderer: var skyboxShader" href="gltf/backends/opengl/renderer.html#skyboxShader">renderer: var skyboxShader</a></li>
-          </ul></dd>
-<dt><a name="skyboxVao" href="#skyboxVao"><span>skyboxVao:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="renderer: var skyboxVao" href="gltf/backends/opengl/renderer.html#skyboxVao">renderer: var skyboxVao</a></li>
-          </ul></dd>
-<dt><a name="skyboxVbo" href="#skyboxVbo"><span>skyboxVbo:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="renderer: var skyboxVbo" href="gltf/backends/opengl/renderer.html#skyboxVbo">renderer: var skyboxVbo</a></li>
           </ul></dd>
 <dt><a name="SkyboxVertexShader" href="#SkyboxVertexShader"><span>SkyboxVertexShader:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -1629,7 +1587,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-06-28 00:06:38 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-06-28 01:17:48 UTC</small>
       </div>
     </div>
   </div>
