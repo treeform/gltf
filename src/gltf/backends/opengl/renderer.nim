@@ -24,6 +24,15 @@ const
 const
   ShadowMapSize = 2048
 
+when defined(emscripten):
+  const
+    ShadowMapInternalFormat = GL_DEPTH_COMPONENT24.GLint
+    ShadowMapPixelType = GL_UNSIGNED_INT
+else:
+  const
+    ShadowMapInternalFormat = GL_DEPTH_COMPONENT.GLint
+    ShadowMapPixelType = cGL_FLOAT
+
 type
   EnvironmentMap* = object
     textureId*: GLuint
@@ -254,12 +263,12 @@ proc setupPbr(ctx: PbrContext) =
   glTexImage2D(
     GL_TEXTURE_2D,
     0,
-    GL_DEPTH_COMPONENT.GLint,
+    ShadowMapInternalFormat,
     ctx.shadowMapSize.GLsizei,
     ctx.shadowMapSize.GLsizei,
     0,
     GL_DEPTH_COMPONENT,
-    cGL_FLOAT,
+    ShadowMapPixelType,
     nil
   )
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
@@ -348,7 +357,8 @@ proc loadCubeTexture(path: string): EnvironmentMap =
   ]
   var faceSize = 1
   for i, direction in directions:
-    let image = readImage(path.replace("*", direction))
+    let facePath = path.replace("*", direction)
+    let image = readImage(facePath)
     if i == 0:
       faceSize = max(image.width, image.height)
     glTexImage2D(

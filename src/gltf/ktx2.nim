@@ -620,6 +620,199 @@ proc expectedLevelByteLength(
   else:
     width.uint64 * height.uint64 * bytesPerPixelForVkFormat(vkFormat).uint64
 
+proc compressedLevelValidForWebGl(width, height: int): bool =
+  ## Returns true when WebGL accepts one block-compressed mip size.
+  width >= 4 and height >= 4 and width mod 4 == 0 and height mod 4 == 0
+
+proc validWebGlCompressedMipCount(info: Ktx2TextureInfo): int =
+  ## Returns the leading compressed mip count WebGL can upload.
+  for level in 0 ..< info.levelCount:
+    let
+      width = mipDimension(info.width, level)
+      height = mipDimension(info.height, level)
+    if not compressedLevelValidForWebGl(width, height):
+      return level
+  info.levelCount
+
+proc decodeRgb565(value: uint16): array[3, uint8] =
+  ## Decodes one BC color endpoint.
+  let
+    r = ((value shr 11) and 0x1F'u16).uint32
+    g = ((value shr 5) and 0x3F'u16).uint32
+    b = (value and 0x1F'u16).uint32
+  result[0] = uint8((r * 255'u32 + 15'u32) div 31'u32)
+  result[1] = uint8((g * 255'u32 + 31'u32) div 63'u32)
+  result[2] = uint8((b * 255'u32 + 15'u32) div 31'u32)
+
+proc writeRgbaPixel(
+  pixels: var seq[uint8],
+  width,
+  height,
+  x,
+  y: int,
+  color: array[4, uint8]
+) =
+  ## Writes one decoded pixel when it lies inside the destination.
+  if x < 0 or y < 0 or x >= width or y >= height:
+    return
+  let offset = (y * width + x) * 4
+  pixels[offset + 0] = color[0]
+  pixels[offset + 1] = color[1]
+  pixels[offset + 2] = color[2]
+  pixels[offset + 3] = color[3]
+
+proc decodeBcColorBlock(
+  data: string,
+  offset,
+  width,
+  height,
+  blockX,
+  blockY: int,
+  forceFourColors: bool,
+  alphaPixels: array[16, uint8],
+  pixels: var seq[uint8]
+) =
+  ## Decodes one BC color block into an RGBA destination.
+  let
+    c0 = data.readUint16(offset)
+    c1 = data.readUint16(offset + 2)
+    bits = data.readUint32(offset + 4)
+    rgb0 = decodeRgb565(c0)
+    rgb1 = decodeRgb565(c1)
+  var colors: array[4, array[4, uint8]]
+  colors[0] = [rgb0[0], rgb0[1], rgb0[2], 255'u8]
+  colors[1] = [rgb1[0], rgb1[1], rgb1[2], 255'u8]
+  if forceFourColors or c0 > c1:
+    for i in 0 ..< 3:
+      colors[2][i] = uint8((2'u32 * colors[0][i].uint32 +
+        colors[1][i].uint32) div 3'u32)
+      colors[3][i] = uint8((colors[0][i].uint32 +
+        2'u32 * colors[1][i].uint32) div 3'u32)
+    colors[2][3] = 255'u8
+    colors[3][3] = 255'u8
+  else:
+    for i in 0 ..< 3:
+      colors[2][i] = uint8((colors[0][i].uint32 +
+        colors[1][i].uint32) div 2'u32)
+    colors[2][3] = 255'u8
+    colors[3] = [0'u8, 0'u8, 0'u8, 0'u8]
+
+  for py in 0 ..< 4:
+    for px in 0 ..< 4:
+      let
+        pixelIndex = py * 4 + px
+        colorIndex = int((bits shr (pixelIndex * 2)) and 0x3'u32)
+        x = blockX * 4 + px
+        y = blockY * 4 + py
+      var color = colors[colorIndex]
+      color[3] = alphaPixels[pixelIndex]
+      pixels.writeRgbaPixel(width, height, x, y, color)
+
+proc decodeBc2AlphaBlock(data: string, offset: int): array[16, uint8] =
+  ## Decodes one BC2 explicit alpha block.
+  for i in 0 ..< 16:
+    let packed = uint8(data[offset + i div 2])
+    let value =
+      if i mod 2 == 0:
+        packed and 0x0F'u8
+      else:
+        packed shr 4
+    result[i] = uint8(value.uint32 * 17'u32)
+
+proc decodeBc3AlphaBlock(data: string, offset: int): array[16, uint8] =
+  ## Decodes one BC3 interpolated alpha block.
+  let
+    a0 = uint8(data[offset])
+    a1 = uint8(data[offset + 1])
+  var palette: array[8, uint8]
+  palette[0] = a0
+  palette[1] = a1
+  if a0 > a1:
+    for i in 1 .. 6:
+      palette[i + 1] = uint8(
+        ((7 - i).uint32 * a0.uint32 + i.uint32 * a1.uint32) div 7'u32
+      )
+  else:
+    for i in 1 .. 4:
+      palette[i + 1] = uint8(
+        ((5 - i).uint32 * a0.uint32 + i.uint32 * a1.uint32) div 5'u32
+      )
+    palette[6] = 0'u8
+    palette[7] = 255'u8
+
+  var bits = 0'u64
+  for i in 0 ..< 6:
+    bits = bits or (uint64(uint8(data[offset + 2 + i])) shl (8 * i))
+  for i in 0 ..< 16:
+    result[i] = palette[int((bits shr (3 * i)) and 0x7'u64)]
+
+proc decodeCompressedLevelToRgba(
+  info: Ktx2TextureInfo,
+  data: string,
+  level: int
+): seq[uint8] =
+  ## Decodes one BC-compressed KTX2 level to RGBA8.
+  let
+    width = mipDimension(info.width, level)
+    height = mipDimension(info.height, level)
+    levelInfo = info.levels[level]
+    blockBytes = blockBytesForVkFormat(info.vkFormat)
+    blocksWide = (width + 3) div 4
+    blocksHigh = (height + 3) div 4
+  result = newSeq[uint8](width * height * 4)
+  for blockY in 0 ..< blocksHigh:
+    for blockX in 0 ..< blocksWide:
+      let offset =
+        levelInfo.byteOffset + (blockY * blocksWide + blockX) * blockBytes
+      var alphaPixels: array[16, uint8]
+      for i in 0 ..< 16:
+        alphaPixels[i] = 255'u8
+      case info.vkFormat
+      of VkFormatBc1RgbUnormBlock, VkFormatBc1RgbSrgbBlock,
+         VkFormatBc1RgbaUnormBlock, VkFormatBc1RgbaSrgbBlock:
+        decodeBcColorBlock(
+          data,
+          offset,
+          width,
+          height,
+          blockX,
+          blockY,
+          false,
+          alphaPixels,
+          result
+        )
+      of VkFormatBc2UnormBlock, VkFormatBc2SrgbBlock:
+        alphaPixels = decodeBc2AlphaBlock(data, offset)
+        decodeBcColorBlock(
+          data,
+          offset + 8,
+          width,
+          height,
+          blockX,
+          blockY,
+          true,
+          alphaPixels,
+          result
+        )
+      of VkFormatBc3UnormBlock, VkFormatBc3SrgbBlock:
+        alphaPixels = decodeBc3AlphaBlock(data, offset)
+        decodeBcColorBlock(
+          data,
+          offset + 8,
+          width,
+          height,
+          blockX,
+          blockY,
+          true,
+          alphaPixels,
+          result
+        )
+      else:
+        raiseKtx2Error(
+          "cannot decode " & vkFormatName(info.vkFormat) &
+            " for WebGL fallback"
+        )
+
 proc checkedInt(value: uint64, name: string): int =
   ## Converts a KTX2 uint64 field to a platform int.
   if value > high(int).uint64:
@@ -1084,9 +1277,76 @@ proc uploadKtx2*(info: Ktx2TextureInfo, data: string, sampler = defaultKtx2Sampl
   glGenTextures(1, result.addr)
   glBindTexture(GL_TEXTURE_2D, result)
   glTexParameteri(GL_TEXTURE_2D, GlTextureBaseLevel, 0)
-  glTexParameteri(GL_TEXTURE_2D, GlTextureMaxLevel, (info.levelCount - 1).GLint)
 
-  for level, levelInfo in info.levels:
+  let uploadLevelCount =
+    when defined(emscripten):
+      if isCompressedVkFormat(info.vkFormat):
+        info.validWebGlCompressedMipCount()
+      else:
+        info.levelCount
+    else:
+      info.levelCount
+
+  if uploadLevelCount == 0:
+    when defined(emscripten):
+      let
+        width = info.width
+        height = info.height
+        pixels = info.decodeCompressedLevelToRgba(data, 0)
+      glTexParameteri(GL_TEXTURE_2D, GlTextureMaxLevel, 0)
+      glTexImage2D(
+        GL_TEXTURE_2D,
+        0,
+        GL_RGBA.GLint,
+        width.GLsizei,
+        height.GLsizei,
+        0,
+        GL_RGBA,
+        GL_UNSIGNED_BYTE,
+        cast[pointer](unsafeAddr pixels[0])
+      )
+      glTexParameteri(
+        GL_TEXTURE_2D,
+        GL_TEXTURE_MIN_FILTER,
+        GL_LINEAR.GLint
+      )
+      glTexParameteri(
+        GL_TEXTURE_2D,
+        GL_TEXTURE_MAG_FILTER,
+        sampler.magFilter.glValue
+      )
+      glTexParameteri(
+        GL_TEXTURE_2D,
+        GL_TEXTURE_WRAP_S,
+        sampler.wrapS.glValue
+      )
+      glTexParameteri(
+        GL_TEXTURE_2D,
+        GL_TEXTURE_WRAP_T,
+        sampler.wrapT.glValue
+      )
+      let err = glGetError()
+      glBindTexture(GL_TEXTURE_2D, 0)
+      if err != GL_NO_ERROR:
+        glDeleteTextures(1, result.addr)
+        result = 0
+        raiseKtx2Error(
+          "WebGL rejected decoded " & vkFormatName(info.vkFormat) &
+            " fallback " & $width & "x" & $height &
+            " with error 0x" & toHex(err.int)
+        )
+      return
+    else:
+      raiseKtx2Error("no uploadable KTX2 mip levels")
+
+  glTexParameteri(
+    GL_TEXTURE_2D,
+    GlTextureMaxLevel,
+    (uploadLevelCount - 1).GLint
+  )
+
+  for level in 0 ..< uploadLevelCount:
+    let levelInfo = info.levels[level]
     let
       width = mipDimension(info.width, level)
       height = mipDimension(info.height, level)
