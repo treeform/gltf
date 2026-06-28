@@ -21,25 +21,14 @@ const
   ShadowDepthVertexShader* = shaderSources.ShadowDepthVertSrc
   ShadowDepthFragmentShader* = shaderSources.ShadowDepthFragSrc
 
-var
-  envMapFBO*: GLuint # Framebuffer object for environment map.
-  environmentMapId*: GLuint # Texture ID for environment map.
-  rboDepth*: GLuint # Renderbuffer object for depth buffer.
-
-  pbrShader*: GLuint # Shader program for PBR rendering.
-  skyboxShader*: GLuint # Shader program for skybox rendering.
-  skyboxVao*: GLuint # VAO for skybox rendering.
-  skyboxVbo*: GLuint # VBO for skybox rendering.
-
-  shadowMapFbo*: GLuint
-  shadowMapTex*: GLuint
-  shadowDepthShader*: GLuint
-  environmentMipCount*: float32
-
 const
   ShadowMapSize = 2048
 
 type
+  EnvironmentMap* = object
+    textureId*: GLuint
+    mipCount*: float32
+
   TextureTransformUniforms = object
     texCoord: GLint
     offset: GLint
@@ -88,8 +77,65 @@ type
     tint: GLint
     useShadow: GLint
 
-var
-  pbrUniforms: PbrUniforms
+  SkyboxUniforms = object
+    invProj: GLint
+    invView: GLint
+    environmentMap: GLint
+    lod: GLint
+
+  ShadowUniforms = object
+    model: GLint
+    view: GLint
+    proj: GLint
+    useSkinning: GLint
+    jointMatrices: GLint
+    tint: GLint
+
+  Renderer* = ref object
+    window*: Window
+
+  BlendEntry = object
+    node: Node
+    primitive: Primitive
+    transform: Mat4
+
+  PbrContext* = ref object
+    ## Reusable state for PBR rendering.
+    size*: IVec2
+    clearColor*: Color
+    transform*: Mat4
+    view*: Mat4
+    proj*: Mat4
+    tint*: Color
+    useTrs*: bool
+    ambientLightColor*: Color
+    sunLightDirection*: Vec3
+    sunLightColor*: Color
+    rimLightDirection*: Vec3
+    rimLightColor*: Color
+    debugView*: DebugView
+    cameraPosition*: Vec3
+    environmentMap*: EnvironmentMap
+    useShadows*: bool
+    drawSkybox*: bool
+    skyboxLod*: float32
+    vsync*: bool
+    pbrShader*: GLuint
+    skyboxShader*: GLuint
+    skyboxVao*: GLuint
+    skyboxVbo*: GLuint
+    shadowMapFbo*: GLuint
+    shadowMapTex*: GLuint
+    shadowDepthShader*: GLuint
+    shadowMapSize*: int
+    shadowBias*: float32
+    pbrUniforms: PbrUniforms
+    skyboxUniforms: SkyboxUniforms
+    shadowUniforms: ShadowUniforms
+    ownsEnvironmentMap: bool
+    jointMatrices: seq[Mat4]
+    blended: seq[BlendEntry]
+    deferred: seq[BlendEntry]
 
 proc uniformLocation(shader: GLuint, name: cstring): GLint =
   ## Returns one shader uniform location.
@@ -152,93 +198,65 @@ proc loadPbrUniforms(shader: GLuint): PbrUniforms =
   result.tint = uniformLocation(shader, "tint")
   result.useShadow = uniformLocation(shader, "useShadow")
 
+proc loadSkyboxUniforms(shader: GLuint): SkyboxUniforms =
+  ## Caches skybox shader uniform locations.
+  result.invProj = uniformLocation(shader, "invProj")
+  result.invView = uniformLocation(shader, "invView")
+  result.environmentMap = uniformLocation(shader, "environmentMap")
+  result.lod = uniformLocation(shader, "lod")
+
+proc loadShadowUniforms(shader: GLuint): ShadowUniforms =
+  ## Caches shadow-depth shader uniform locations.
+  result.model = uniformLocation(shader, "model")
+  result.view = uniformLocation(shader, "view")
+  result.proj = uniformLocation(shader, "proj")
+  result.useSkinning = uniformLocation(shader, "useSkinning")
+  result.jointMatrices = uniformLocation(shader, "jointMatrices")
+  result.tint = uniformLocation(shader, "tint")
+
 proc mipCountForSize(size: int): float32 =
+  ## Returns the highest mip level for one square texture size.
   if size <= 1:
     0.0'f32
   else:
     floor(log2(size.float32))
 
-proc updateEnvironmentMipUniform() =
-  if pbrShader == 0:
-    return
-  glUseProgram(pbrShader)
-  glUniform1f(
-    pbrUniforms.environmentMipCount,
-    environmentMipCount
-  )
-  glUseProgram(0)
-
-proc setupPbr*() =
-  ## Sets up the PBR rendering system.
-  ## * Create Environment Map and Framebuffer.
+proc setupPbr(ctx: PbrContext) =
+  ## Sets up the PBR rendering resources for one context.
+  doAssert ctx != nil, "PBR context must not be nil."
 
   when not defined(emscripten):
     # Reduce visible seams when sampling blurred cubemap mip levels.
     glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS)
 
-  glGenTextures(1, addr environmentMapId)
-  glBindTexture(GL_TEXTURE_CUBE_MAP, environmentMapId)
-
-  for i in 0 ..< 6:
-    glTexImage2D(
-      (GL_TEXTURE_CUBE_MAP_POSITIVE_X.int + i).GLenum,
-      0,
-      GL_RGB.GLint,
-      envMapSize,
-      envMapSize,
-      0,
-      GL_RGB,
-      GL_UNSIGNED_BYTE,
-      nil
-      )
-
-  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
-  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
-  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE)
-
-  # Set up the offscreen framebuffer.
-  glGenFramebuffers(1, addr envMapFBO)
-  glBindFramebuffer(GL_FRAMEBUFFER, envMapFBO)
-
-  # Create a depth renderbuffer.
-  glGenRenderbuffers(1, addr rboDepth)
-  glBindRenderbuffer(GL_RENDERBUFFER, rboDepth)
-  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, envMapSize, envMapSize)
-  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth)
-
-  if glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE:
-    echo "Framebuffer not complete!"
-
-  glBindFramebuffer(GL_FRAMEBUFFER, 0)
-
-  pbrShader = compileShaderFiles(
+  ctx.pbrShader = compileShaderFiles(
     PbrVertexShader,
     PbrFragmentShader
   )
-  pbrUniforms = loadPbrUniforms(pbrShader)
+  ctx.pbrUniforms = loadPbrUniforms(ctx.pbrShader)
 
-  skyboxShader = compileShaderFiles(
+  ctx.skyboxShader = compileShaderFiles(
     SkyboxVertexShader,
     SkyboxFragmentShader
   )
+  ctx.skyboxUniforms = loadSkyboxUniforms(ctx.skyboxShader)
 
-  shadowDepthShader = compileShaderFiles(
+  ctx.shadowDepthShader = compileShaderFiles(
     ShadowDepthVertexShader,
     ShadowDepthFragmentShader
   )
+  ctx.shadowUniforms = loadShadowUniforms(ctx.shadowDepthShader)
 
   # Shadow map resources.
-  glGenFramebuffers(1, addr shadowMapFbo)
-  glGenTextures(1, addr shadowMapTex)
-  glBindTexture(GL_TEXTURE_2D, shadowMapTex)
+  glGenFramebuffers(1, addr ctx.shadowMapFbo)
+  glGenTextures(1, addr ctx.shadowMapTex)
+  glBindTexture(GL_TEXTURE_2D, ctx.shadowMapTex)
   glTexImage2D(
     GL_TEXTURE_2D,
     0,
     GL_DEPTH_COMPONENT.GLint,
-    ShadowMapSize,
-    ShadowMapSize,
+    ctx.shadowMapSize.GLsizei,
+    ctx.shadowMapSize.GLsizei,
     0,
     GL_DEPTH_COMPONENT,
     cGL_FLOAT,
@@ -258,12 +276,12 @@ proc setupPbr*() =
     var borderColor = [1.0.GLfloat, 1.0, 1.0, 1.0]
     glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor[0].addr)
 
-  glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFbo)
+  glBindFramebuffer(GL_FRAMEBUFFER, ctx.shadowMapFbo)
   glFramebufferTexture2D(
     GL_FRAMEBUFFER,
     GL_DEPTH_ATTACHMENT,
     GL_TEXTURE_2D,
-    shadowMapTex,
+    ctx.shadowMapTex,
     0
   )
   glDrawBuffer(GL_NONE)
@@ -272,18 +290,17 @@ proc setupPbr*() =
 
   # Bind shadow map to texture unit 6 so the sampler2DShadow uniform always
   # points to a valid depth texture, even when shadows are disabled.
-  glUseProgram(pbrShader)
-  glUniform1i(pbrUniforms.shadowMap, 6)
-  glUniform1f(pbrUniforms.shadowBias, 0.0015'f32)
+  glUseProgram(ctx.pbrShader)
+  glUniform1i(ctx.pbrUniforms.shadowMap, 6)
+  glUniform1f(ctx.pbrUniforms.shadowBias, ctx.shadowBias)
   glUniform2f(
-    pbrUniforms.shadowMapTexelSize,
-    1.0'f32 / ShadowMapSize.float32,
-    1.0'f32 / ShadowMapSize.float32
+    ctx.pbrUniforms.shadowMapTexelSize,
+    1.0'f32 / ctx.shadowMapSize.float32,
+    1.0'f32 / ctx.shadowMapSize.float32
   )
-  environmentMipCount = mipCountForSize(envMapSize)
-  glUniform1f(pbrUniforms.environmentMipCount, environmentMipCount)
+  glUniform1f(ctx.pbrUniforms.environmentMipCount, 0)
   glActiveTexture(GL_TEXTURE6)
-  glBindTexture(GL_TEXTURE_2D, shadowMapTex)
+  glBindTexture(GL_TEXTURE_2D, ctx.shadowMapTex)
   glUseProgram(0)
 
   # Full-screen triangle data.
@@ -293,11 +310,11 @@ proc setupPbr*() =
     -1.0f32,  3.0f32
   ]
 
-  glGenVertexArrays(1, addr skyboxVao)
-  glGenBuffers(1, addr skyboxVbo)
+  glGenVertexArrays(1, addr ctx.skyboxVao)
+  glGenBuffers(1, addr ctx.skyboxVbo)
 
-  glBindVertexArray(skyboxVao)
-  glBindBuffer(GL_ARRAY_BUFFER, skyboxVbo)
+  glBindVertexArray(ctx.skyboxVao)
+  glBindBuffer(GL_ARRAY_BUFFER, ctx.skyboxVbo)
   glBufferData(GL_ARRAY_BUFFER, skyboxVertices.sizeof, addr skyboxVertices, GL_STATIC_DRAW)
 
   glEnableVertexAttribArray(0)
@@ -305,8 +322,21 @@ proc setupPbr*() =
 
   glBindVertexArray(0)
 
-proc loadCubeTexture(path: string): GLuint =
-  ## Creates a cube texture and returns its OpenGL ID.
+proc newEnvironmentMap*(
+  textureId: GLuint,
+  mipCount: float32
+): EnvironmentMap =
+  ## Creates an environment-map handle from an existing texture.
+  EnvironmentMap(textureId: textureId, mipCount: mipCount)
+
+proc destroy*(environmentMap: var EnvironmentMap) =
+  ## Deletes the OpenGL texture owned by an environment map.
+  if environmentMap.textureId != 0:
+    glDeleteTextures(1, environmentMap.textureId.addr)
+  environmentMap = EnvironmentMap()
+
+proc loadCubeTexture(path: string): EnvironmentMap =
+  ## Creates a cube texture and returns its environment-map handle.
 
   var textureId: GLuint
   glGenTextures(1, addr(textureId))
@@ -341,12 +371,9 @@ proc loadCubeTexture(path: string): GLuint =
 
   # Generate mipmaps for the cube map.
   glGenerateMipmap(GL_TEXTURE_CUBE_MAP)
-  environmentMipCount = mipCountForSize(faceSize)
-  updateEnvironmentMipUniform()
+  newEnvironmentMap(textureId, mipCountForSize(faceSize))
 
-  return textureId
-
-proc createSolidCubeTexture(color: ColorRGBX): GLuint =
+proc createSolidCubeTexture(color: ColorRGBX): EnvironmentMap =
   ## Creates a simple solid-color cube texture.
   var
     textureId: GLuint
@@ -373,9 +400,7 @@ proc createSolidCubeTexture(color: ColorRGBX): GLuint =
   glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
   glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
   glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE)
-  environmentMipCount = 0.0'f32
-  updateEnvironmentMipUniform()
-  textureId
+  newEnvironmentMap(textureId, 0.0'f32)
 
 proc studioFaceDirection(face, x, y, size: int): Vec3 =
   ## Returns a normalized direction for a cubemap texel.
@@ -420,7 +445,7 @@ proc studioColor(dir: Vec3): ColorRGBX =
     255
   )
 
-proc createStudioCubeTexture(): GLuint =
+proc createStudioCubeTexture(): EnvironmentMap =
   ## Creates a tiny procedural cubemap for neutral studio lighting.
   var textureId: GLuint
   glGenTextures(1, textureId.addr)
@@ -455,84 +480,143 @@ proc createStudioCubeTexture(): GLuint =
   glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
   glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE)
   glGenerateMipmap(GL_TEXTURE_CUBE_MAP)
-  environmentMipCount = mipCountForSize(StudioEnvSize)
-  updateEnvironmentMipUniform()
-  textureId
+  newEnvironmentMap(textureId, mipCountForSize(StudioEnvSize))
 
-proc loadEnvironmentMap*(cubeMapPath: string) =
+proc loadEnvironmentMap*(cubeMapPath: string): EnvironmentMap =
   ## Loads an environment map from a cube texture path.
-  if environmentMapId != 0:
-    glDeleteTextures(1, environmentMapId.addr)
-  environmentMapId = loadCubeTexture(cubeMapPath)
+  loadCubeTexture(cubeMapPath)
 
-proc loadSolidEnvironmentMap*(color = rgbx(180, 190, 220, 255)) =
+proc loadSolidEnvironmentMap*(
+  color = rgbx(180, 190, 220, 255)
+): EnvironmentMap =
   ## Loads a solid-color cubemap.
-  if environmentMapId != 0:
-    glDeleteTextures(1, environmentMapId.addr)
-  environmentMapId = createSolidCubeTexture(color)
+  createSolidCubeTexture(color)
 
-proc loadDefaultEnvironmentMap*() =
+proc loadDefaultEnvironmentMap*(): EnvironmentMap =
   ## Loads a small procedural studio cubemap.
-  if environmentMapId != 0:
-    glDeleteTextures(1, environmentMapId.addr)
-  environmentMapId = createStudioCubeTexture()
+  createStudioCubeTexture()
 
-proc drawSkybox*(view, proj: Mat4, lod: float32 = 0.0) =
+proc drawSkybox*(
+  ctx: PbrContext,
+  view, proj: Mat4,
+  environmentMap: EnvironmentMap,
+  lod: float32 = 0.0
+) =
   ## Draws the skybox using a full-screen quad.
-  glUseProgram(skyboxShader)
+  doAssert ctx != nil, "PBR context must not be nil."
+  glUseProgram(ctx.skyboxShader)
 
   var
     invProj = proj.inverse
     invView = view.inverse
 
   glUniformMatrix4fv(
-    glGetUniformLocation(skyboxShader, "invProj"),
+    ctx.skyboxUniforms.invProj,
     1,
     GL_FALSE,
     cast[ptr float32](invProj.addr)
   )
   glUniformMatrix4fv(
-    glGetUniformLocation(skyboxShader, "invView"),
+    ctx.skyboxUniforms.invView,
     1,
     GL_FALSE,
     cast[ptr float32](invView.addr)
   )
 
   glActiveTexture(GL_TEXTURE0)
-  glBindTexture(GL_TEXTURE_CUBE_MAP, environmentMapId)
-  glUniform1i(glGetUniformLocation(skyboxShader, "environmentMap"), 0)
-  glUniform1f(glGetUniformLocation(skyboxShader, "lod"), lod)
+  glBindTexture(GL_TEXTURE_CUBE_MAP, environmentMap.textureId)
+  glUniform1i(ctx.skyboxUniforms.environmentMap, 0)
+  glUniform1f(ctx.skyboxUniforms.lod, lod)
 
   # Draw a single triangle that covers the whole screen.
   glDisable(GL_CULL_FACE)
   glDisable(GL_DEPTH_TEST)
   glDepthMask(GL_FALSE)
 
-  glBindVertexArray(skyboxVao)
+  glBindVertexArray(ctx.skyboxVao)
   glDrawArrays(GL_TRIANGLES, 0, 3)
   glBindVertexArray(0)
 
   glDepthMask(GL_TRUE)
   glEnable(GL_DEPTH_TEST)
 
-type
-  Renderer* = ref object
-    window*: Window
-
-  BlendEntry = object
-    node: Node
-    primitive: Primitive
-    transform: Mat4
-
-  PbrContext* = ref object
-    ## Reusable state for PBR rendering.
-    jointMatrices: seq[Mat4]
-    blended: seq[BlendEntry]
-    deferred: seq[BlendEntry]
-
-proc newPbrContext*(): PbrContext =
+proc newPbrContext*(
+  shadowMapSize = ShadowMapSize,
+  shadowBias = 0.0015'f32
+): PbrContext =
   ## Creates reusable state for PBR rendering.
-  new(result)
+  var ctx: PbrContext
+  new(ctx)
+  ctx.size = ivec2(0, 0)
+  ctx.clearColor = color(0, 0, 0, 1)
+  ctx.transform = mat4()
+  ctx.view = mat4()
+  ctx.proj = mat4()
+  ctx.tint = color(1, 1, 1, 1)
+  ctx.useTrs = true
+  ctx.ambientLightColor = color(0.1, 0.1, 0.1, 1)
+  ctx.sunLightDirection = vec3(1, 4, 2)
+  ctx.sunLightColor = color(1, 1, 1, 1)
+  ctx.rimLightDirection = vec3(-1, 1, -1)
+  ctx.rimLightColor = color(0, 0, 0, 0)
+  ctx.debugView = dvLit
+  ctx.cameraPosition = vec3(0, 0, 10)
+  ctx.environmentMap = EnvironmentMap()
+  ctx.ownsEnvironmentMap = false
+  ctx.useShadows = false
+  ctx.drawSkybox = false
+  ctx.skyboxLod = 0
+  ctx.vsync = false
+  ctx.shadowMapSize = shadowMapSize
+  ctx.shadowBias = shadowBias
+  setupPbr(ctx)
+  ctx
+
+proc newPbrContext*(renderer: Renderer): PbrContext =
+  ## Creates reusable state for PBR rendering.
+  discard renderer
+  newPbrContext()
+
+proc attachEnvironmentMap*(
+  ctx: PbrContext,
+  environmentMap: EnvironmentMap,
+  owned = true
+) =
+  ## Attaches an environment map to a PBR context.
+  doAssert ctx != nil, "PBR context must not be nil."
+  if ctx.ownsEnvironmentMap:
+    ctx.environmentMap.destroy()
+  ctx.environmentMap = environmentMap
+  ctx.ownsEnvironmentMap = owned
+
+proc destroy*(ctx: PbrContext) =
+  ## Deletes the OpenGL resources owned by a PBR context.
+  if ctx == nil:
+    return
+  if ctx.ownsEnvironmentMap:
+    ctx.environmentMap.destroy()
+  ctx.ownsEnvironmentMap = false
+  if ctx.shadowMapTex != 0:
+    glDeleteTextures(1, ctx.shadowMapTex.addr)
+  if ctx.shadowMapFbo != 0:
+    glDeleteFramebuffers(1, ctx.shadowMapFbo.addr)
+  if ctx.skyboxVbo != 0:
+    glDeleteBuffers(1, ctx.skyboxVbo.addr)
+  if ctx.skyboxVao != 0:
+    glDeleteVertexArrays(1, ctx.skyboxVao.addr)
+  if ctx.pbrShader != 0:
+    glDeleteProgram(ctx.pbrShader)
+  if ctx.skyboxShader != 0:
+    glDeleteProgram(ctx.skyboxShader)
+  if ctx.shadowDepthShader != 0:
+    glDeleteProgram(ctx.shadowDepthShader)
+  ctx.shadowMapTex = 0
+  ctx.shadowMapFbo = 0
+  ctx.skyboxVbo = 0
+  ctx.skyboxVao = 0
+  ctx.pbrShader = 0
+  ctx.skyboxShader = 0
+  ctx.shadowDepthShader = 0
 
 proc glValue(filter: TextureMagFilter): GLint =
   case filter
@@ -930,6 +1014,9 @@ proc renderPbrPrimitive(
 ) =
   if primitive == nil:
     return
+  let
+    pbrShader = ctx.pbrShader
+    pbrUniforms = ctx.pbrUniforms
 
   let isBlend =
     primitive.material != nil and
@@ -998,7 +1085,11 @@ proc renderPbrPrimitive(
 
   glActiveTexture(GL_TEXTURE5)
   glUniform1i(pbrUniforms.environmentMap, 5)
-  glBindTexture(GL_TEXTURE_CUBE_MAP, environmentMapId)
+  glUniform1f(
+    pbrUniforms.environmentMipCount,
+    ctx.environmentMap.mipCount
+  )
+  glBindTexture(GL_TEXTURE_CUBE_MAP, ctx.environmentMap.textureId)
 
   if primitive.material != nil:
     let materialData = primitive.material.ensureData()
@@ -1077,7 +1168,7 @@ proc renderPbrPrimitive(
       if shadowTex != 0.GLuint:
         shadowTex
       else:
-        shadowMapTex
+        ctx.shadowMapTex
     glActiveTexture(GL_TEXTURE6)
     glUniform1i(pbrUniforms.shadowMap, 6)
     glBindTexture(GL_TEXTURE_2D, activeShadowTex)
@@ -1267,42 +1358,32 @@ proc renderPbrNode(
         root=rootNode
       )
 
-proc drawPbr*(
+proc drawPbr(
   node: Node,
-  transform, view, proj: Mat4,
-  tint: Color,
-  ctx: PbrContext,
-  useTrs = true,
-  ambientLightColor = color(0.1, 0.1, 0.1, 1),
-  sunLightDirection = vec3(1, 4, 2),
-  sunLightColor = color(1, 1, 1, 1),
-  rimLightDirection = vec3(-1, 1, -1),
-  rimLightColor = color(0, 0, 0, 0),
-  debugView = dvLit,
-  cameraPosition = vec3(0, 0, 10)
+  ctx: PbrContext
 ) =
   ## Draws a node tree with PBR shading.
+  doAssert ctx != nil, "PBR context must not be nil."
   if not node.visible:
     return
-  doAssert ctx != nil, "PBR context must not be nil."
 
-  node.updateTransforms(transform, useTrs)
+  node.updateTransforms(ctx.transform, ctx.useTrs)
 
   ctx.blended.setLen(0)
 
   renderPbrNode(
     node,
-    transform,
-    view,
-    proj,
-    tint,
-    ambientLightColor,
-    sunLightDirection,
-    sunLightColor,
-    rimLightDirection,
-    rimLightColor,
-    debugView,
-    cameraPosition,
+    ctx.transform,
+    ctx.view,
+    ctx.proj,
+    ctx.tint,
+    ctx.ambientLightColor,
+    ctx.sunLightDirection,
+    ctx.sunLightColor,
+    ctx.rimLightDirection,
+    ctx.rimLightColor,
+    ctx.debugView,
+    ctx.cameraPosition,
     useShadow=false,
     lightSpace=mat4(),
     shadowTex=0,
@@ -1318,8 +1399,8 @@ proc drawPbr*(
       let
         pa = (a.transform * vec4(0, 0, 0, 1)).xyz
         pb = (b.transform * vec4(0, 0, 0, 1)).xyz
-        da = (cameraPosition - pa).lengthSq
-        db = (cameraPosition - pb).lengthSq
+        da = (ctx.cameraPosition - pa).lengthSq
+        db = (ctx.cameraPosition - pb).lengthSq
       if da > db: -1 elif da < db: 1 else: 0
     )
     for entry in ctx.blended:
@@ -1327,16 +1408,16 @@ proc drawPbr*(
       renderPbrPrimitive(
         entry.primitive,
         entry.transform,
-        view,
-        proj,
-        tint,
-        ambientLightColor,
-        sunLightDirection,
-        sunLightColor,
-        rimLightDirection,
-        rimLightColor,
-        debugView,
-        cameraPosition,
+        ctx.view,
+        ctx.proj,
+        ctx.tint,
+        ctx.ambientLightColor,
+        ctx.sunLightDirection,
+        ctx.sunLightColor,
+        ctx.rimLightDirection,
+        ctx.rimLightColor,
+        ctx.debugView,
+        ctx.cameraPosition,
         useShadow=false,
         lightSpace=mat4(),
         shadowTex=0,
@@ -1347,37 +1428,6 @@ proc drawPbr*(
         root=node
       )
     glDepthMask(GL_TRUE)
-
-proc drawPbr*(
-  node: Node,
-  transform, view, proj: Mat4,
-  tint: Color,
-  useTrs = true,
-  ambientLightColor = color(0.1, 0.1, 0.1, 1),
-  sunLightDirection = vec3(1, 4, 2),
-  sunLightColor = color(1, 1, 1, 1),
-  rimLightDirection = vec3(-1, 1, -1),
-  rimLightColor = color(0, 0, 0, 0),
-  debugView = dvLit,
-  cameraPosition = vec3(0, 0, 10)
-) =
-  ## Draws a node tree with PBR shading using a temporary context.
-  let ctx = newPbrContext()
-  node.drawPbr(
-    transform,
-    view,
-    proj,
-    tint,
-    ctx,
-    useTrs=useTrs,
-    ambientLightColor=ambientLightColor,
-    sunLightDirection=sunLightDirection,
-    sunLightColor=sunLightColor,
-    rimLightDirection=rimLightDirection,
-    rimLightColor=rimLightColor,
-    debugView=debugView,
-    cameraPosition=cameraPosition
-  )
 
 proc shadowLookAt(eye, center, up: Vec3): Mat4 =
   ## Standard OpenGL lookAt (z-backward) for shadow mapping.
@@ -1427,7 +1477,6 @@ proc getShadowMatrices(
 
 proc renderShadowPrimitive(
   primitive: Primitive,
-  shader: GLuint,
   owner,
   root: Node,
   transform, view, proj: Mat4,
@@ -1442,6 +1491,7 @@ proc renderShadowPrimitive(
 
   primitive.uploadToGpu()
   let primitiveData = primitive.data
+  let shadowUniforms = ctx.shadowUniforms
   glBindVertexArray(primitiveData.vertexArrayId)
 
   var
@@ -1449,19 +1499,19 @@ proc renderShadowPrimitive(
     viewArray = view
     projArray = proj
   glUniformMatrix4fv(
-    glGetUniformLocation(shader, "model"),
+    shadowUniforms.model,
     1,
     GL_FALSE,
     cast[ptr float32](modelArray.addr)
   )
   glUniformMatrix4fv(
-    glGetUniformLocation(shader, "view"),
+    shadowUniforms.view,
     1,
     GL_FALSE,
     cast[ptr float32](viewArray.addr)
   )
   glUniformMatrix4fv(
-    glGetUniformLocation(shader, "proj"),
+    shadowUniforms.proj,
     1,
     GL_FALSE,
     cast[ptr float32](projArray.addr)
@@ -1469,22 +1519,19 @@ proc renderShadowPrimitive(
 
   root.skinMatricesInto(owner, ctx.jointMatrices)
   let useSkinning = ctx.jointMatrices.len > 0
-  let useSkinningUniform = glGetUniformLocation(shader, "useSkinning")
-  if useSkinningUniform >= 0:
-    glUniform1i(useSkinningUniform, useSkinning.ord.GLint)
+  if shadowUniforms.useSkinning >= 0:
+    glUniform1i(shadowUniforms.useSkinning, useSkinning.ord.GLint)
   if useSkinning:
-    let jointMatricesUniform = glGetUniformLocation(shader, "jointMatrices")
-    if jointMatricesUniform >= 0:
+    if shadowUniforms.jointMatrices >= 0:
       glUniformMatrix4fv(
-        jointMatricesUniform,
+        shadowUniforms.jointMatrices,
         ctx.jointMatrices.len.GLsizei,
         GL_FALSE,
         cast[ptr float32](ctx.jointMatrices[0].addr)
       )
 
-  let tintUniform = glGetUniformLocation(shader, "tint")
-  if tintUniform >= 0:
-    glUniform4f(tintUniform, tint.r, tint.g, tint.b, tint.a)
+  if shadowUniforms.tint >= 0:
+    glUniform4f(shadowUniforms.tint, tint.r, tint.g, tint.b, tint.a)
 
   let glMode = primitive.mode.glValue
   setFrontFace(transform, primitive.mode)
@@ -1529,7 +1576,6 @@ proc renderShadowNode(
     for primitive in node.mesh.primitives:
       renderShadowPrimitive(
         primitive,
-        shadowDepthShader,
         node,
         root,
         node.mat,
@@ -1550,29 +1596,19 @@ proc renderShadowNode(
       applyTrs=true
     )
 
-proc drawPbrWithShadow*(
+proc drawPbrWithShadow(
   node: Node,
-  transform, view, proj: Mat4,
-  tint: Color,
-  ctx: PbrContext,
-  sunLightDirection = vec3(1, 4, 2),
-  useTrs = true,
-  ambientLightColor = color(0.1, 0.1, 0.1, 1),
-  sunLightColor = color(1, 1, 1, 1),
-  rimLightDirection = vec3(-1, 1, -1),
-  rimLightColor = color(0, 0, 0, 0),
-  debugView = dvLit,
-  cameraPosition = vec3(0, 0, 10)
+  ctx: PbrContext
 ) =
   ## Draws a node tree with PBR shading and shadows.
+  doAssert ctx != nil, "PBR context must not be nil."
   if not node.visible:
     return
-  doAssert ctx != nil, "PBR context must not be nil."
 
-  node.updateTransforms(transform, useTrs)
+  node.updateTransforms(ctx.transform, ctx.useTrs)
 
   let (lightView, lightProj, lightSpace, _) =
-    getShadowMatrices(node, transform, sunLightDirection)
+    getShadowMatrices(node, ctx.transform, ctx.sunLightDirection)
 
   # Save viewport and framebuffer.
   var
@@ -1582,10 +1618,15 @@ proc drawPbrWithShadow*(
   glGetIntegerv(GL_FRAMEBUFFER_BINDING, oldFramebuffer.addr)
 
   # Depth pass.
-  glViewport(0, 0, ShadowMapSize, ShadowMapSize)
-  glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFbo)
+  glViewport(
+    0,
+    0,
+    ctx.shadowMapSize.GLsizei,
+    ctx.shadowMapSize.GLsizei
+  )
+  glBindFramebuffer(GL_FRAMEBUFFER, ctx.shadowMapFbo)
   glClear(GL_DEPTH_BUFFER_BIT)
-  glUseProgram(shadowDepthShader)
+  glUseProgram(ctx.shadowDepthShader)
   glEnable(GL_CULL_FACE)
   glCullFace(GL_BACK)
   glEnable(GL_DEPTH_TEST)
@@ -1594,10 +1635,10 @@ proc drawPbrWithShadow*(
   renderShadowNode(
     node,
     node,
-    transform,
+    ctx.transform,
     lightView,
     lightProj,
-    tint,
+    ctx.tint,
     ctx,
     applyTrs=true
   )
@@ -1612,20 +1653,20 @@ proc drawPbrWithShadow*(
 
   renderPbrNode(
     node,
-    transform,
-    view,
-    proj,
-    tint,
-    ambientLightColor,
-    sunLightDirection,
-    sunLightColor,
-    rimLightDirection,
-    rimLightColor,
-    debugView,
-    cameraPosition,
+    ctx.transform,
+    ctx.view,
+    ctx.proj,
+    ctx.tint,
+    ctx.ambientLightColor,
+    ctx.sunLightDirection,
+    ctx.sunLightColor,
+    ctx.rimLightDirection,
+    ctx.rimLightColor,
+    ctx.debugView,
+    ctx.cameraPosition,
     useShadow=true,
     lightSpace=lightSpace,
-    shadowTex=shadowMapTex,
+    shadowTex=ctx.shadowMapTex,
     deferBlend=true,
     blended=ctx.blended,
     ctx=ctx,
@@ -1637,8 +1678,8 @@ proc drawPbrWithShadow*(
     ctx.blended.sort(proc(a, b: BlendEntry): int =
       let pa = (a.transform * vec4(0, 0, 0, 1)).xyz
       let pb = (b.transform * vec4(0, 0, 0, 1)).xyz
-      let da = (cameraPosition - pa).lengthSq
-      let db = (cameraPosition - pb).lengthSq
+      let da = (ctx.cameraPosition - pa).lengthSq
+      let db = (ctx.cameraPosition - pb).lengthSq
       if da > db: -1 elif da < db: 1 else: 0
     )
     for entry in ctx.blended:
@@ -1646,16 +1687,16 @@ proc drawPbrWithShadow*(
       renderPbrPrimitive(
         entry.primitive,
         entry.transform,
-        view,
-        proj,
-        tint,
-        ambientLightColor,
-        sunLightDirection,
-        sunLightColor,
-        rimLightDirection,
-        rimLightColor,
-        debugView,
-        cameraPosition,
+        ctx.view,
+        ctx.proj,
+        ctx.tint,
+        ctx.ambientLightColor,
+        ctx.sunLightDirection,
+        ctx.sunLightColor,
+        ctx.rimLightDirection,
+        ctx.rimLightColor,
+        ctx.debugView,
+        ctx.cameraPosition,
         useShadow=false,
         lightSpace=mat4(),
         shadowTex=0,
@@ -1667,40 +1708,32 @@ proc drawPbrWithShadow*(
       )
     glDepthMask(GL_TRUE)
 
-proc drawPbrWithShadow*(
-  node: Node,
-  transform, view, proj: Mat4,
-  tint: Color,
-  sunLightDirection = vec3(1, 4, 2),
-  useTrs = true,
-  ambientLightColor = color(0.1, 0.1, 0.1, 1),
-  sunLightColor = color(1, 1, 1, 1),
-  rimLightDirection = vec3(-1, 1, -1),
-  rimLightColor = color(0, 0, 0, 0),
-  debugView = dvLit,
-  cameraPosition = vec3(0, 0, 10)
-) =
-  ## Draws a node tree with PBR shading and shadows using a temporary context.
-  let ctx = newPbrContext()
-  node.drawPbrWithShadow(
-    transform,
-    view,
-    proj,
-    tint,
-    ctx,
-    sunLightDirection=sunLightDirection,
-    useTrs=useTrs,
-    ambientLightColor=ambientLightColor,
-    sunLightColor=sunLightColor,
-    rimLightDirection=rimLightDirection,
-    rimLightColor=rimLightColor,
-    debugView=debugView,
-    cameraPosition=cameraPosition
-  )
+proc draw*(ctx: PbrContext, node: Node) =
+  ## Draws a node tree using PBR context state.
+  doAssert ctx != nil, "PBR context must not be nil."
+  if node == nil:
+    return
+  if ctx.drawSkybox:
+    drawSkybox(
+      ctx,
+      ctx.view,
+      ctx.proj,
+      ctx.environmentMap,
+      ctx.skyboxLod
+    )
+  if ctx.useShadows and ctx.debugView == dvLit:
+    drawPbrWithShadow(node, ctx)
+  else:
+    drawPbr(node, ctx)
+
+proc draw*(ctx: PbrContext, file: GltfFile) =
+  ## Draws a glTF file using PBR context state.
+  if file != nil:
+    ctx.draw(file.root)
 
 proc newRenderer*(window: Window): Renderer =
+  ## Creates an OpenGL renderer wrapper.
   result = Renderer(window: window)
-  setupPbr()
 
 proc beginFrame*(renderer: Renderer; window: Window; size: IVec2) =
   discard renderer
@@ -1722,47 +1755,6 @@ proc clearScreen*(renderer: Renderer; color: Color) =
   discard renderer
   glClearColor(color.r, color.g, color.b, color.a)
   glClear(GL_DEPTH_BUFFER_BIT or GL_COLOR_BUFFER_BIT)
-
-proc render*(renderer: Renderer; node: Node; params: RenderParams) =
-  discard renderer
-  if node == nil:
-    return
-  if params.drawSkybox:
-    drawSkybox(params.view, params.proj, params.skyboxLod)
-  if params.useShadows and params.debugView == dvLit:
-    node.drawPbrWithShadow(
-      params.transform,
-      params.view,
-      params.proj,
-      params.tint,
-      sunLightDirection = params.sunLightDirection,
-      useTrs = params.useTrs,
-      ambientLightColor = params.ambientLightColor,
-      sunLightColor = params.sunLightColor,
-      rimLightDirection = params.rimLightDirection,
-      rimLightColor = params.rimLightColor,
-      debugView = params.debugView,
-      cameraPosition = params.cameraPosition
-    )
-  else:
-    node.drawPbr(
-      params.transform,
-      params.view,
-      params.proj,
-      params.tint,
-      useTrs = params.useTrs,
-      ambientLightColor = params.ambientLightColor,
-      sunLightDirection = params.sunLightDirection,
-      sunLightColor = params.sunLightColor,
-      rimLightDirection = params.rimLightDirection,
-      rimLightColor = params.rimLightColor,
-      debugView = params.debugView,
-      cameraPosition = params.cameraPosition
-    )
-
-proc render*(renderer: Renderer; file: GltfFile; params: RenderParams) =
-  if file != nil:
-    renderer.render(file.root, params)
 
 proc endFrame*(renderer: Renderer) =
   discard renderer

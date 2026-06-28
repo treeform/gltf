@@ -31,7 +31,9 @@ type
     exceptionName: string
     message: string
 
-var renderer: Renderer
+var
+  renderer: Renderer
+  pbrContext: PbrContext
 
 proc hasModel(node: Node): bool =
   ## Returns true when the node tree has geometry to draw.
@@ -202,29 +204,27 @@ proc renderScene(window: Window, model: Node) =
     sunLightDirection = safeNormalize(vec3(1, -4, -2), vec3(1, -1, -1))
     rimLightDirection = safeNormalize(vec3(-1, 1, -1), vec3(-1, 1, -1))
 
-  let params = RenderParams(
-    size: window.size,
-    clearColor: BackgroundColor,
-    transform: mat4(),
-    view: cameraMat,
-    proj: proj,
-    tint: color(1, 1, 1, 1),
-    useTrs: true,
-    ambientLightColor: color(0.32, 0.36, 0.46, 0.18),
-    sunLightDirection: sunLightDirection,
-    sunLightColor: color(0.95, 0.96, 1.0, 1.0),
-    rimLightDirection: rimLightDirection,
-    rimLightColor: color(0.95, 0.72, 0.46, 0.25),
-    debugView: dvLit,
-    cameraPosition: cameraPosition,
-    useShadows: false,
-    drawSkybox: false,
-    skyboxLod: 0,
-    vsync: false
-  )
   renderer.beginFrame(window, window.size)
   renderer.clearScreen(BackgroundColor)
-  renderer.render(model, params)
+  pbrContext.size = window.size
+  pbrContext.clearColor = BackgroundColor
+  pbrContext.transform = mat4()
+  pbrContext.view = cameraMat
+  pbrContext.proj = proj
+  pbrContext.tint = color(1, 1, 1, 1)
+  pbrContext.useTrs = true
+  pbrContext.ambientLightColor = color(0.32, 0.36, 0.46, 0.18)
+  pbrContext.sunLightDirection = sunLightDirection
+  pbrContext.sunLightColor = color(0.95, 0.96, 1.0, 1.0)
+  pbrContext.rimLightDirection = rimLightDirection
+  pbrContext.rimLightColor = color(0.95, 0.72, 0.46, 0.25)
+  pbrContext.debugView = dvLit
+  pbrContext.cameraPosition = cameraPosition
+  pbrContext.useShadows = false
+  pbrContext.drawSkybox = false
+  pbrContext.skyboxLod = 0
+  pbrContext.vsync = false
+  pbrContext.draw(model)
   renderer.endFrame()
 
 proc testModel(
@@ -472,8 +472,9 @@ when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal
 elif defined(useDirectX) or defined(useVulkan):
   loadExtensions()
 renderer = newRenderer(window)
+pbrContext = newPbrContext(renderer)
 when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
-  loadDefaultEnvironmentMap()
+  pbrContext.attachEnvironmentMap(loadDefaultEnvironmentMap())
 
 var results: seq[AssetResult]
 for i, modelPath in modelPaths:
@@ -509,6 +510,8 @@ var hasFailure = false
 for result in results:
   if result.status notin ["ok", "skip"]:
     hasFailure = true
+if pbrContext != nil:
+  pbrContext.destroy()
 if renderer != nil:
   renderer.shutdown()
 echo "done"

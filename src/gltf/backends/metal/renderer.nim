@@ -44,7 +44,7 @@ type
     size*: IVec2
     clearColor*: Color
     scene*: Node
-    params*: RenderParams
+    pbrContext*: PbrContext
     when defined(macosx):
       ctx*: MetalContext
       pipelineState*: MTLRenderPipelineState
@@ -59,10 +59,63 @@ type
       targetWidth*: int
       targetHeight*: int
 
+  PbrContext* = ref object
+    ## Reusable state for PBR rendering.
+    renderer: Renderer
+    size*: IVec2
+    clearColor*: Color
+    transform*: Mat4
+    view*: Mat4
+    proj*: Mat4
+    tint*: Color
+    useTrs*: bool
+    ambientLightColor*: Color
+    sunLightDirection*: Vec3
+    sunLightColor*: Color
+    rimLightDirection*: Vec3
+    rimLightColor*: Color
+    debugView*: DebugView
+    cameraPosition*: Vec3
+    useShadows*: bool
+    drawSkybox*: bool
+    skyboxLod*: float32
+    vsync*: bool
+
   BlendEntry = object
     node: Node
     primitive: Primitive
     transform: Mat4
+
+proc newPbrContext*(renderer: Renderer): PbrContext =
+  ## Creates reusable state for PBR rendering.
+  new(result)
+  result.renderer = renderer
+  if renderer != nil:
+    result.size = renderer.size
+    result.clearColor = renderer.clearColor
+  else:
+    result.size = ivec2(0, 0)
+    result.clearColor = color(0, 0, 0, 1)
+  result.transform = mat4()
+  result.view = mat4()
+  result.proj = mat4()
+  result.tint = color(1, 1, 1, 1)
+  result.useTrs = true
+  result.ambientLightColor = color(0.1, 0.1, 0.1, 1)
+  result.sunLightDirection = vec3(1, 4, 2)
+  result.sunLightColor = color(1, 1, 1, 1)
+  result.rimLightDirection = vec3(-1, 1, -1)
+  result.rimLightColor = color(0, 0, 0, 0)
+  result.debugView = dvLit
+  result.cameraPosition = vec3(0, 0, 10)
+  result.useShadows = false
+  result.drawSkybox = false
+  result.skyboxLod = 0
+  result.vsync = false
+
+proc destroy*(ctx: PbrContext) =
+  ## Releases resources owned by a PBR context.
+  discard ctx
 
 when defined(macosx):
   type
@@ -848,7 +901,7 @@ when defined(macosx):
     owner,
     root: Node,
     transform: Mat4,
-    params: RenderParams,
+    ctx: PbrContext,
     deferBlend: bool,
     blended: var seq[BlendEntry]
   ) =
@@ -915,19 +968,19 @@ when defined(macosx):
       owner,
       root,
       transform,
-      params.view,
-      params.proj
+      ctx.view,
+      ctx.proj
     )
     var fragmentConstants = shadyFragmentConstants(
       primitive,
-      params.tint,
-      params.ambientLightColor,
-      params.sunLightDirection,
-      params.sunLightColor,
-      params.rimLightDirection,
-      params.rimLightColor,
-      params.debugView,
-      params.cameraPosition
+      ctx.tint,
+      ctx.ambientLightColor,
+      ctx.sunLightDirection,
+      ctx.sunLightColor,
+      ctx.rimLightDirection,
+      ctx.rimLightColor,
+      ctx.debugView,
+      ctx.cameraPosition
     )
     encoder.setVertexBuffer(data.vertexBuffer, 0, MetalVertexBufferIndex)
     encoder.setVertexBytes(
@@ -963,7 +1016,7 @@ when defined(macosx):
     renderer: Renderer,
     encoder: MTLRenderCommandEncoder,
     node: Node,
-    params: RenderParams,
+    ctx: PbrContext,
     deferBlend: bool,
     blended: var seq[BlendEntry]
   ) =
@@ -977,12 +1030,12 @@ when defined(macosx):
           node,
           renderer.scene,
           node.mat,
-          params,
+          ctx,
           deferBlend,
           blended
         )
     for child in node.nodes:
-      renderer.renderNode(encoder, child, params, deferBlend, blended)
+      renderer.renderNode(encoder, child, ctx, deferBlend, blended)
 
   proc encodeScene(
     renderer: Renderer,
@@ -1027,16 +1080,17 @@ when defined(macosx):
     encoder.setCullMode(MTLCullModeBack)
     encoder.setFrontFacingWinding(MTLWindingCounterClockwise)
     encoder.setDepthStencilState(renderer.depthState)
-    if renderer.scene != nil:
+    let pbrContext = renderer.pbrContext
+    if renderer.scene != nil and pbrContext != nil:
       renderer.scene.updateTransforms(
-        renderer.params.transform,
-        renderer.params.useTrs
+        pbrContext.transform,
+        pbrContext.useTrs
       )
       var blended: seq[BlendEntry]
       renderer.renderNode(
         encoder,
         renderer.scene,
-        renderer.params,
+        pbrContext,
         deferBlend = true,
         blended = blended
       )
@@ -1047,8 +1101,8 @@ when defined(macosx):
           let
             pa = (a.transform * vec4(0, 0, 0, 1)).xyz
             pb = (b.transform * vec4(0, 0, 0, 1)).xyz
-            da = (renderer.params.cameraPosition - pa).lengthSq
-            db = (renderer.params.cameraPosition - pb).lengthSq
+            da = (pbrContext.cameraPosition - pa).lengthSq
+            db = (pbrContext.cameraPosition - pb).lengthSq
           if da > db:
             -1
           elif da < db:
@@ -1064,7 +1118,7 @@ when defined(macosx):
             entry.node,
             renderer.scene,
             entry.transform,
-            renderer.params,
+            pbrContext,
             deferBlend = false,
             blended = dummy
           )
@@ -1094,18 +1148,24 @@ proc clearScreen*(renderer: Renderer; color: ColorRGBX) =
 proc clearScreen*(renderer: Renderer; color: Color) =
   renderer.clearColor = color
 
-proc render*(renderer: Renderer; node: Node; params: RenderParams) =
+proc draw*(ctx: PbrContext; node: Node) =
+  ## Draws a node tree using PBR context state.
+  doAssert ctx != nil, "PBR context must not be nil."
+  doAssert ctx.renderer != nil, "PBR context renderer must not be nil."
   if node != nil:
-    renderer.prepareNode(node)
-  renderer.scene = node
-  renderer.params = params
+    ctx.renderer.prepareNode(node)
+  ctx.renderer.scene = node
+  ctx.renderer.size = clampSize(ctx.size)
+  ctx.renderer.clearColor = ctx.clearColor
+  ctx.renderer.pbrContext = ctx
 
-proc render*(renderer: Renderer; file: GltfFile; params: RenderParams) =
+proc draw*(ctx: PbrContext; file: GltfFile) =
+  ## Draws a glTF file using PBR context state.
   if file != nil:
     if file.data == nil:
       file.data = GltfFileData()
     file.data.sceneVersion = file.sceneVersion
-    renderer.render(file.root, params)
+    ctx.draw(file.root)
 
 proc endFrame*(renderer: Renderer) =
   when defined(macosx):

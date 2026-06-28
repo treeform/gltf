@@ -11,5 +11,4 @@ else:
 
 export
   common.DebugView,
-  common.RenderParams,
   backendRenderer

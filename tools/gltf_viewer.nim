@@ -51,6 +51,7 @@ when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal
     atlasData = extractAtlasJsonFromPng(AtlasPng).fromJson(SilkyAtlas)
 
 var renderer = newRenderer(window)
+var pbrContext = newPbrContext(renderer)
 
 when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
   var sk = newSilky(window, atlasImage, atlasData)
@@ -295,11 +296,15 @@ when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal
     skyboxOptions.sort()
     skyboxOptions.add("Solid Color")
 
+  proc replaceEnvironmentMap(nextEnvironmentMap: EnvironmentMap) =
+    ## Replaces the active environment map and updates the PBR context.
+    pbrContext.attachEnvironmentMap(nextEnvironmentMap)
+
   proc updateEnvironmentMap(force = false) =
     ## Reloads the environment map when the selection changes.
     if selectedSkybox == "Solid Color":
       if force or lastSkybox != selectedSkybox:
-        loadDefaultEnvironmentMap()
+        replaceEnvironmentMap(loadDefaultEnvironmentMap())
       if force or
          backgroundColor.r != lastBackgroundColor.r or
          backgroundColor.g != lastBackgroundColor.g or
@@ -314,7 +319,7 @@ when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal
         selectedSkybox = "Solid Color"
         updateEnvironmentMap(force = true)
         return
-      loadEnvironmentMap(pattern)
+      replaceEnvironmentMap(loadEnvironmentMap(pattern))
       lastSkybox = selectedSkybox
 
 proc hasModel(node: Node): bool =
@@ -604,47 +609,49 @@ window.onFrame = proc() =
           dvLit
         else:
           dvUnlit
-    renderParams = RenderParams(
-      size: window.size,
-      clearColor: backgroundColor,
-      transform: mat4(),
-      view: cameraMat,
-      proj: proj,
-      tint: color(1, 1, 1, 1),
-      useTrs: true,
-      ambientLightColor: effectiveAmbientLightColor,
-      sunLightDirection: effectiveSunLightDirection,
-      sunLightColor: effectiveSunLightColor,
-      rimLightDirection: effectiveRimLightDirection,
-      rimLightColor: effectiveRimLightColor,
-      debugView: effectiveDebugView,
-      cameraPosition: cameraPosition,
-      useShadows:
-        when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
-          useShadows
-        else:
-          false,
-      drawSkybox:
-        when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
-          selectedSkybox != "Solid Color"
-        else:
-          false,
-      skyboxLod:
-        when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
-          skyboxLod
-        else:
-          0.0'f32,
-      vsync:
-        when compiles(window.vsync):
-          window.vsync
-        else:
-          false
-    )
+
+  pbrContext.size = window.size
+  pbrContext.clearColor = backgroundColor
+  pbrContext.transform = mat4()
+  pbrContext.view = cameraMat
+  pbrContext.proj = proj
+  pbrContext.tint = color(1, 1, 1, 1)
+  pbrContext.useTrs = true
+  pbrContext.ambientLightColor = effectiveAmbientLightColor
+  pbrContext.sunLightDirection = effectiveSunLightDirection
+  pbrContext.sunLightColor = effectiveSunLightColor
+  pbrContext.rimLightDirection = effectiveRimLightDirection
+  pbrContext.rimLightColor = effectiveRimLightColor
+  pbrContext.debugView = effectiveDebugView
+  pbrContext.cameraPosition = cameraPosition
+  pbrContext.useShadows =
+    when not defined(useDirectX) and not defined(useVulkan) and
+      not defined(useMetal4):
+        useShadows
+    else:
+      false
+  pbrContext.drawSkybox =
+    when not defined(useDirectX) and not defined(useVulkan) and
+      not defined(useMetal4):
+        selectedSkybox != "Solid Color"
+    else:
+      false
+  pbrContext.skyboxLod =
+    when not defined(useDirectX) and not defined(useVulkan) and
+      not defined(useMetal4):
+        skyboxLod
+    else:
+      0.0'f32
+  pbrContext.vsync =
+    when compiles(window.vsync):
+      window.vsync
+    else:
+      false
 
   renderer.beginFrame(window, window.size)
   renderer.clearScreen(backgroundColor)
   if model.hasModel():
-    renderer.render(model, renderParams)
+    pbrContext.draw(model)
   renderer.endFrame()
 
   when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
@@ -663,4 +670,6 @@ window.onFrame = proc() =
 while not window.closeRequested:
   pollEvents()
 
+if pbrContext != nil:
+  pbrContext.destroy()
 renderer.shutdown()

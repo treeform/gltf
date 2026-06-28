@@ -250,23 +250,3 @@ type
     dvAoBake,
     dvMetallic,
     dvSpecular
-
-  RenderParams* = object
-    size*: IVec2
-    clearColor*: Color
-    transform*: Mat4
-    view*: Mat4
-    proj*: Mat4
-    tint*: Color
-    useTrs*: bool
-    ambientLightColor*: Color
-    sunLightDirection*: Vec3
-    sunLightColor*: Color
-    rimLightDirection*: Vec3
-    rimLightColor*: Color
-    debugView*: DebugView
-    cameraPosition*: Vec3
-    useShadows*: bool
-    drawSkybox*: bool
-    skyboxLod*: float32
-    vsync*: bool

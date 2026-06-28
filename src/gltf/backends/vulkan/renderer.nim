@@ -94,6 +94,55 @@ type
     readbackMemory: VkDeviceMemory
     readbackSize: IVec2
 
+  PbrContext* = ref object
+    ## Reusable state for PBR rendering.
+    renderer: Renderer
+    size*: IVec2
+    clearColor*: Color
+    transform*: Mat4
+    view*: Mat4
+    proj*: Mat4
+    tint*: Color
+    useTrs*: bool
+    ambientLightColor*: Color
+    sunLightDirection*: Vec3
+    sunLightColor*: Color
+    rimLightDirection*: Vec3
+    rimLightColor*: Color
+    debugView*: DebugView
+    cameraPosition*: Vec3
+    useShadows*: bool
+    drawSkybox*: bool
+    skyboxLod*: float32
+    vsync*: bool
+
+proc newPbrContext*(renderer: Renderer): PbrContext =
+  ## Creates reusable state for PBR rendering.
+  new(result)
+  result.renderer = renderer
+  result.size = ivec2(0, 0)
+  result.clearColor = color(0, 0, 0, 1)
+  result.transform = mat4()
+  result.view = mat4()
+  result.proj = mat4()
+  result.tint = color(1, 1, 1, 1)
+  result.useTrs = true
+  result.ambientLightColor = color(0.1, 0.1, 0.1, 1)
+  result.sunLightDirection = vec3(1, 4, 2)
+  result.sunLightColor = color(1, 1, 1, 1)
+  result.rimLightDirection = vec3(-1, 1, -1)
+  result.rimLightColor = color(0, 0, 0, 0)
+  result.debugView = dvLit
+  result.cameraPosition = vec3(0, 0, 10)
+  result.useShadows = false
+  result.drawSkybox = false
+  result.skyboxLod = 0
+  result.vsync = true
+
+proc destroy*(ctx: PbrContext) =
+  ## Releases resources owned by a PBR context.
+  discard ctx
+
 proc f32bits(value: float32): uint32 =
   cast[uint32](value)
 
@@ -2021,24 +2070,26 @@ proc recordFrame(
   renderer.imageLayouts[imageIndex] = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
   checkVk(vkEndCommandBuffer(commandBuffer), "Ending Vulkan draw command buffer")
 
-proc drawPbrFrame*(
+proc drawPbrFrame(
   renderer: Renderer,
   node: Node,
-  size: IVec2,
-  clearColor: Color,
-  transform,
-  view,
-  proj: Mat4,
-  tint: Color,
-  ambientLightColor: Color,
-  sunLightDirection: Vec3,
-  sunLightColor: Color,
-  rimLightDirection: Vec3,
-  rimLightColor: Color,
-  cameraPosition: Vec3,
-  vsync = true
+  ctx: PbrContext
 ) =
   ## Draws a full glTF PBR frame through Vulkan.
+  let
+    size = ctx.size
+    clearColor = ctx.clearColor
+    transform = ctx.transform
+    view = ctx.view
+    proj = ctx.proj
+    tint = ctx.tint
+    ambientLightColor = ctx.ambientLightColor
+    sunLightDirection = ctx.sunLightDirection
+    sunLightColor = ctx.sunLightColor
+    rimLightDirection = ctx.rimLightDirection
+    rimLightColor = ctx.rimLightColor
+    cameraPosition = ctx.cameraPosition
+    vsync = ctx.vsync
   discard vsync
   renderer.resize(size)
   renderer.resetFrameResources()
@@ -2225,27 +2276,19 @@ proc clearScreen*(renderer: Renderer; color: Color) =
   discard renderer
   discard color
 
-proc render*(renderer: Renderer; node: Node; params: RenderParams) =
-  renderer.drawPbrFrame(
+proc draw*(ctx: PbrContext; node: Node) =
+  ## Draws a node tree using PBR context state.
+  doAssert ctx != nil, "PBR context must not be nil."
+  doAssert ctx.renderer != nil, "PBR context renderer must not be nil."
+  ctx.renderer.drawPbrFrame(
     node,
-    params.size,
-    params.clearColor,
-    params.transform,
-    params.view,
-    params.proj,
-    tint = params.tint,
-    ambientLightColor = params.ambientLightColor,
-    sunLightDirection = params.sunLightDirection,
-    sunLightColor = params.sunLightColor,
-    rimLightDirection = params.rimLightDirection,
-    rimLightColor = params.rimLightColor,
-    cameraPosition = params.cameraPosition,
-    vsync = params.vsync
+    ctx
   )
 
-proc render*(renderer: Renderer; file: GltfFile; params: RenderParams) =
+proc draw*(ctx: PbrContext; file: GltfFile) =
+  ## Draws a glTF file using PBR context state.
   if file != nil:
-    renderer.render(file.root, params)
+    ctx.draw(file.root)
 
 proc endFrame*(renderer: Renderer) =
   discard renderer
