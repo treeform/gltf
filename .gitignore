@@ -24,3 +24,8 @@ coverage/
 docs/htmldocs/
 tests/tmp/
 tmp/
+examples/data/*.glb
+examples/emscripten/*.data
+examples/emscripten/*.js
+examples/emscripten/*.wasm
+examples/emscripten/emscripten_damaged_helmet.html

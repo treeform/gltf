@@ -24,6 +24,15 @@ const
 const
   ShadowMapSize = 2048
 
+when defined(emscripten):
+  const
+    ShadowMapInternalFormat = GL_DEPTH_COMPONENT24.GLint
+    ShadowMapPixelType = GL_UNSIGNED_INT
+else:
+  const
+    ShadowMapInternalFormat = GL_DEPTH_COMPONENT.GLint
+    ShadowMapPixelType = cGL_FLOAT
+
 type
   EnvironmentMap* = object
     textureId*: GLuint
@@ -254,12 +263,12 @@ proc setupPbr(ctx: PbrContext) =
   glTexImage2D(
     GL_TEXTURE_2D,
     0,
-    GL_DEPTH_COMPONENT.GLint,
+    ShadowMapInternalFormat,
     ctx.shadowMapSize.GLsizei,
     ctx.shadowMapSize.GLsizei,
     0,
     GL_DEPTH_COMPONENT,
-    cGL_FLOAT,
+    ShadowMapPixelType,
     nil
   )
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
@@ -284,8 +293,9 @@ proc setupPbr(ctx: PbrContext) =
     ctx.shadowMapTex,
     0
   )
-  glDrawBuffer(GL_NONE)
-  glReadBuffer(GL_NONE)
+  when not defined(emscripten):
+    glDrawBuffer(GL_NONE)
+    glReadBuffer(GL_NONE)
   glBindFramebuffer(GL_FRAMEBUFFER, 0)
 
   # Bind shadow map to texture unit 6 so the sampler2DShadow uniform always
@@ -347,7 +357,8 @@ proc loadCubeTexture(path: string): EnvironmentMap =
   ]
   var faceSize = 1
   for i, direction in directions:
-    let image = readImage(path.replace("*", direction))
+    let facePath = path.replace("*", direction)
+    let image = readImage(facePath)
     if i == 0:
       faceSize = max(image.width, image.height)
     glTexImage2D(
@@ -1242,8 +1253,9 @@ proc renderPbrPrimitive(
 
   let glMode = primitive.mode.glValue
   setFrontFace(transform, primitive.mode)
-  if primitive.mode == PointsMode:
-    glPointSize(1.0)
+  when not defined(emscripten):
+    if primitive.mode == PointsMode:
+      glPointSize(1.0)
 
   if primitive.indices16.len == 0 and primitive.indices32.len == 0:
     glDrawArrays(glMode, 0, primitive.points.len.cint)
@@ -1535,8 +1547,9 @@ proc renderShadowPrimitive(
 
   let glMode = primitive.mode.glValue
   setFrontFace(transform, primitive.mode)
-  if primitive.mode == PointsMode:
-    glPointSize(1.0)
+  when not defined(emscripten):
+    if primitive.mode == PointsMode:
+      glPointSize(1.0)
   if primitive.indices16.len == 0 and primitive.indices32.len == 0:
     glDrawArrays(glMode, 0, primitive.points.len.cint)
   else:
