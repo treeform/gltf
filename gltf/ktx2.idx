@@ -19,16 +19,16 @@ nim	vkFormatName	gltf/ktx2.html#vkFormatName,uint32	proc vkFormatName(vkFormat: 
 nim	isSupportedVkFormat	gltf/ktx2.html#isSupportedVkFormat,uint32	proc isSupportedVkFormat(vkFormat: uint32): bool		446
 nim	glInternalFormatForVkFormat	gltf/ktx2.html#glInternalFormatForVkFormat,uint32	proc glInternalFormatForVkFormat(vkFormat: uint32): GLenum		466
 nim	vkFormatForGlInternalFormat	gltf/ktx2.html#vkFormatForGlInternalFormat,GLenum	proc vkFormatForGlInternalFormat(glInternalFormat: GLenum): uint32		497
-nim	parseKtx2	gltf/ktx2.html#parseKtx2,string	proc parseKtx2(data: string): Ktx2TextureInfo		642
-nim	readKtx2File	gltf/ktx2.html#readKtx2File,string	proc readKtx2File(file: string): Ktx2TextureInfo		721
-nim	encodeKtx2	gltf/ktx2.html#encodeKtx2,uint32,int,int,openArray[string]	proc encodeKtx2(vkFormat: uint32; width, height: int; levelsData: openArray[string]): string		724
-nim	encodeKtx2ImageLevel	gltf/ktx2.html#encodeKtx2ImageLevel,Image,uint32	proc encodeKtx2ImageLevel(image: Image; vkFormat: uint32): string		798
-nim	encodeKtx2Image	gltf/ktx2.html#encodeKtx2Image,Image,uint32	proc encodeKtx2Image(image: Image; vkFormat: uint32; generateMipmaps = true): string		855
-nim	encodeKtx2R32Sfloat	gltf/ktx2.html#encodeKtx2R32Sfloat,int,int,openArray[float32]	proc encodeKtx2R32Sfloat(width, height: int; values: openArray[float32]): string		876
-nim	writeKtx2File	gltf/ktx2.html#writeKtx2File,string,uint32,int,int,openArray[string]	proc writeKtx2File(file: string; vkFormat: uint32; width, height: int;\n              levelsData: openArray[string])		891
-nim	writeKtx2ImageFile	gltf/ktx2.html#writeKtx2ImageFile,string,Image,uint32	proc writeKtx2ImageFile(file: string; image: Image; vkFormat: uint32;\n                   generateMipmaps = true)		900
-nim	writeKtx2R32SfloatFile	gltf/ktx2.html#writeKtx2R32SfloatFile,string,int,int,openArray[float32]	proc writeKtx2R32SfloatFile(file: string; width, height: int;\n                       values: openArray[float32])		909
-nim	writeKtx2TextureFile	gltf/ktx2.html#writeKtx2TextureFile,GLenum,GLuint,string,uint32,GLenum,GLenum,int	proc writeKtx2TextureFile(target: GLenum; texture: GLuint; file: string;\n                     vkFormat: uint32 = 0'u32; sourceFormat: GLenum = 0.GLenum;\n                     sourceType: GLenum = 0.GLenum; levelCount = -1)		1023
-nim	uploadKtx2	gltf/ktx2.html#uploadKtx2,Ktx2TextureInfo,string	proc uploadKtx2(info: Ktx2TextureInfo; data: string; sampler = defaultKtx2Sampler()): GLuint		1082
-nim	loadKtx2Texture	gltf/ktx2.html#loadKtx2Texture,string	proc loadKtx2Texture(data: string; sampler = defaultKtx2Sampler()): GLuint		1132
-nim	loadKtx2TextureFile	gltf/ktx2.html#loadKtx2TextureFile,string	proc loadKtx2TextureFile(file: string; sampler = defaultKtx2Sampler()): GLuint		1136
+nim	parseKtx2	gltf/ktx2.html#parseKtx2,string	proc parseKtx2(data: string): Ktx2TextureInfo		835
+nim	readKtx2File	gltf/ktx2.html#readKtx2File,string	proc readKtx2File(file: string): Ktx2TextureInfo		914
+nim	encodeKtx2	gltf/ktx2.html#encodeKtx2,uint32,int,int,openArray[string]	proc encodeKtx2(vkFormat: uint32; width, height: int; levelsData: openArray[string]): string		917
+nim	encodeKtx2ImageLevel	gltf/ktx2.html#encodeKtx2ImageLevel,Image,uint32	proc encodeKtx2ImageLevel(image: Image; vkFormat: uint32): string		991
+nim	encodeKtx2Image	gltf/ktx2.html#encodeKtx2Image,Image,uint32	proc encodeKtx2Image(image: Image; vkFormat: uint32; generateMipmaps = true): string		1048
+nim	encodeKtx2R32Sfloat	gltf/ktx2.html#encodeKtx2R32Sfloat,int,int,openArray[float32]	proc encodeKtx2R32Sfloat(width, height: int; values: openArray[float32]): string		1069
+nim	writeKtx2File	gltf/ktx2.html#writeKtx2File,string,uint32,int,int,openArray[string]	proc writeKtx2File(file: string; vkFormat: uint32; width, height: int;\n              levelsData: openArray[string])		1084
+nim	writeKtx2ImageFile	gltf/ktx2.html#writeKtx2ImageFile,string,Image,uint32	proc writeKtx2ImageFile(file: string; image: Image; vkFormat: uint32;\n                   generateMipmaps = true)		1093
+nim	writeKtx2R32SfloatFile	gltf/ktx2.html#writeKtx2R32SfloatFile,string,int,int,openArray[float32]	proc writeKtx2R32SfloatFile(file: string; width, height: int;\n                       values: openArray[float32])		1102
+nim	writeKtx2TextureFile	gltf/ktx2.html#writeKtx2TextureFile,GLenum,GLuint,string,uint32,GLenum,GLenum,int	proc writeKtx2TextureFile(target: GLenum; texture: GLuint; file: string;\n                     vkFormat: uint32 = 0'u32; sourceFormat: GLenum = 0.GLenum;\n                     sourceType: GLenum = 0.GLenum; levelCount = -1)		1216
+nim	uploadKtx2	gltf/ktx2.html#uploadKtx2,Ktx2TextureInfo,string	proc uploadKtx2(info: Ktx2TextureInfo; data: string; sampler = defaultKtx2Sampler()): GLuint		1275
+nim	loadKtx2Texture	gltf/ktx2.html#loadKtx2Texture,string	proc loadKtx2Texture(data: string; sampler = defaultKtx2Sampler()): GLuint		1392
+nim	loadKtx2TextureFile	gltf/ktx2.html#loadKtx2TextureFile,string	proc loadKtx2TextureFile(file: string; sampler = defaultKtx2Sampler()): GLuint		1396
