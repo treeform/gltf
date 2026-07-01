@@ -1055,7 +1055,7 @@ proc renderPbrPrimitive(
 
   let isBlend =
     (primitive.material != nil and
-      primitive.material.alphaMode == BlendAlphaMode) or
+      primitive.material.alphaMode in {BlendAlphaMode, AdditiveAlphaMode}) or
     ctx.tint.a < 1
   if deferBlend and isBlend:
     blended.add(BlendEntry(
@@ -1218,6 +1218,11 @@ proc renderPbrPrimitive(
     of BlendAlphaMode:
       glEnable(GL_BLEND)
       glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+      glDepthMask(GL_FALSE)
+      cutoff = -1.0
+    of AdditiveAlphaMode:
+      glEnable(GL_BLEND)
+      glBlendFunc(GL_ONE, GL_ONE)
       glDepthMask(GL_FALSE)
       cutoff = -1.0
     else:
@@ -1549,7 +1554,7 @@ proc renderShadowPrimitive(
   if primitive == nil or not primitive.hasGeometry():
     return
   if primitive.material != nil and
-    primitive.material.alphaMode == BlendAlphaMode:
+    primitive.material.alphaMode in {BlendAlphaMode, AdditiveAlphaMode}:
     return
 
   primitive.uploadToGpu()

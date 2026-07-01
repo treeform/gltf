@@ -60,7 +60,7 @@ type
     wrapT*: TextureWrap
 
   AlphaMode* = enum
-    OpaqueAlphaMode, MaskAlphaMode, BlendAlphaMode
+    OpaqueAlphaMode, MaskAlphaMode, BlendAlphaMode, AdditiveAlphaMode
 
   CameraKind* = enum
     PerspectiveLens, OrthographicLens

@@ -364,6 +364,9 @@ proc writeGLB*(
       matNode["alphaCutoff"] = newJFloat(cutoff)
     of BlendAlphaMode:
       matNode["alphaMode"] = newJString("BLEND")
+    of AdditiveAlphaMode:
+      # glTF has no additive alpha mode; export as the closest legal mode.
+      matNode["alphaMode"] = newJString("BLEND")
     materials.add(matNode)
     let idx = materials.len - 1
     materialIds[key] = idx

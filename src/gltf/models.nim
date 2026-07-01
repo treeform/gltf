@@ -296,6 +296,8 @@ proc dumpTree*(node: Node, indent: string = "") =
           echo &"{prefix} alphaCutoff: {primitive.material.alphaCutoff}"
         elif primitive.material.alphaMode == BlendAlphaMode:
           echo &"{prefix} alphaMode: Blend"
+        elif primitive.material.alphaMode == AdditiveAlphaMode:
+          echo &"{prefix} alphaMode: Additive"
         else:
           echo &"{prefix} alphaMode: Opaque"
         echo &"{prefix} transmissionFactor: {primitive.material.transmissionFactor}"
