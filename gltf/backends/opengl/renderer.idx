@@ -9,34 +9,34 @@ nim	SkyboxFragmentShader	gltf/backends/opengl/renderer.html#SkyboxFragmentShader
 nim	ShadowDepthVertexShader	gltf/backends/opengl/renderer.html#ShadowDepthVertexShader	const ShadowDepthVertexShader		21
 nim	ShadowDepthFragmentShader	gltf/backends/opengl/renderer.html#ShadowDepthFragmentShader	const ShadowDepthFragmentShader		22
 nim	EnvironmentMap	gltf/backends/opengl/renderer.html#EnvironmentMap	object EnvironmentMap		37
-nim	Renderer	gltf/backends/opengl/renderer.html#Renderer	type Renderer		103
-nim	PbrContext	gltf/backends/opengl/renderer.html#PbrContext	type PbrContext		111
-nim	newEnvironmentMap	gltf/backends/opengl/renderer.html#newEnvironmentMap,GLuint,float32	proc newEnvironmentMap(textureId: GLuint; mipCount: float32): EnvironmentMap		335
-nim	destroy	gltf/backends/opengl/renderer.html#destroy,EnvironmentMap	proc destroy(environmentMap: var EnvironmentMap)		342
-nim	loadEnvironmentMap	gltf/backends/opengl/renderer.html#loadEnvironmentMap,string	proc loadEnvironmentMap(cubeMapPath: string): EnvironmentMap		496
-nim	loadSolidEnvironmentMap	gltf/backends/opengl/renderer.html#loadSolidEnvironmentMap	proc loadSolidEnvironmentMap(color = rgbx(180, 190, 220, 255)): EnvironmentMap		500
-nim	loadDefaultEnvironmentMap	gltf/backends/opengl/renderer.html#loadDefaultEnvironmentMap	proc loadDefaultEnvironmentMap(): EnvironmentMap		506
-nim	drawSkybox	gltf/backends/opengl/renderer.html#drawSkybox,PbrContext,Mat4,Mat4,EnvironmentMap,float32	proc drawSkybox(ctx: PbrContext; view, proj: Mat4; environmentMap: EnvironmentMap;\n           lod: float32 = 0.0)		510
-nim	newPbrContext	gltf/backends/opengl/renderer.html#newPbrContext,float32	proc newPbrContext(shadowMapSize = ShadowMapSize; shadowBias = 0.0015'f32): PbrContext		554
-nim	newPbrContext	gltf/backends/opengl/renderer.html#newPbrContext,Renderer	proc newPbrContext(renderer: Renderer): PbrContext		586
-nim	attachEnvironmentMap	gltf/backends/opengl/renderer.html#attachEnvironmentMap,PbrContext,EnvironmentMap	proc attachEnvironmentMap(ctx: PbrContext; environmentMap: EnvironmentMap;\n                     owned = true)		591
-nim	destroy	gltf/backends/opengl/renderer.html#destroy,PbrContext	proc destroy(ctx: PbrContext)		603
-nim	clearFromGpu	gltf/backends/opengl/renderer.html#clearFromGpu,Primitive	proc clearFromGpu(primitive: Primitive)		796
-nim	uploadToGpu	gltf/backends/opengl/renderer.html#uploadToGpu,Primitive	proc uploadToGpu(primitive: Primitive)		798
-nim	clearFromGpu	gltf/backends/opengl/renderer.html#clearFromGpu,Mesh	proc clearFromGpu(mesh: Mesh)		975
-nim	clearFromGpu	gltf/backends/opengl/renderer.html#clearFromGpu,Node	proc clearFromGpu(node: Node)		981
-nim	draw	gltf/backends/opengl/renderer.html#draw,PbrContext,Node	proc draw(ctx: PbrContext; node: Node)		1724
-nim	draw	gltf/backends/opengl/renderer.html#draw,PbrContext,GltfFile	proc draw(ctx: PbrContext; file: GltfFile)		1742
-nim	newRenderer	gltf/backends/opengl/renderer.html#newRenderer,Window	proc newRenderer(window: Window): Renderer		1747
-nim	beginFrame	gltf/backends/opengl/renderer.html#beginFrame,Renderer,Window,IVec2	proc beginFrame(renderer: Renderer; window: Window; size: IVec2)		1751
-nim	clearScreen	gltf/backends/opengl/renderer.html#clearScreen,Renderer,ColorRGBX	proc clearScreen(renderer: Renderer; color: ColorRGBX)		1761
-nim	clearScreen	gltf/backends/opengl/renderer.html#clearScreen,Renderer,Color	proc clearScreen(renderer: Renderer; color: Color)		1767
-nim	endFrame	gltf/backends/opengl/renderer.html#endFrame,Renderer	proc endFrame(renderer: Renderer)		1772
-nim	captureScreenshot	gltf/backends/opengl/renderer.html#captureScreenshot,Renderer	proc captureScreenshot(renderer: Renderer): Image		1775
-nim	release	gltf/backends/opengl/renderer.html#release,Renderer,Node	proc release(renderer: Renderer; node: Node)		1808
-nim	shutdown	gltf/backends/opengl/renderer.html#shutdown,Renderer	proc shutdown(renderer: Renderer)		1812
-nimgrp	clearscreen	gltf/backends/opengl/renderer.html#clearScreen-procs-all	proc		1761
-nimgrp	clearfromgpu	gltf/backends/opengl/renderer.html#clearFromGpu-procs-all	proc		796
-nimgrp	destroy	gltf/backends/opengl/renderer.html#destroy-procs-all	proc		342
-nimgrp	draw	gltf/backends/opengl/renderer.html#draw-procs-all	proc		1724
-nimgrp	newpbrcontext	gltf/backends/opengl/renderer.html#newPbrContext-procs-all	proc		554
+nim	Renderer	gltf/backends/opengl/renderer.html#Renderer	type Renderer		109
+nim	PbrContext	gltf/backends/opengl/renderer.html#PbrContext	type PbrContext		117
+nim	newEnvironmentMap	gltf/backends/opengl/renderer.html#newEnvironmentMap,GLuint,float32	proc newEnvironmentMap(textureId: GLuint; mipCount: float32): EnvironmentMap		353
+nim	destroy	gltf/backends/opengl/renderer.html#destroy,EnvironmentMap	proc destroy(environmentMap: var EnvironmentMap)		360
+nim	loadEnvironmentMap	gltf/backends/opengl/renderer.html#loadEnvironmentMap,string	proc loadEnvironmentMap(cubeMapPath: string): EnvironmentMap		514
+nim	loadSolidEnvironmentMap	gltf/backends/opengl/renderer.html#loadSolidEnvironmentMap	proc loadSolidEnvironmentMap(color = rgbx(180, 190, 220, 255)): EnvironmentMap		518
+nim	loadDefaultEnvironmentMap	gltf/backends/opengl/renderer.html#loadDefaultEnvironmentMap	proc loadDefaultEnvironmentMap(): EnvironmentMap		524
+nim	drawSkybox	gltf/backends/opengl/renderer.html#drawSkybox,PbrContext,Mat4,Mat4,EnvironmentMap,float32	proc drawSkybox(ctx: PbrContext; view, proj: Mat4; environmentMap: EnvironmentMap;\n           lod: float32 = 0.0)		528
+nim	newPbrContext	gltf/backends/opengl/renderer.html#newPbrContext,float32	proc newPbrContext(shadowMapSize = ShadowMapSize; shadowBias = 0.0015'f32): PbrContext		572
+nim	newPbrContext	gltf/backends/opengl/renderer.html#newPbrContext,Renderer	proc newPbrContext(renderer: Renderer): PbrContext		610
+nim	attachEnvironmentMap	gltf/backends/opengl/renderer.html#attachEnvironmentMap,PbrContext,EnvironmentMap	proc attachEnvironmentMap(ctx: PbrContext; environmentMap: EnvironmentMap;\n                     owned = true)		615
+nim	destroy	gltf/backends/opengl/renderer.html#destroy,PbrContext	proc destroy(ctx: PbrContext)		627
+nim	clearFromGpu	gltf/backends/opengl/renderer.html#clearFromGpu,Primitive	proc clearFromGpu(primitive: Primitive)		820
+nim	uploadToGpu	gltf/backends/opengl/renderer.html#uploadToGpu,Primitive	proc uploadToGpu(primitive: Primitive)		822
+nim	clearFromGpu	gltf/backends/opengl/renderer.html#clearFromGpu,Mesh	proc clearFromGpu(mesh: Mesh)		999
+nim	clearFromGpu	gltf/backends/opengl/renderer.html#clearFromGpu,Node	proc clearFromGpu(node: Node)		1005
+nim	draw	gltf/backends/opengl/renderer.html#draw,PbrContext,Node	proc draw(ctx: PbrContext; node: Node)		1763
+nim	draw	gltf/backends/opengl/renderer.html#draw,PbrContext,GltfFile	proc draw(ctx: PbrContext; file: GltfFile)		1781
+nim	newRenderer	gltf/backends/opengl/renderer.html#newRenderer,Window	proc newRenderer(window: Window): Renderer		1786
+nim	beginFrame	gltf/backends/opengl/renderer.html#beginFrame,Renderer,Window,IVec2	proc beginFrame(renderer: Renderer; window: Window; size: IVec2)		1790
+nim	clearScreen	gltf/backends/opengl/renderer.html#clearScreen,Renderer,ColorRGBX	proc clearScreen(renderer: Renderer; color: ColorRGBX)		1800
+nim	clearScreen	gltf/backends/opengl/renderer.html#clearScreen,Renderer,Color	proc clearScreen(renderer: Renderer; color: Color)		1806
+nim	endFrame	gltf/backends/opengl/renderer.html#endFrame,Renderer	proc endFrame(renderer: Renderer)		1811
+nim	captureScreenshot	gltf/backends/opengl/renderer.html#captureScreenshot,Renderer	proc captureScreenshot(renderer: Renderer): Image		1814
+nim	release	gltf/backends/opengl/renderer.html#release,Renderer,Node	proc release(renderer: Renderer; node: Node)		1847
+nim	shutdown	gltf/backends/opengl/renderer.html#shutdown,Renderer	proc shutdown(renderer: Renderer)		1851
+nimgrp	clearscreen	gltf/backends/opengl/renderer.html#clearScreen-procs-all	proc		1800
+nimgrp	clearfromgpu	gltf/backends/opengl/renderer.html#clearFromGpu-procs-all	proc		820
+nimgrp	destroy	gltf/backends/opengl/renderer.html#destroy-procs-all	proc		360
+nimgrp	draw	gltf/backends/opengl/renderer.html#draw-procs-all	proc		1763
+nimgrp	newpbrcontext	gltf/backends/opengl/renderer.html#newPbrContext-procs-all	proc		572

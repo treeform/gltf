@@ -79,6 +79,12 @@
   rimLightColor*: Color
   debugView*: DebugView
   cameraPosition*: Vec3
+  fogColor*: Color
+  fogStart*: float32
+  fogEnd*: float32
+  fogDensity*: float32
+  fogStrength*: float32
+  environmentMapStrength*: float32
   environmentMap*: EnvironmentMap
   useShadows*: bool
   drawSkybox*: bool
@@ -105,7 +111,7 @@
     <ul class="simple simple-toc-section">
       <li><a class="reference" href="#envMapSize" title="envMapSize = 512">envMapSize</a></li>
 <li><a class="reference" href="#FragmentEntryPoint" title="FragmentEntryPoint = &quot;main&quot;">FragmentEntryPoint</a></li>
-<li><a class="reference" href="#PbrFragmentShader" title="PbrFragmentShader = &quot;#version 410\n// from gltfPbrFrag\n\nuniform vec2 occlusionUvOffset;\nuniform vec4 ambientLightColor;\nuniform sampler2D emissiveTexture;\nuniform vec2 normalUvOffset;\nuniform vec3 cameraPosition;\nuniform float metallicRoughnessUvRotation;\nuniform int baseColorTexCoord;\nuniform float alphaCutoff;\nuniform float occlusionStrength;\nuniform vec2 baseColorUvOffset;\nuniform vec4 tint;\nuniform vec4 rimLightColor;\nuniform int emissiveTexCoord;\nuniform float normalScale;\nuniform vec4 sunLightColor;\nuniform sampler2D normalTexture;\nuniform samplerCube environmentMap;\nuniform vec2 baseColorUvScale;\nuniform vec2 metallicRoughnessUvScale;\nuniform float shadowBias;\nuniform float environmentMipCount;\nuniform vec3 sunLightDirection;\nuniform float transmissionFactor;\nuniform int debugViewMode;\nuniform vec2 emissiveUvOffset;\nuniform int occlusionTexCoord;\nuniform bool useShadow;\nuniform int normalTexCoord;\nuniform vec2 emissiveUvScale;\nuniform sampler2D baseColorTexture;\nuniform sampler2D metallicRoughnessTexture;\nuniform vec3 rimLightDirection;\nuniform float normalUvRotation;\nuniform vec2 shadowMapTexelSize;\nuniform sampler2DShadow shadowMap;\nuniform vec2 metallicRoughnessUvOffset;\nuniform float roughnessFactor;\nuniform vec2 normalUvScale;\nuniform vec4 baseColorFactor;\nuniform vec2 occlusionUvScale;\nuniform float occlusionUvRotation;\nuniform vec3 emissiveFactor;\nuniform float baseColorUvRotation;\nuniform float metallicFactor;\nuniform sampler2D occlusionTexture;\nuniform int metallicRoughnessTexCoord;\nuniform float emissiveUvRotation;\nuniform bool useNormalTexture;\n\nvec2 selectUv(int texCoord, vec2 uv, vec2 uv1);\nvec2 transformUv(vec2 uv, vec2 offset, vec2 scale, float rotation);\n\nvec2 selectUv(\n  int texCoord,\n  vec2 uv,\n  vec2 uv1\n) {\n  vec2 result;\n  result = ((texCoord == 1) ? (uv1) : (uv));\n  return result;\n}\nvec2 transformUv(\n  vec2 uv,\n  vec2 offset,\n  vec2 scale,\n  float rotation\n) {\n  vec2 result;\n  float c = cos(rotation);\n  float s = sin(rotation);\n  vec2 scaled = uv * scale;\n  vec2 transformed = vec2(c * scaled.x + s * scaled.y, - (s) * scaled.x + c * scaled.y) + offset;\n  result = transformed;\n  return result;\n}\n\nin vec3 worldPos;\nin vec4 color;\nin vec3 normal;\nin vec2 uv;\nin vec2 uv1;\nin vec3 tangent;\nin vec3 bitangent;\nin vec4 vPosLightSpace;\nout vec4 fragColor;\n\nvoid main() {\n  vec2 baseColorUv = transformUv(selectUv(baseColorTexCoord, uv, uv1), baseColorUvOffset, baseColorUvScale, baseColorUvRotation);\n  vec2 metallicRoughnessUv = transformUv(selectUv(metallicRoughnessTexCoord, uv, uv1), metallicRoughnessUvOffset, metallicRoughnessUvScale, metallicRoughnessUvRotation);\n  vec2 normalUv = transformUv(selectUv(normalTexCoord, uv, uv1), normalUvOffset, normalUvScale, normalUvRotation);\n  vec2 occlusionUv = transformUv(selectUv(occlusionTexCoord, uv, uv1), occlusionUvOffset, occlusionUvScale, occlusionUvRotation);\n  vec2 emissiveUv = transformUv(selectUv(emissiveTexCoord, uv, uv1), emissiveUvOffset, emissiveUvScale, emissiveUvRotation);\n  fragColor = texture(baseColorTexture, baseColorUv);\n  fragColor = fragColor * baseColorFactor;\n  fragColor = fragColor * color;\n  if ((fragColor).a &lt; alphaCutoff) {\n    discard;\n  }\n  vec3 albedo = (fragColor).rgb;\n  float roughness = (texture(metallicRoughnessTexture, metallicRoughnessUv)).g * roughnessFactor;\n  float metallic = (texture(metallicRoughnessTexture, metallicRoughnessUv)).b * metallicFactor;\n  float transmission = clamp(transmissionFactor, 0.0, 1.0);\n  float ambientOcclusion = (texture(occlusionTexture, occlusionUv)).r * occlusionStrength;\n  vec3 emissiveValue = (texture(emissiveTexture, emissiveUv)).rgb * emissiveFactor;\n  vec3 geometricNormal = normalize(cross(dFdx(worldPos), dFdy(worldPos)));\n  vec3 meshNormal = ((0.0 &lt; length(normal)) ? (normalize(normal)) : (geometricNormal));\n  vec3 normalValue = normalize((texture(normalTexture, normalUv)).rgb * 2.0 - vec3(1.0, 1.0, 1.0)) * normalScale;\n  vec3 mappedNormal = normalize((tangent * normalValue.x + bitangent * normalValue.y) + normal * normalValue.z);\n  vec3 computedNormal = ((useNormalTexture) ? (mappedNormal) : (meshNormal));\n  if (! (gl_FrontFacing)) {\n    computedNormal = - (computedNormal);\n  }\n  vec3 sunDir = normalize(- (sunLightDirection));\n  vec3 rimDir = normalize(- (rimLightDirection));\n  vec3 viewDir = normalize(cameraPosition - worldPos);\n  vec3 reflectDir = reflect(- (viewDir), computedNormal);\n  vec3 halfVector = normalize(viewDir + sunDir);\n  float nDotH = max(dot(computedNormal, halfVector), 0.0);\n  float nDotL = max(dot(computedNormal, sunDir), 0.0);\n  vec3 f0 = vec3(0.04, 0.04, 0.04);\n  vec3 f0mix = mix(f0, albedo, metallic);\n  float cosTheta = max(dot(computedNormal, viewDir), 0.0);\n  vec3 fresnel = f0mix + (vec3(1.0, 1.0, 1.0) - f0mix) * pow(1.0 - cosTheta, 5.0);\n  float specComponent = nDotL * pow(nDotH, 2.0 / (roughness + 0.0001));\n  vec3 specular = ((sunLightColor.rgb * sunLightColor.a) * fresnel) * specComponent;\n  vec3 diffuse = (((sunLightColor.rgb * sunLightColor.a) * (1.0 - metallic)) * albedo) * nDotL;\n  float rim = pow(1.0 - max(dot(computedNormal, viewDir), 0.0), 2.5) * (1.0 - metallic);\n  float rimFacing = max(dot(computedNormal, rimDir), 0.0);\n  vec3 rimLight = (((rimLightColor.rgb * rimLightColor.a) * rim) * (0.15 + 0.85 * rimFacing)) * (0.15 + 0.35 * ambientOcclusion);\n  float mipLevel = roughness * environmentMipCount;\n  vec3 envColor = (textureLod(environmentMap, reflectDir, mipLevel)).rgb;\n  vec3 skyDiffuse = (textureLod(environmentMap, computedNormal, min(environmentMipCount, 6.0))).rgb;\n  vec3 envDiffuse = (((skyDiffuse * albedo) * ambientOcclusion) * (1.0 - metallic)) * (0.32 + ambientLightColor.a * 0.18);\n  vec3 envSpecular = ((envColor * fresnel) * (1.0 - roughness * 0.72)) * mix(0.28, 0.08, metallic);\n  float shadow = 0.0;\n  if (useShadow) {\n    vec3 projCoords = vPosLightSpace.xyz / vPosLightSpace.w;\n    projCoords = projCoords * 0.5 + vec3(0.5, 0.5, 0.5);\n    if (((((projCoords.z &lt;= 1.0) &amp;&amp; (0.0 &lt;= projCoords.x)) &amp;&amp; (projCoords.x &lt;= 1.0)) &amp;&amp; (0.0 &lt;= projCoords.y)) &amp;&amp; (projCoords.y &lt;= 1.0)) {\n      float bias = max(shadowBias, 0.002 * (1.0 - dot(computedNormal, sunDir)));\n      float total = 0.0;\n      float weightSum = 0.0;\n      for(int ix = 0; ix &lt; 5; ix++) {\n        for(int iy = 0; iy &lt; 5; iy++) {\n          int x = ix - 2;\n          int y = iy - 2;\n          float wx = 1.0 - abs(float(x)) * 0.25;\n          float wy = 1.0 - abs(float(y)) * 0.25;\n          float w = wx * wy;\n          vec2 offset = vec2(float(x), float(y)) * shadowMapTexelSize;\n          float lit = texture(shadowMap, vec3(projCoords.xy + offset, projCoords.z - bias));\n          total += w * lit;\n          weightSum += w;\n        };\n      }\n      shadow = 1.0 - total / weightSum;\n    }\n  }\n  if (debugViewMode == 1) {\n    fragColor = vec4(albedo * tint.rgb, (fragColor).a * tint.a);\n  } else if (debugViewMode == 2) {\n    fragColor = vec4(computedNormal * 0.5 + vec3(0.5, 0.5, 0.5), (fragColor).a);\n  } else if (debugViewMode == 3) {\n    fragColor = vec4(ambientOcclusion, ambientOcclusion, ambientOcclusion, (fragColor).a);\n  } else if (debugViewMode == 4) {\n    fragColor = vec4(metallic, metallic, metallic, (fragColor).a);\n  } else if (debugViewMode == 5) {\n    float specularMap = clamp(dot(f0mix, vec3(0.3333333, 0.3333333, 0.3333333)) * (1.0 - roughness * 0.5), 0.0, 1.0);\n    fragColor = vec4(specularMap, specularMap, specularMap, (fragColor).a);\n  } else {\n    vec3 direct = (specular + diffuse) * (1.0 - shadow);\n    vec3 ambient = ((albedo * ambientLightColor.rgb) * ambientLightColor.a) * ambientOcclusion;\n    vec3 lo = (((direct + ambient) + rimLight) + envDiffuse) + envSpecular;\n    vec3 litColor = mix(lo, envColor, fresnel * metallic);\n    if (0.0 &lt; transmission) {\n      float glassMix = clamp((0.35 + transmission * 0.55) + roughness * 0.1, 0.0, 1.0);\n      litColor = mix(litColor, envColor, glassMix);\n      litColor = litColor * mix(1.0, 0.82, transmission);\n      fragColor.a = (fragColor).a * mix(1.0, 0.08 + roughness * 0.2, transmission);\n    }\n    litColor += emissiveValue;\n    fragColor = vec4(litColor, (fragColor).a) * tint;\n  }\n}\n&quot;">PbrFragmentShader</a></li>
+<li><a class="reference" href="#PbrFragmentShader" title="PbrFragmentShader = &quot;#version 410\n// from gltfPbrFrag\n\nuniform vec2 occlusionUvOffset;\nuniform vec4 ambientLightColor;\nuniform sampler2D emissiveTexture;\nuniform vec2 normalUvOffset;\nuniform vec3 cameraPosition;\nuniform float metallicRoughnessUvRotation;\nuniform int baseColorTexCoord;\nuniform float alphaCutoff;\nuniform float occlusionStrength;\nuniform vec2 baseColorUvOffset;\nuniform vec4 tint;\nuniform vec4 rimLightColor;\nuniform int emissiveTexCoord;\nuniform float normalScale;\nuniform vec4 sunLightColor;\nuniform sampler2D normalTexture;\nuniform samplerCube environmentMap;\nuniform vec2 baseColorUvScale;\nuniform vec2 metallicRoughnessUvScale;\nuniform float shadowBias;\nuniform float environmentMipCount;\nuniform vec3 sunLightDirection;\nuniform float transmissionFactor;\nuniform int debugViewMode;\nuniform vec2 emissiveUvOffset;\nuniform float environmentMapStrength;\nuniform int occlusionTexCoord;\nuniform bool useShadow;\nuniform vec4 fogColor;\nuniform int normalTexCoord;\nuniform vec2 emissiveUvScale;\nuniform sampler2D baseColorTexture;\nuniform sampler2D metallicRoughnessTexture;\nuniform vec3 rimLightDirection;\nuniform float normalUvRotation;\nuniform vec2 shadowMapTexelSize;\nuniform sampler2DShadow shadowMap;\nuniform float fogStart;\nuniform vec2 metallicRoughnessUvOffset;\nuniform float roughnessFactor;\nuniform vec2 normalUvScale;\nuniform vec4 baseColorFactor;\nuniform vec2 occlusionUvScale;\nuniform float occlusionUvRotation;\nuniform vec3 emissiveFactor;\nuniform float baseColorUvRotation;\nuniform float metallicFactor;\nuniform sampler2D occlusionTexture;\nuniform float fogStrength;\nuniform int metallicRoughnessTexCoord;\nuniform float fogEnd;\nuniform float emissiveUvRotation;\nuniform float fogDensity;\nuniform bool useNormalTexture;\n\nfloat fogAmount(vec3 worldPos);\nvec3 applyFog(vec3 value, vec3 worldPos);\nvec2 selectUv(int texCoord, vec2 uv, vec2 uv1);\nvec2 transformUv(vec2 uv, vec2 offset, vec2 scale, float rotation);\n\nfloat fogAmount(\n  vec3 worldPos\n) {\n  float result;\n  // Returns the fog blend amount for one world position.\n  float distance = length(cameraPosition - worldPos);\n  float start = max(fogStart, 0.0);\n  float finish = max(fogEnd, start + 0.001);\n  float linear = clamp((distance - start) / (finish - start), 0.0, 1.0);\n  float dense = clamp(max(distance - start, 0.0) * max(fogDensity, 0.0), 0.0, 1.0);\n  result = clamp(max(linear, dense) * fogStrength, 0.0, 1.0);\n  return result;\n}\nvec3 applyFog(\n  vec3 value,\n  vec3 worldPos\n) {\n  vec3 result;\n  result = // Applies the configured fog color to a shaded RGB value.\nmix(value, fogColor.rgb, fogAmount(worldPos) * fogColor.a);\n  return result;\n}\nvec2 selectUv(\n  int texCoord,\n  vec2 uv,\n  vec2 uv1\n) {\n  vec2 result;\n  result = ((texCoord == 1) ? (uv1) : (uv));\n  return result;\n}\nvec2 transformUv(\n  vec2 uv,\n  vec2 offset,\n  vec2 scale,\n  float rotation\n) {\n  vec2 result;\n  float c = cos(rotation);\n  float s = sin(rotation);\n  vec2 scaled = uv * scale;\n  vec2 transformed = vec2(c * scaled.x + s * scaled.y, - (s) * scaled.x + c * scaled.y) + offset;\n  result = transformed;\n  return result;\n}\n\nin vec3 worldPos;\nin vec4 color;\nin vec3 normal;\nin vec2 uv;\nin vec2 uv1;\nin vec3 tangent;\nin vec3 bitangent;\nin vec4 vPosLightSpace;\nout vec4 fragColor;\n\nvoid main() {\n  vec2 baseColorUv = transformUv(selectUv(baseColorTexCoord, uv, uv1), baseColorUvOffset, baseColorUvScale, baseColorUvRotation);\n  vec2 metallicRoughnessUv = transformUv(selectUv(metallicRoughnessTexCoord, uv, uv1), metallicRoughnessUvOffset, metallicRoughnessUvScale, metallicRoughnessUvRotation);\n  vec2 normalUv = transformUv(selectUv(normalTexCoord, uv, uv1), normalUvOffset, normalUvScale, normalUvRotation);\n  vec2 occlusionUv = transformUv(selectUv(occlusionTexCoord, uv, uv1), occlusionUvOffset, occlusionUvScale, occlusionUvRotation);\n  vec2 emissiveUv = transformUv(selectUv(emissiveTexCoord, uv, uv1), emissiveUvOffset, emissiveUvScale, emissiveUvRotation);\n  fragColor = texture(baseColorTexture, baseColorUv);\n  fragColor = fragColor * baseColorFactor;\n  fragColor = fragColor * color;\n  if ((fragColor).a &lt; alphaCutoff) {\n    discard;\n  }\n  vec3 albedo = (fragColor).rgb;\n  float roughness = (texture(metallicRoughnessTexture, metallicRoughnessUv)).g * roughnessFactor;\n  float metallic = (texture(metallicRoughnessTexture, metallicRoughnessUv)).b * metallicFactor;\n  float transmission = clamp(transmissionFactor, 0.0, 1.0);\n  float ambientOcclusion = (texture(occlusionTexture, occlusionUv)).r * occlusionStrength;\n  vec3 emissiveValue = (texture(emissiveTexture, emissiveUv)).rgb * emissiveFactor;\n  vec3 geometricNormal = normalize(cross(dFdx(worldPos), dFdy(worldPos)));\n  vec3 meshNormal = ((0.0 &lt; length(normal)) ? (normalize(normal)) : (geometricNormal));\n  vec3 normalValue = normalize((texture(normalTexture, normalUv)).rgb * 2.0 - vec3(1.0, 1.0, 1.0)) * normalScale;\n  vec3 mappedNormal = normalize((tangent * normalValue.x + bitangent * normalValue.y) + normal * normalValue.z);\n  vec3 computedNormal = ((useNormalTexture) ? (mappedNormal) : (meshNormal));\n  if (! (gl_FrontFacing)) {\n    computedNormal = - (computedNormal);\n  }\n  vec3 sunDir = normalize(- (sunLightDirection));\n  vec3 rimDir = normalize(- (rimLightDirection));\n  vec3 viewDir = normalize(cameraPosition - worldPos);\n  vec3 reflectDir = reflect(- (viewDir), computedNormal);\n  vec3 halfVector = normalize(viewDir + sunDir);\n  float nDotH = max(dot(computedNormal, halfVector), 0.0);\n  float nDotL = max(dot(computedNormal, sunDir), 0.0);\n  vec3 f0 = vec3(0.04, 0.04, 0.04);\n  vec3 f0mix = mix(f0, albedo, metallic);\n  float cosTheta = max(dot(computedNormal, viewDir), 0.0);\n  vec3 fresnel = f0mix + (vec3(1.0, 1.0, 1.0) - f0mix) * pow(1.0 - cosTheta, 5.0);\n  float specComponent = nDotL * pow(nDotH, 2.0 / (roughness + 0.0001));\n  vec3 specular = ((sunLightColor.rgb * sunLightColor.a) * fresnel) * specComponent;\n  vec3 diffuse = (((sunLightColor.rgb * sunLightColor.a) * (1.0 - metallic)) * albedo) * nDotL;\n  float rim = pow(1.0 - max(dot(computedNormal, viewDir), 0.0), 2.5) * (1.0 - metallic);\n  float rimFacing = max(dot(computedNormal, rimDir), 0.0);\n  vec3 rimLight = (((rimLightColor.rgb * rimLightColor.a) * rim) * (0.15 + 0.85 * rimFacing)) * (0.15 + 0.35 * ambientOcclusion);\n  float mipLevel = roughness * environmentMipCount;\n  vec3 envColor = (textureLod(environmentMap, reflectDir, mipLevel)).rgb;\n  vec3 skyDiffuse = (textureLod(environmentMap, computedNormal, min(environmentMipCount, 6.0))).rgb;\n  vec3 envDiffuse = ((((skyDiffuse * albedo) * ambientOcclusion) * (1.0 - metallic)) * (0.32 + ambientLightColor.a * 0.18)) * environmentMapStrength;\n  vec3 envSpecular = (((envColor * fresnel) * (1.0 - roughness * 0.72)) * mix(0.28, 0.08, metallic)) * environmentMapStrength;\n  float shadow = 0.0;\n  if (useShadow) {\n    vec3 projCoords = vPosLightSpace.xyz / vPosLightSpace.w;\n    projCoords = projCoords * 0.5 + vec3(0.5, 0.5, 0.5);\n    if (((((projCoords.z &lt;= 1.0) &amp;&amp; (0.0 &lt;= projCoords.x)) &amp;&amp; (projCoords.x &lt;= 1.0)) &amp;&amp; (0.0 &lt;= projCoords.y)) &amp;&amp; (projCoords.y &lt;= 1.0)) {\n      float bias = max(shadowBias, 0.002 * (1.0 - dot(computedNormal, sunDir)));\n      float total = 0.0;\n      float weightSum = 0.0;\n      for(int ix = 0; ix &lt; 5; ix++) {\n        for(int iy = 0; iy &lt; 5; iy++) {\n          int x = ix - 2;\n          int y = iy - 2;\n          float wx = 1.0 - abs(float(x)) * 0.25;\n          float wy = 1.0 - abs(float(y)) * 0.25;\n          float w = wx * wy;\n          vec2 offset = vec2(float(x), float(y)) * shadowMapTexelSize;\n          float lit = texture(shadowMap, vec3(projCoords.xy + offset, projCoords.z - bias));\n          total += w * lit;\n          weightSum += w;\n        };\n      }\n      shadow = 1.0 - total / weightSum;\n    }\n  }\n  if (debugViewMode == 1) {\n    fragColor = vec4(albedo * tint.rgb, (fragColor).a * tint.a);\n  } else if (debugViewMode == 2) {\n    fragColor = vec4(computedNormal * 0.5 + vec3(0.5, 0.5, 0.5), (fragColor).a);\n  } else if (debugViewMode == 3) {\n    fragColor = vec4(ambientOcclusion, ambientOcclusion, ambientOcclusion, (fragColor).a);\n  } else if (debugViewMode == 4) {\n    fragColor = vec4(metallic, metallic, metallic, (fragColor).a);\n  } else if (debugViewMode == 5) {\n    float specularMap = clamp(dot(f0mix, vec3(0.3333333, 0.3333333, 0.3333333)) * (1.0 - roughness * 0.5), 0.0, 1.0);\n    fragColor = vec4(specularMap, specularMap, specularMap, (fragColor).a);\n  } else {\n    vec3 direct = (specular + diffuse) * (1.0 - shadow);\n    vec3 ambient = ((albedo * ambientLightColor.rgb) * ambientLightColor.a) * ambientOcclusion;\n    vec3 lo = (((direct + ambient) + rimLight) + envDiffuse) + envSpecular;\n    vec3 litColor = mix(lo, envColor * environmentMapStrength, fresnel * metallic);\n    if (0.0 &lt; transmission) {\n      float glassMix = clamp((0.35 + transmission * 0.55) + roughness * 0.1, 0.0, 1.0);\n      litColor = mix(litColor, envColor, glassMix);\n      litColor = litColor * mix(1.0, 0.82, transmission);\n      fragColor.a = (fragColor).a * mix(1.0, 0.08 + roughness * 0.2, transmission);\n    }\n    litColor += emissiveValue;\n    litColor = applyFog(litColor, worldPos);\n    fragColor = vec4(litColor, (fragColor).a) * tint;\n  }\n}\n&quot;">PbrFragmentShader</a></li>
 <li><a class="reference" href="#PbrVertexShader" title="PbrVertexShader = &quot;#version 410\n// from gltfPbrVert\n\nuniform mat4 lightSpace;\nuniform mat3 normalMatrix;\nuniform mat4 model;\nuniform mat4 jointMatrices[128];\nuniform mat4 proj;\nuniform bool useSkinning;\nuniform mat4 view;\n\nvec3 safeNormalize(vec3 v);\nmat4 identityMat4();\n\nvec3 safeNormalize(\n  vec3 v\n) {\n  vec3 result;\n  result = ((0.0 &lt; length(v)) ? (normalize(v)) : (vec3(0.0, 0.0, 0.0)));\n  return result;\n}\nmat4 identityMat4(\n) {\n  mat4 result;\n  result = mat4(1.0);\n  return result;\n}\n\nin vec3 vertexPosition;\nin vec4 vertexColor;\nin vec3 vertexNormal;\nin vec2 vertexUV;\nin vec4 vertexTangent;\nin uvec4 vertexJoints;\nin vec4 vertexWeights;\nin vec2 vertexUV1;\nout vec3 worldPos;\nout vec4 color;\nout vec3 normal;\nout vec2 uv;\nout vec2 uv1;\nout vec3 tangent;\nout vec3 bitangent;\nout vec4 vPosLightSpace;\n\nvoid main() {\n  mat4 skin = identityMat4();\n  if (useSkinning) {\n    skin = ((vertexWeights.x * jointMatrices[int(vertexJoints.x)] + vertexWeights.y * jointMatrices[int(vertexJoints.y)]) + vertexWeights.z * jointMatrices[int(vertexJoints.z)]) + vertexWeights.w * jointMatrices[int(vertexJoints.w)];\n  }\n  vec4 skinnedPosition = skin * vec4(vertexPosition, 1.0);\n  vec3 skinnedNormal = (skin * vec4(vertexNormal, 0.0)).xyz;\n  vec3 skinnedTangent = (skin * vec4(vertexTangent.xyz, 0.0)).xyz;\n  worldPos = (model * skinnedPosition).xyz;\n  color = vertexColor;\n  uv = vertexUV;\n  uv1 = vertexUV1;\n  vec3 n = safeNormalize(normalMatrix * skinnedNormal);\n  vec3 rawTangent = (model * vec4(skinnedTangent, 0.0)).xyz;\n  vec3 t = safeNormalize(rawTangent - n * dot(n, rawTangent));\n  normal = n;\n  tangent = t;\n  bitangent = cross(n, tangent) * vertexTangent.w;\n  vPosLightSpace = lightSpace * vec4(worldPos, 1.0);\n  gl_Position = ((proj * view) * model) * skinnedPosition;\n}\n&quot;">PbrVertexShader</a></li>
 <li><a class="reference" href="#ShadowDepthFragmentShader" title="ShadowDepthFragmentShader = &quot;#version 410\n// from gltfShadowDepthFrag\n\nuniform float alphaCutoff;\nuniform vec4 baseColorFactor;\nuniform sampler2D sampleTex;\n\nin vec2 fragmentUv;\n\nvoid main() {\n  if (0.0 &lt;= alphaCutoff) {\n    vec4 texColor = texture(sampleTex, fragmentUv) * baseColorFactor;\n    if (texColor.a &lt; alphaCutoff) {\n      discard;\n    }\n  }\n}\n&quot;">ShadowDepthFragmentShader</a></li>
 <li><a class="reference" href="#ShadowDepthVertexShader" title="ShadowDepthVertexShader = &quot;#version 410\n// from gltfShadowDepthVert\n\nuniform mat4 model;\nuniform mat4 jointMatrices[128];\nuniform mat4 proj;\nuniform bool useSkinning;\nuniform mat4 view;\n\nmat4 identityMat4();\nmat4 skinMatrix(uvec4 vertexJoints, vec4 vertexWeights);\n\nmat4 identityMat4(\n) {\n  mat4 result;\n  result = mat4(1.0);\n  return result;\n}\nmat4 skinMatrix(\n  uvec4 vertexJoints,\n  vec4 vertexWeights\n) {\n  mat4 result;\n  result = ((vertexWeights.x * jointMatrices[int(vertexJoints.x)] + vertexWeights.y * jointMatrices[int(vertexJoints.y)]) + vertexWeights.z * jointMatrices[int(vertexJoints.z)]) + vertexWeights.w * jointMatrices[int(vertexJoints.w)];\n  return result;\n}\n\nin vec3 vertexPosition;\nin vec2 vertexUV;\nin uvec4 vertexJoints;\nin vec4 vertexWeights;\nout vec2 fragmentUv;\n\nvoid main() {\n  fragmentUv = vertexUV;\n  mat4 skin = ((useSkinning) ? (skinMatrix(vertexJoints, vertexWeights)) : (identityMat4()));\n  gl_Position = (((proj * view) * model) * skin) * vec4(vertexPosition, 1.0);\n}\n&quot;">ShadowDepthVertexShader</a></li>
@@ -254,6 +260,12 @@
   <span class="Identifier">rimLightColor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Color</span>
   <span class="Identifier">debugView</span><span class="Operator">*</span><span class="Other">:</span> <a href="../../common.html#DebugView"><span class="Identifier">DebugView</span></a>
   <span class="Identifier">cameraPosition</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec3</span>
+  <span class="Identifier">fogColor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Color</span>
+  <span class="Identifier">fogStart</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">fogEnd</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">fogDensity</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">fogStrength</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">environmentMapStrength</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
   <span class="Identifier">environmentMap</span><span class="Operator">*</span><span class="Other">:</span> <a href="#EnvironmentMap"><span class="Identifier">EnvironmentMap</span></a>
   <span class="Identifier">useShadows</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
   <span class="Identifier">drawSkybox</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
@@ -271,8 +283,8 @@
   <dd>
     
     Reusable state for PBR rendering.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L111" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L111" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L117" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L117" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -282,8 +294,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L103" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L103" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L109" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L109" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -314,7 +326,7 @@
   </dd>
 </div>
 <div id="PbrFragmentShader">
-  <dt><pre><a href="#PbrFragmentShader"><span class="Identifier">PbrFragmentShader</span></a> <span class="Other">=</span> <span class="StringLit">&quot;#version 410\n// from gltfPbrFrag\n\nuniform vec2 occlusionUvOffset;\nuniform vec4 ambientLightColor;\nuniform sampler2D emissiveTexture;\nuniform vec2 normalUvOffset;\nuniform vec3 cameraPosition;\nuniform float metallicRoughnessUvRotation;\nuniform int baseColorTexCoord;\nuniform float alphaCutoff;\nuniform float occlusionStrength;\nuniform vec2 baseColorUvOffset;\nuniform vec4 tint;\nuniform vec4 rimLightColor;\nuniform int emissiveTexCoord;\nuniform float normalScale;\nuniform vec4 sunLightColor;\nuniform sampler2D normalTexture;\nuniform samplerCube environmentMap;\nuniform vec2 baseColorUvScale;\nuniform vec2 metallicRoughnessUvScale;\nuniform float shadowBias;\nuniform float environmentMipCount;\nuniform vec3 sunLightDirection;\nuniform float transmissionFactor;\nuniform int debugViewMode;\nuniform vec2 emissiveUvOffset;\nuniform int occlusionTexCoord;\nuniform bool useShadow;\nuniform int normalTexCoord;\nuniform vec2 emissiveUvScale;\nuniform sampler2D baseColorTexture;\nuniform sampler2D metallicRoughnessTexture;\nuniform vec3 rimLightDirection;\nuniform float normalUvRotation;\nuniform vec2 shadowMapTexelSize;\nuniform sampler2DShadow shadowMap;\nuniform vec2 metallicRoughnessUvOffset;\nuniform float roughnessFactor;\nuniform vec2 normalUvScale;\nuniform vec4 baseColorFactor;\nuniform vec2 occlusionUvScale;\nuniform float occlusionUvRotation;\nuniform vec3 emissiveFactor;\nuniform float baseColorUvRotation;\nuniform float metallicFactor;\nuniform sampler2D occlusionTexture;\nuniform int metallicRoughnessTexCoord;\nuniform float emissiveUvRotation;\nuniform bool useNormalTexture;\n\nvec2 selectUv(int texCoord, vec2 uv, vec2 uv1);\nvec2 transformUv(vec2 uv, vec2 offset, vec2 scale, float rotation);\n\nvec2 selectUv(\n  int texCoord,\n  vec2 uv,\n  vec2 uv1\n) {\n  vec2 result;\n  result = ((texCoord == 1) ? (uv1) : (uv));\n  return result;\n}\nvec2 transformUv(\n  vec2 uv,\n  vec2 offset,\n  vec2 scale,\n  float rotation\n) {\n  vec2 result;\n  float c = cos(rotation);\n  float s = sin(rotation);\n  vec2 scaled = uv * scale;\n  vec2 transformed = vec2(c * scaled.x + s * scaled.y, - (s) * scaled.x + c * scaled.y) + offset;\n  result = transformed;\n  return result;\n}\n\nin vec3 worldPos;\nin vec4 color;\nin vec3 normal;\nin vec2 uv;\nin vec2 uv1;\nin vec3 tangent;\nin vec3 bitangent;\nin vec4 vPosLightSpace;\nout vec4 fragColor;\n\nvoid main() {\n  vec2 baseColorUv = transformUv(selectUv(baseColorTexCoord, uv, uv1), baseColorUvOffset, baseColorUvScale, baseColorUvRotation);\n  vec2 metallicRoughnessUv = transformUv(selectUv(metallicRoughnessTexCoord, uv, uv1), metallicRoughnessUvOffset, metallicRoughnessUvScale, metallicRoughnessUvRotation);\n  vec2 normalUv = transformUv(selectUv(normalTexCoord, uv, uv1), normalUvOffset, normalUvScale, normalUvRotation);\n  vec2 occlusionUv = transformUv(selectUv(occlusionTexCoord, uv, uv1), occlusionUvOffset, occlusionUvScale, occlusionUvRotation);\n  vec2 emissiveUv = transformUv(selectUv(emissiveTexCoord, uv, uv1), emissiveUvOffset, emissiveUvScale, emissiveUvRotation);\n  fragColor = texture(baseColorTexture, baseColorUv);\n  fragColor = fragColor * baseColorFactor;\n  fragColor = fragColor * color;\n  if ((fragColor).a &lt; alphaCutoff) {\n    discard;\n  }\n  vec3 albedo = (fragColor).rgb;\n  float roughness = (texture(metallicRoughnessTexture, metallicRoughnessUv)).g * roughnessFactor;\n  float metallic = (texture(metallicRoughnessTexture, metallicRoughnessUv)).b * metallicFactor;\n  float transmission = clamp(transmissionFactor, 0.0, 1.0);\n  float ambientOcclusion = (texture(occlusionTexture, occlusionUv)).r * occlusionStrength;\n  vec3 emissiveValue = (texture(emissiveTexture, emissiveUv)).rgb * emissiveFactor;\n  vec3 geometricNormal = normalize(cross(dFdx(worldPos), dFdy(worldPos)));\n  vec3 meshNormal = ((0.0 &lt; length(normal)) ? (normalize(normal)) : (geometricNormal));\n  vec3 normalValue = normalize((texture(normalTexture, normalUv)).rgb * 2.0 - vec3(1.0, 1.0, 1.0)) * normalScale;\n  vec3 mappedNormal = normalize((tangent * normalValue.x + bitangent * normalValue.y) + normal * normalValue.z);\n  vec3 computedNormal = ((useNormalTexture) ? (mappedNormal) : (meshNormal));\n  if (! (gl_FrontFacing)) {\n    computedNormal = - (computedNormal);\n  }\n  vec3 sunDir = normalize(- (sunLightDirection));\n  vec3 rimDir = normalize(- (rimLightDirection));\n  vec3 viewDir = normalize(cameraPosition - worldPos);\n  vec3 reflectDir = reflect(- (viewDir), computedNormal);\n  vec3 halfVector = normalize(viewDir + sunDir);\n  float nDotH = max(dot(computedNormal, halfVector), 0.0);\n  float nDotL = max(dot(computedNormal, sunDir), 0.0);\n  vec3 f0 = vec3(0.04, 0.04, 0.04);\n  vec3 f0mix = mix(f0, albedo, metallic);\n  float cosTheta = max(dot(computedNormal, viewDir), 0.0);\n  vec3 fresnel = f0mix + (vec3(1.0, 1.0, 1.0) - f0mix) * pow(1.0 - cosTheta, 5.0);\n  float specComponent = nDotL * pow(nDotH, 2.0 / (roughness + 0.0001));\n  vec3 specular = ((sunLightColor.rgb * sunLightColor.a) * fresnel) * specComponent;\n  vec3 diffuse = (((sunLightColor.rgb * sunLightColor.a) * (1.0 - metallic)) * albedo) * nDotL;\n  float rim = pow(1.0 - max(dot(computedNormal, viewDir), 0.0), 2.5) * (1.0 - metallic);\n  float rimFacing = max(dot(computedNormal, rimDir), 0.0);\n  vec3 rimLight = (((rimLightColor.rgb * rimLightColor.a) * rim) * (0.15 + 0.85 * rimFacing)) * (0.15 + 0.35 * ambientOcclusion);\n  float mipLevel = roughness * environmentMipCount;\n  vec3 envColor = (textureLod(environmentMap, reflectDir, mipLevel)).rgb;\n  vec3 skyDiffuse = (textureLod(environmentMap, computedNormal, min(environmentMipCount, 6.0))).rgb;\n  vec3 envDiffuse = (((skyDiffuse * albedo) * ambientOcclusion) * (1.0 - metallic)) * (0.32 + ambientLightColor.a * 0.18);\n  vec3 envSpecular = ((envColor * fresnel) * (1.0 - roughness * 0.72)) * mix(0.28, 0.08, metallic);\n  float shadow = 0.0;\n  if (useShadow) {\n    vec3 projCoords = vPosLightSpace.xyz / vPosLightSpace.w;\n    projCoords = projCoords * 0.5 + vec3(0.5, 0.5, 0.5);\n    if (((((projCoords.z &lt;= 1.0) &amp;&amp; (0.0 &lt;= projCoords.x)) &amp;&amp; (projCoords.x &lt;= 1.0)) &amp;&amp; (0.0 &lt;= projCoords.y)) &amp;&amp; (projCoords.y &lt;= 1.0)) {\n      float bias = max(shadowBias, 0.002 * (1.0 - dot(computedNormal, sunDir)));\n      float total = 0.0;\n      float weightSum = 0.0;\n      for(int ix = 0; ix &lt; 5; ix++) {\n        for(int iy = 0; iy &lt; 5; iy++) {\n          int x = ix - 2;\n          int y = iy - 2;\n          float wx = 1.0 - abs(float(x)) * 0.25;\n          float wy = 1.0 - abs(float(y)) * 0.25;\n          float w = wx * wy;\n          vec2 offset = vec2(float(x), float(y)) * shadowMapTexelSize;\n          float lit = texture(shadowMap, vec3(projCoords.xy + offset, projCoords.z - bias));\n          total += w * lit;\n          weightSum += w;\n        };\n      }\n      shadow = 1.0 - total / weightSum;\n    }\n  }\n  if (debugViewMode == 1) {\n    fragColor = vec4(albedo * tint.rgb, (fragColor).a * tint.a);\n  } else if (debugViewMode == 2) {\n    fragColor = vec4(computedNormal * 0.5 + vec3(0.5, 0.5, 0.5), (fragColor).a);\n  } else if (debugViewMode == 3) {\n    fragColor = vec4(ambientOcclusion, ambientOcclusion, ambientOcclusion, (fragColor).a);\n  } else if (debugViewMode == 4) {\n    fragColor = vec4(metallic, metallic, metallic, (fragColor).a);\n  } else if (debugViewMode == 5) {\n    float specularMap = clamp(dot(f0mix, vec3(0.3333333, 0.3333333, 0.3333333)) * (1.0 - roughness * 0.5), 0.0, 1.0);\n    fragColor = vec4(specularMap, specularMap, specularMap, (fragColor).a);\n  } else {\n    vec3 direct = (specular + diffuse) * (1.0 - shadow);\n    vec3 ambient = ((albedo * ambientLightColor.rgb) * ambientLightColor.a) * ambientOcclusion;\n    vec3 lo = (((direct + ambient) + rimLight) + envDiffuse) + envSpecular;\n    vec3 litColor = mix(lo, envColor, fresnel * metallic);\n    if (0.0 &lt; transmission) {\n      float glassMix = clamp((0.35 + transmission * 0.55) + roughness * 0.1, 0.0, 1.0);\n      litColor = mix(litColor, envColor, glassMix);\n      litColor = litColor * mix(1.0, 0.82, transmission);\n      fragColor.a = (fragColor).a * mix(1.0, 0.08 + roughness * 0.2, transmission);\n    }\n    litColor += emissiveValue;\n    fragColor = vec4(litColor, (fragColor).a) * tint;\n  }\n}\n&quot;</span></pre></dt>
+  <dt><pre><a href="#PbrFragmentShader"><span class="Identifier">PbrFragmentShader</span></a> <span class="Other">=</span> <span class="StringLit">&quot;#version 410\n// from gltfPbrFrag\n\nuniform vec2 occlusionUvOffset;\nuniform vec4 ambientLightColor;\nuniform sampler2D emissiveTexture;\nuniform vec2 normalUvOffset;\nuniform vec3 cameraPosition;\nuniform float metallicRoughnessUvRotation;\nuniform int baseColorTexCoord;\nuniform float alphaCutoff;\nuniform float occlusionStrength;\nuniform vec2 baseColorUvOffset;\nuniform vec4 tint;\nuniform vec4 rimLightColor;\nuniform int emissiveTexCoord;\nuniform float normalScale;\nuniform vec4 sunLightColor;\nuniform sampler2D normalTexture;\nuniform samplerCube environmentMap;\nuniform vec2 baseColorUvScale;\nuniform vec2 metallicRoughnessUvScale;\nuniform float shadowBias;\nuniform float environmentMipCount;\nuniform vec3 sunLightDirection;\nuniform float transmissionFactor;\nuniform int debugViewMode;\nuniform vec2 emissiveUvOffset;\nuniform float environmentMapStrength;\nuniform int occlusionTexCoord;\nuniform bool useShadow;\nuniform vec4 fogColor;\nuniform int normalTexCoord;\nuniform vec2 emissiveUvScale;\nuniform sampler2D baseColorTexture;\nuniform sampler2D metallicRoughnessTexture;\nuniform vec3 rimLightDirection;\nuniform float normalUvRotation;\nuniform vec2 shadowMapTexelSize;\nuniform sampler2DShadow shadowMap;\nuniform float fogStart;\nuniform vec2 metallicRoughnessUvOffset;\nuniform float roughnessFactor;\nuniform vec2 normalUvScale;\nuniform vec4 baseColorFactor;\nuniform vec2 occlusionUvScale;\nuniform float occlusionUvRotation;\nuniform vec3 emissiveFactor;\nuniform float baseColorUvRotation;\nuniform float metallicFactor;\nuniform sampler2D occlusionTexture;\nuniform float fogStrength;\nuniform int metallicRoughnessTexCoord;\nuniform float fogEnd;\nuniform float emissiveUvRotation;\nuniform float fogDensity;\nuniform bool useNormalTexture;\n\nfloat fogAmount(vec3 worldPos);\nvec3 applyFog(vec3 value, vec3 worldPos);\nvec2 selectUv(int texCoord, vec2 uv, vec2 uv1);\nvec2 transformUv(vec2 uv, vec2 offset, vec2 scale, float rotation);\n\nfloat fogAmount(\n  vec3 worldPos\n) {\n  float result;\n  // Returns the fog blend amount for one world position.\n  float distance = length(cameraPosition - worldPos);\n  float start = max(fogStart, 0.0);\n  float finish = max(fogEnd, start + 0.001);\n  float linear = clamp((distance - start) / (finish - start), 0.0, 1.0);\n  float dense = clamp(max(distance - start, 0.0) * max(fogDensity, 0.0), 0.0, 1.0);\n  result = clamp(max(linear, dense) * fogStrength, 0.0, 1.0);\n  return result;\n}\nvec3 applyFog(\n  vec3 value,\n  vec3 worldPos\n) {\n  vec3 result;\n  result = // Applies the configured fog color to a shaded RGB value.\nmix(value, fogColor.rgb, fogAmount(worldPos) * fogColor.a);\n  return result;\n}\nvec2 selectUv(\n  int texCoord,\n  vec2 uv,\n  vec2 uv1\n) {\n  vec2 result;\n  result = ((texCoord == 1) ? (uv1) : (uv));\n  return result;\n}\nvec2 transformUv(\n  vec2 uv,\n  vec2 offset,\n  vec2 scale,\n  float rotation\n) {\n  vec2 result;\n  float c = cos(rotation);\n  float s = sin(rotation);\n  vec2 scaled = uv * scale;\n  vec2 transformed = vec2(c * scaled.x + s * scaled.y, - (s) * scaled.x + c * scaled.y) + offset;\n  result = transformed;\n  return result;\n}\n\nin vec3 worldPos;\nin vec4 color;\nin vec3 normal;\nin vec2 uv;\nin vec2 uv1;\nin vec3 tangent;\nin vec3 bitangent;\nin vec4 vPosLightSpace;\nout vec4 fragColor;\n\nvoid main() {\n  vec2 baseColorUv = transformUv(selectUv(baseColorTexCoord, uv, uv1), baseColorUvOffset, baseColorUvScale, baseColorUvRotation);\n  vec2 metallicRoughnessUv = transformUv(selectUv(metallicRoughnessTexCoord, uv, uv1), metallicRoughnessUvOffset, metallicRoughnessUvScale, metallicRoughnessUvRotation);\n  vec2 normalUv = transformUv(selectUv(normalTexCoord, uv, uv1), normalUvOffset, normalUvScale, normalUvRotation);\n  vec2 occlusionUv = transformUv(selectUv(occlusionTexCoord, uv, uv1), occlusionUvOffset, occlusionUvScale, occlusionUvRotation);\n  vec2 emissiveUv = transformUv(selectUv(emissiveTexCoord, uv, uv1), emissiveUvOffset, emissiveUvScale, emissiveUvRotation);\n  fragColor = texture(baseColorTexture, baseColorUv);\n  fragColor = fragColor * baseColorFactor;\n  fragColor = fragColor * color;\n  if ((fragColor).a &lt; alphaCutoff) {\n    discard;\n  }\n  vec3 albedo = (fragColor).rgb;\n  float roughness = (texture(metallicRoughnessTexture, metallicRoughnessUv)).g * roughnessFactor;\n  float metallic = (texture(metallicRoughnessTexture, metallicRoughnessUv)).b * metallicFactor;\n  float transmission = clamp(transmissionFactor, 0.0, 1.0);\n  float ambientOcclusion = (texture(occlusionTexture, occlusionUv)).r * occlusionStrength;\n  vec3 emissiveValue = (texture(emissiveTexture, emissiveUv)).rgb * emissiveFactor;\n  vec3 geometricNormal = normalize(cross(dFdx(worldPos), dFdy(worldPos)));\n  vec3 meshNormal = ((0.0 &lt; length(normal)) ? (normalize(normal)) : (geometricNormal));\n  vec3 normalValue = normalize((texture(normalTexture, normalUv)).rgb * 2.0 - vec3(1.0, 1.0, 1.0)) * normalScale;\n  vec3 mappedNormal = normalize((tangent * normalValue.x + bitangent * normalValue.y) + normal * normalValue.z);\n  vec3 computedNormal = ((useNormalTexture) ? (mappedNormal) : (meshNormal));\n  if (! (gl_FrontFacing)) {\n    computedNormal = - (computedNormal);\n  }\n  vec3 sunDir = normalize(- (sunLightDirection));\n  vec3 rimDir = normalize(- (rimLightDirection));\n  vec3 viewDir = normalize(cameraPosition - worldPos);\n  vec3 reflectDir = reflect(- (viewDir), computedNormal);\n  vec3 halfVector = normalize(viewDir + sunDir);\n  float nDotH = max(dot(computedNormal, halfVector), 0.0);\n  float nDotL = max(dot(computedNormal, sunDir), 0.0);\n  vec3 f0 = vec3(0.04, 0.04, 0.04);\n  vec3 f0mix = mix(f0, albedo, metallic);\n  float cosTheta = max(dot(computedNormal, viewDir), 0.0);\n  vec3 fresnel = f0mix + (vec3(1.0, 1.0, 1.0) - f0mix) * pow(1.0 - cosTheta, 5.0);\n  float specComponent = nDotL * pow(nDotH, 2.0 / (roughness + 0.0001));\n  vec3 specular = ((sunLightColor.rgb * sunLightColor.a) * fresnel) * specComponent;\n  vec3 diffuse = (((sunLightColor.rgb * sunLightColor.a) * (1.0 - metallic)) * albedo) * nDotL;\n  float rim = pow(1.0 - max(dot(computedNormal, viewDir), 0.0), 2.5) * (1.0 - metallic);\n  float rimFacing = max(dot(computedNormal, rimDir), 0.0);\n  vec3 rimLight = (((rimLightColor.rgb * rimLightColor.a) * rim) * (0.15 + 0.85 * rimFacing)) * (0.15 + 0.35 * ambientOcclusion);\n  float mipLevel = roughness * environmentMipCount;\n  vec3 envColor = (textureLod(environmentMap, reflectDir, mipLevel)).rgb;\n  vec3 skyDiffuse = (textureLod(environmentMap, computedNormal, min(environmentMipCount, 6.0))).rgb;\n  vec3 envDiffuse = ((((skyDiffuse * albedo) * ambientOcclusion) * (1.0 - metallic)) * (0.32 + ambientLightColor.a * 0.18)) * environmentMapStrength;\n  vec3 envSpecular = (((envColor * fresnel) * (1.0 - roughness * 0.72)) * mix(0.28, 0.08, metallic)) * environmentMapStrength;\n  float shadow = 0.0;\n  if (useShadow) {\n    vec3 projCoords = vPosLightSpace.xyz / vPosLightSpace.w;\n    projCoords = projCoords * 0.5 + vec3(0.5, 0.5, 0.5);\n    if (((((projCoords.z &lt;= 1.0) &amp;&amp; (0.0 &lt;= projCoords.x)) &amp;&amp; (projCoords.x &lt;= 1.0)) &amp;&amp; (0.0 &lt;= projCoords.y)) &amp;&amp; (projCoords.y &lt;= 1.0)) {\n      float bias = max(shadowBias, 0.002 * (1.0 - dot(computedNormal, sunDir)));\n      float total = 0.0;\n      float weightSum = 0.0;\n      for(int ix = 0; ix &lt; 5; ix++) {\n        for(int iy = 0; iy &lt; 5; iy++) {\n          int x = ix - 2;\n          int y = iy - 2;\n          float wx = 1.0 - abs(float(x)) * 0.25;\n          float wy = 1.0 - abs(float(y)) * 0.25;\n          float w = wx * wy;\n          vec2 offset = vec2(float(x), float(y)) * shadowMapTexelSize;\n          float lit = texture(shadowMap, vec3(projCoords.xy + offset, projCoords.z - bias));\n          total += w * lit;\n          weightSum += w;\n        };\n      }\n      shadow = 1.0 - total / weightSum;\n    }\n  }\n  if (debugViewMode == 1) {\n    fragColor = vec4(albedo * tint.rgb, (fragColor).a * tint.a);\n  } else if (debugViewMode == 2) {\n    fragColor = vec4(computedNormal * 0.5 + vec3(0.5, 0.5, 0.5), (fragColor).a);\n  } else if (debugViewMode == 3) {\n    fragColor = vec4(ambientOcclusion, ambientOcclusion, ambientOcclusion, (fragColor).a);\n  } else if (debugViewMode == 4) {\n    fragColor = vec4(metallic, metallic, metallic, (fragColor).a);\n  } else if (debugViewMode == 5) {\n    float specularMap = clamp(dot(f0mix, vec3(0.3333333, 0.3333333, 0.3333333)) * (1.0 - roughness * 0.5), 0.0, 1.0);\n    fragColor = vec4(specularMap, specularMap, specularMap, (fragColor).a);\n  } else {\n    vec3 direct = (specular + diffuse) * (1.0 - shadow);\n    vec3 ambient = ((albedo * ambientLightColor.rgb) * ambientLightColor.a) * ambientOcclusion;\n    vec3 lo = (((direct + ambient) + rimLight) + envDiffuse) + envSpecular;\n    vec3 litColor = mix(lo, envColor * environmentMapStrength, fresnel * metallic);\n    if (0.0 &lt; transmission) {\n      float glassMix = clamp((0.35 + transmission * 0.55) + roughness * 0.1, 0.0, 1.0);\n      litColor = mix(litColor, envColor, glassMix);\n      litColor = litColor * mix(1.0, 0.82, transmission);\n      fragColor.a = (fragColor).a * mix(1.0, 0.08 + roughness * 0.2, transmission);\n    }\n    litColor += emissiveValue;\n    litColor = applyFog(litColor, worldPos);\n    fragColor = vec4(litColor, (fragColor).a) * tint;\n  }\n}\n&quot;</span></pre></dt>
   <dd>
     
     
@@ -397,8 +409,8 @@
   <dd>
     
     Attaches an environment map to a PBR context.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L591" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L591" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L615" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L615" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -411,8 +423,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1751" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1751" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1790" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1790" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -425,8 +437,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1775" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1775" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1814" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1814" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -438,8 +450,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L975" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L975" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L999" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L999" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -448,8 +460,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L981" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L981" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1005" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1005" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -459,8 +471,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L796" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L796" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L820" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L820" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -473,8 +485,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1767" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1767" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1806" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1806" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -484,8 +496,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1761" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1761" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1800" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1800" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -497,8 +509,8 @@
   <dd>
     
     Deletes the OpenGL resources owned by a PBR context.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L603" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L603" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L627" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L627" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -508,8 +520,8 @@
   <dd>
     
     Deletes the OpenGL texture owned by an environment map.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L342" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L342" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L360" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L360" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -522,8 +534,8 @@
   <dd>
     
     Draws a glTF file using PBR context state.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1742" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1742" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1781" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1781" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -533,8 +545,8 @@
   <dd>
     
     Draws a node tree using PBR context state.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1724" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1724" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1763" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1763" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -548,8 +560,8 @@
   <dd>
     
     Draws the skybox using a full-screen quad.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L510" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L510" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L528" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L528" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -561,8 +573,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1772" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1772" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1811" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1811" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -575,8 +587,8 @@
   <dd>
     
     Loads a small procedural studio cubemap.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L506" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L506" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L524" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L524" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -590,8 +602,8 @@
   <dd>
     
     Loads an environment map from a cube texture path.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L496" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L496" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L514" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L514" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -604,8 +616,8 @@
   <dd>
     
     Loads a solid-color cubemap.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L500" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L500" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L518" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L518" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -618,8 +630,8 @@
   <dd>
     
     Creates an environment-map handle from an existing texture.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L335" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L335" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L353" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L353" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -632,8 +644,8 @@
   <dd>
     
     Creates reusable state for PBR rendering.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L586" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L586" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L610" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L610" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -643,8 +655,8 @@
   <dd>
     
     Creates reusable state for PBR rendering.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L554" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L554" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L572" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L572" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -656,8 +668,8 @@
   <dd>
     
     Creates an OpenGL renderer wrapper.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1747" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1747" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1786" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1786" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -670,8 +682,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1808" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1808" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1847" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1847" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -683,8 +695,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1812" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1812" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1851" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1851" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -697,8 +709,8 @@
   <dd>
     
     Uploads primitive data to OpenGL.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L798" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L798" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L822" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L822" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -714,7 +726,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-06-28 14:25:12 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-07-02 05:03:07 UTC</small>
       </div>
     </div>
   </div>
