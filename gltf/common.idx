@@ -58,8 +58,8 @@ nim	aiStep	gltf/common.html#aiStep	AnimInterpolation.aiStep		155
 nim	aiLinear	gltf/common.html#aiLinear	AnimInterpolation.aiLinear		155
 nim	aiCubicSpline	gltf/common.html#aiCubicSpline	AnimInterpolation.aiCubicSpline		155
 nim	AnimInterpolation	gltf/common.html#AnimInterpolation	enum AnimInterpolation		155
-nim	AnimationChannel	gltf/common.html#AnimationChannel	object AnimationChannel		158
-nim	AnimationClip	gltf/common.html#AnimationClip	object AnimationClip		176
+nim	AnimationChannel	gltf/common.html#AnimationChannel	type AnimationChannel		158
+nim	AnimationClip	gltf/common.html#AnimationClip	type AnimationClip		176
 nim	Material	gltf/common.html#Material	type Material		181
 nim	AABounds	gltf/common.html#AABounds	object AABounds		223
 nim	Bounds	gltf/common.html#Bounds	object Bounds		226

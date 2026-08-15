@@ -65,7 +65,7 @@
   min*, max*: Vec3">AABounds</a></li>
 <li><a class="reference" href="#AlphaMode" title="AlphaMode = enum
   OpaqueAlphaMode, MaskAlphaMode, BlendAlphaMode">AlphaMode</a></li>
-<li><a class="reference" href="#AnimationChannel" title="AnimationChannel = object
+<li><a class="reference" href="#AnimationChannel" title="AnimationChannel = ref object
   target*: Node
   path*: AnimPath
   interpolation*: AnimInterpolation
@@ -82,7 +82,7 @@
   valuesWeights*: seq[seq[float32]]
   inTangentsWeights*: seq[seq[float32]]
   outTangentsWeights*: seq[seq[float32]]">AnimationChannel</a></li>
-<li><a class="reference" href="#AnimationClip" title="AnimationClip = object
+<li><a class="reference" href="#AnimationClip" title="AnimationClip = ref object
   name*: string
   duration*: float32
   channels*: seq[AnimationChannel]">AnimationClip</a></li>
@@ -295,7 +295,7 @@
   </dd>
 </div>
 <div id="AnimationChannel">
-  <dt><pre><a href="#AnimationChannel"><span class="Identifier">AnimationChannel</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <dt><pre><a href="#AnimationChannel"><span class="Identifier">AnimationChannel</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
   <span class="Identifier">target</span><span class="Operator">*</span><span class="Other">:</span> <a href="#Node"><span class="Identifier">Node</span></a>
   <span class="Identifier">path</span><span class="Operator">*</span><span class="Other">:</span> <a href="#AnimPath"><span class="Identifier">AnimPath</span></a>
   <span class="Identifier">interpolation</span><span class="Operator">*</span><span class="Other">:</span> <a href="#AnimInterpolation"><span class="Identifier">AnimInterpolation</span></a>
@@ -321,7 +321,7 @@
   </dd>
 </div>
 <div id="AnimationClip">
-  <dt><pre><a href="#AnimationClip"><span class="Identifier">AnimationClip</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <dt><pre><a href="#AnimationClip"><span class="Identifier">AnimationClip</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
   <span class="Identifier">name</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
   <span class="Identifier">duration</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
   <span class="Identifier">channels</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="#AnimationChannel"><span class="Identifier">AnimationChannel</span></a><span class="Other">]</span></pre></dt>
@@ -739,7 +739,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-08-11 20:34:04 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-08-15 18:22:55 UTC</small>
       </div>
     </div>
   </div>
