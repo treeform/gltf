@@ -130,6 +130,7 @@
   baseColorTransform*: TextureTransform
   baseColorSampler*: TextureSampler
   baseColorFactor*: Color
+  baseColorPlaceholder*: bool
   metallicRoughness*: Image
   metallicRoughnessKtx2*: string
   metallicRoughnessName*: string
@@ -137,6 +138,7 @@
   metallicRoughnessSampler*: TextureSampler
   metallicFactor*: float32
   roughnessFactor*: float32
+  metallicRoughnessPlaceholder*: bool
   normal*: Image
   normalKtx2*: string
   normalName*: string
@@ -144,18 +146,21 @@
   normalSampler*: TextureSampler
   hasNormalTexture*: bool
   normalScale*: float32
+  normalPlaceholder*: bool
   occlusion*: Image
   occlusionKtx2*: string
   occlusionName*: string
   occlusionTransform*: TextureTransform
   occlusionSampler*: TextureSampler
   occlusionStrength*: float32
+  occlusionPlaceholder*: bool
   emissive*: Image
   emissiveKtx2*: string
   emissiveName*: string
   emissiveTransform*: TextureTransform
   emissiveSampler*: TextureSampler
   emissiveFactor*: Color
+  emissivePlaceholder*: bool
   alphaMode*: AlphaMode
   alphaCutoff*: float32
   doubleSided*: bool
@@ -278,8 +283,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L223" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L223" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L232" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L232" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -362,8 +367,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L231" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L231" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L240" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L240" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -375,8 +380,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L226" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L226" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L235" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L235" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -424,8 +429,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L246" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L246" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L255" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L255" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -453,8 +458,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L235" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L235" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L244" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L244" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -477,6 +482,7 @@
   <span class="Identifier">baseColorTransform</span><span class="Operator">*</span><span class="Other">:</span> <a href="#TextureTransform"><span class="Identifier">TextureTransform</span></a>
   <span class="Identifier">baseColorSampler</span><span class="Operator">*</span><span class="Other">:</span> <a href="#TextureSampler"><span class="Identifier">TextureSampler</span></a>
   <span class="Identifier">baseColorFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Color</span>
+  <span class="Identifier">baseColorPlaceholder</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
   <span class="Identifier">metallicRoughness</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Image</span>
   <span class="Identifier">metallicRoughnessKtx2</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
   <span class="Identifier">metallicRoughnessName</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
@@ -484,6 +490,7 @@
   <span class="Identifier">metallicRoughnessSampler</span><span class="Operator">*</span><span class="Other">:</span> <a href="#TextureSampler"><span class="Identifier">TextureSampler</span></a>
   <span class="Identifier">metallicFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
   <span class="Identifier">roughnessFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">metallicRoughnessPlaceholder</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
   <span class="Identifier">normal</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Image</span>
   <span class="Identifier">normalKtx2</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
   <span class="Identifier">normalName</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
@@ -491,18 +498,21 @@
   <span class="Identifier">normalSampler</span><span class="Operator">*</span><span class="Other">:</span> <a href="#TextureSampler"><span class="Identifier">TextureSampler</span></a>
   <span class="Identifier">hasNormalTexture</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
   <span class="Identifier">normalScale</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">normalPlaceholder</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
   <span class="Identifier">occlusion</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Image</span>
   <span class="Identifier">occlusionKtx2</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
   <span class="Identifier">occlusionName</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
   <span class="Identifier">occlusionTransform</span><span class="Operator">*</span><span class="Other">:</span> <a href="#TextureTransform"><span class="Identifier">TextureTransform</span></a>
   <span class="Identifier">occlusionSampler</span><span class="Operator">*</span><span class="Other">:</span> <a href="#TextureSampler"><span class="Identifier">TextureSampler</span></a>
   <span class="Identifier">occlusionStrength</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">occlusionPlaceholder</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
   <span class="Identifier">emissive</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Image</span>
   <span class="Identifier">emissiveKtx2</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
   <span class="Identifier">emissiveName</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
   <span class="Identifier">emissiveTransform</span><span class="Operator">*</span><span class="Other">:</span> <a href="#TextureTransform"><span class="Identifier">TextureTransform</span></a>
   <span class="Identifier">emissiveSampler</span><span class="Operator">*</span><span class="Other">:</span> <a href="#TextureSampler"><span class="Identifier">TextureSampler</span></a>
   <span class="Identifier">emissiveFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Color</span>
+  <span class="Identifier">emissivePlaceholder</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
   <span class="Identifier">alphaMode</span><span class="Operator">*</span><span class="Other">:</span> <a href="#AlphaMode"><span class="Identifier">AlphaMode</span></a>
   <span class="Identifier">alphaCutoff</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
   <span class="Identifier">doubleSided</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
@@ -511,7 +521,7 @@
   <span class="Identifier">data</span><span class="Operator">*</span><span class="Other">:</span> <a href="backends/opengl/common.html#MaterialData"><span class="Identifier">MaterialData</span></a></pre></dt>
   <dd>
     
-    
+    Texture slots the source file left empty are filled with a 1x1 constant image so renderers always have something to sample. Those fills are marked with the matching <tt class="docutils literal"><span class="pre"><span class="Operator">*</span><span class="Identifier">Placeholder</span></span></tt> flag, since a 1x1 image is otherwise indistinguishable from a real one that small.
     <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L181" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
 <a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L181" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
@@ -739,7 +749,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-08-15 18:22:55 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-08-15 19:19:08 UTC</small>
       </div>
     </div>
   </div>

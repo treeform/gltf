@@ -61,14 +61,14 @@ nim	AnimInterpolation	gltf/common.html#AnimInterpolation	enum AnimInterpolation	
 nim	AnimationChannel	gltf/common.html#AnimationChannel	type AnimationChannel		158
 nim	AnimationClip	gltf/common.html#AnimationClip	type AnimationClip		176
 nim	Material	gltf/common.html#Material	type Material		181
-nim	AABounds	gltf/common.html#AABounds	object AABounds		223
-nim	Bounds	gltf/common.html#Bounds	object Bounds		226
-nim	BoundingSphere	gltf/common.html#BoundingSphere	object BoundingSphere		231
-nim	GltfFile	gltf/common.html#GltfFile	type GltfFile		235
-nim	dvLit	gltf/common.html#dvLit	DebugView.dvLit		246
-nim	dvUnlit	gltf/common.html#dvUnlit	DebugView.dvUnlit		246
-nim	dvNormals	gltf/common.html#dvNormals	DebugView.dvNormals		246
-nim	dvAoBake	gltf/common.html#dvAoBake	DebugView.dvAoBake		246
-nim	dvMetallic	gltf/common.html#dvMetallic	DebugView.dvMetallic		246
-nim	dvSpecular	gltf/common.html#dvSpecular	DebugView.dvSpecular		246
-nim	DebugView	gltf/common.html#DebugView	enum DebugView		246
+nim	AABounds	gltf/common.html#AABounds	object AABounds		232
+nim	Bounds	gltf/common.html#Bounds	object Bounds		235
+nim	BoundingSphere	gltf/common.html#BoundingSphere	object BoundingSphere		240
+nim	GltfFile	gltf/common.html#GltfFile	type GltfFile		244
+nim	dvLit	gltf/common.html#dvLit	DebugView.dvLit		255
+nim	dvUnlit	gltf/common.html#dvUnlit	DebugView.dvUnlit		255
+nim	dvNormals	gltf/common.html#dvNormals	DebugView.dvNormals		255
+nim	dvAoBake	gltf/common.html#dvAoBake	DebugView.dvAoBake		255
+nim	dvMetallic	gltf/common.html#dvMetallic	DebugView.dvMetallic		255
+nim	dvSpecular	gltf/common.html#dvSpecular	DebugView.dvSpecular		255
+nim	DebugView	gltf/common.html#DebugView	enum DebugView		255
