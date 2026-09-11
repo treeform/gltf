@@ -99,11 +99,6 @@ when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal
     skyboxLod: float32 = 7.0
 
 when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
-  window.runeInputEnabled = true
-  window.onRune = proc(rune: Rune) =
-    sk.inputRunes.add(rune)
-
-when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
   proc applyTheme(sk: Silky) =
     ## Applies the viewer theme colors and spacing.
     sk.theme.padding = 10
