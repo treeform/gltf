@@ -876,6 +876,7 @@ proc uploadTextureToGpu(
   ## Uploads a texture to OpenGL.
   if ktx2Data.len > 0:
     textureId = loadKtx2Texture(ktx2Data, sampler)
+    inc textureBindEpoch
     return
 
   if image == nil:
@@ -883,6 +884,9 @@ proc uploadTextureToGpu(
 
   glGenTextures(1, textureId.addr)
   glBindTexture(GL_TEXTURE_2D, textureId)
+  # Binding on the active unit changes what the state cache believes is
+  # bound there, so force every cached unit to rebind.
+  inc textureBindEpoch
   # Opaque images upload as RGB, so NPOT widths can have non-4-byte rows.
   glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
   if image.isOpaque():
@@ -1644,6 +1648,23 @@ proc flushBlended(ctx: PbrContext) =
     )
   ctx.blended.setLen(0)
 
+proc abortPass(ctx: PbrContext) =
+  ## Unwinds an implicit pass after an exception escaped a draw: drops the
+  ## deferred blended entries, restores the canonical GL state and forgets
+  ## every cached value so the next draw starts clean.
+  ctx.blended.setLen(0)
+  ctx.deferred.setLen(0)
+  ctx.passDepth = 0
+  try:
+    glDisable(GL_BLEND)
+    glDepthMask(GL_TRUE)
+    glFrontFace(GL_CCW)
+    glEnable(GL_CULL_FACE)
+  except CatchableError:
+    discard
+  ctx.invalidateGlState()
+  ctx.invalidateUniformCache()
+
 proc endPass*(ctx: PbrContext) =
   ## Ends a batched PBR pass: flushes deferred blended primitives, sorted
   ## back-to-front across every draw in the pass, and restores the canonical
@@ -1678,32 +1699,38 @@ proc drawPbr(
   if implicitPass:
     ctx.beginPass()
 
-  node.updateTransforms(ctx.transform, ctx.useTrs)
+  var completed = false
+  try:
+    node.updateTransforms(ctx.transform, ctx.useTrs)
 
-  renderPbrNode(
-    node,
-    ctx.transform,
-    ctx.view,
-    ctx.proj,
-    ctx.tint,
-    ctx.ambientLightColor,
-    ctx.sunLightDirection,
-    ctx.sunLightColor,
-    ctx.rimLightDirection,
-    ctx.rimLightColor,
-    ctx.debugView,
-    ctx.cameraPosition,
-    useShadow=false,
-    lightSpace=mat4(),
-    shadowTex=0,
-    deferBlend=true,
-    blended=ctx.blended,
-    ctx=ctx,
-    root=node
-  )
-
-  if implicitPass:
-    ctx.endPass()
+    renderPbrNode(
+      node,
+      ctx.transform,
+      ctx.view,
+      ctx.proj,
+      ctx.tint,
+      ctx.ambientLightColor,
+      ctx.sunLightDirection,
+      ctx.sunLightColor,
+      ctx.rimLightDirection,
+      ctx.rimLightColor,
+      ctx.debugView,
+      ctx.cameraPosition,
+      useShadow=false,
+      lightSpace=mat4(),
+      shadowTex=0,
+      deferBlend=true,
+      blended=ctx.blended,
+      ctx=ctx,
+      root=node
+    )
+    completed = true
+  finally:
+    if implicitPass:
+      if completed:
+        ctx.endPass()
+      else:
+        ctx.abortPass()
 
 proc shadowLookAt(eye, center, up: Vec3): Mat4 =
   ## Standard OpenGL lookAt (z-backward) for shadow mapping.
@@ -1885,78 +1912,85 @@ proc drawPbrWithShadow(
   let implicitPass = ctx.passDepth == 0
   if implicitPass:
     ctx.beginPass()
+  var completed = false
+  try:
 
-  node.updateTransforms(ctx.transform, ctx.useTrs)
+    node.updateTransforms(ctx.transform, ctx.useTrs)
 
-  let (lightView, lightProj, lightSpace, _) =
-    getShadowMatrices(node, ctx.transform, ctx.sunLightDirection)
+    let (lightView, lightProj, lightSpace, _) =
+      getShadowMatrices(node, ctx.transform, ctx.sunLightDirection)
 
-  # Save viewport and framebuffer.
-  var
-    oldViewport: array[4, GLint]
-    oldFramebuffer: GLint
-  glGetIntegerv(GL_VIEWPORT, oldViewport[0].addr)
-  glGetIntegerv(GL_FRAMEBUFFER_BINDING, oldFramebuffer.addr)
+    # Save viewport and framebuffer.
+    var
+      oldViewport: array[4, GLint]
+      oldFramebuffer: GLint
+    glGetIntegerv(GL_VIEWPORT, oldViewport[0].addr)
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, oldFramebuffer.addr)
 
-  # Depth pass.
-  glViewport(
-    0,
-    0,
-    ctx.shadowMapSize.GLsizei,
-    ctx.shadowMapSize.GLsizei
-  )
-  glBindFramebuffer(GL_FRAMEBUFFER, ctx.shadowMapFbo)
-  glClear(GL_DEPTH_BUFFER_BIT)
-  glUseProgram(ctx.shadowDepthShader)
-  glEnable(GL_CULL_FACE)
-  glCullFace(GL_BACK)
-  glEnable(GL_DEPTH_TEST)
-  glDepthMask(GL_TRUE)
+    # Depth pass.
+    glViewport(
+      0,
+      0,
+      ctx.shadowMapSize.GLsizei,
+      ctx.shadowMapSize.GLsizei
+    )
+    glBindFramebuffer(GL_FRAMEBUFFER, ctx.shadowMapFbo)
+    glClear(GL_DEPTH_BUFFER_BIT)
+    glUseProgram(ctx.shadowDepthShader)
+    glEnable(GL_CULL_FACE)
+    glCullFace(GL_BACK)
+    glEnable(GL_DEPTH_TEST)
+    glDepthMask(GL_TRUE)
 
-  renderShadowNode(
-    node,
-    node,
-    ctx.transform,
-    lightView,
-    lightProj,
-    ctx.tint,
-    ctx,
-    applyTrs=true
-  )
+    renderShadowNode(
+      node,
+      node,
+      ctx.transform,
+      lightView,
+      lightProj,
+      ctx.tint,
+      ctx,
+      applyTrs=true
+    )
 
-  glBindFramebuffer(GL_FRAMEBUFFER, oldFramebuffer.GLuint)
+    glBindFramebuffer(GL_FRAMEBUFFER, oldFramebuffer.GLuint)
 
-  # Restore viewport.
-  glViewport(oldViewport[0], oldViewport[1], oldViewport[2], oldViewport[3])
+    # Restore viewport.
+    glViewport(oldViewport[0], oldViewport[1], oldViewport[2], oldViewport[3])
 
-  # The depth pass bound its own program and toggled enables.
-  ctx.invalidateGlState()
+    # The depth pass bound its own program and toggled enables.
+    ctx.invalidateGlState()
 
-  # Main pass with shadow sampling.
-  renderPbrNode(
-    node,
-    ctx.transform,
-    ctx.view,
-    ctx.proj,
-    ctx.tint,
-    ctx.ambientLightColor,
-    ctx.sunLightDirection,
-    ctx.sunLightColor,
-    ctx.rimLightDirection,
-    ctx.rimLightColor,
-    ctx.debugView,
-    ctx.cameraPosition,
-    useShadow=true,
-    lightSpace=lightSpace,
-    shadowTex=ctx.shadowMapTex,
-    deferBlend=true,
-    blended=ctx.blended,
-    ctx=ctx,
-    root=node
-  )
+    # Main pass with shadow sampling.
+    renderPbrNode(
+      node,
+      ctx.transform,
+      ctx.view,
+      ctx.proj,
+      ctx.tint,
+      ctx.ambientLightColor,
+      ctx.sunLightDirection,
+      ctx.sunLightColor,
+      ctx.rimLightDirection,
+      ctx.rimLightColor,
+      ctx.debugView,
+      ctx.cameraPosition,
+      useShadow=true,
+      lightSpace=lightSpace,
+      shadowTex=ctx.shadowMapTex,
+      deferBlend=true,
+      blended=ctx.blended,
+      ctx=ctx,
+      root=node
+    )
 
-  if implicitPass:
-    ctx.endPass()
+    completed = true
+  finally:
+    if implicitPass:
+      if completed:
+        ctx.endPass()
+      else:
+        ctx.abortPass()
 
 proc draw*(ctx: PbrContext, node: Node) =
   ## Draws a node tree using PBR context state.
