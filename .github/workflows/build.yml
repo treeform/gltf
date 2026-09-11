@@ -18,6 +18,16 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
+      - name: Checkout Khronos compression samples
+        uses: actions/checkout@v5
+        with:
+          repository: KhronosGroup/glTF-Sample-Assets
+          ref: 9429648735279342b4c32b8745f7904196607379
+          path: glTF-Sample-Assets
+          sparse-checkout: |
+            Models/AnimatedMorphCube/glTF-Quantized
+            Models/BrainStem/glTF-Meshopt-EXT
+          sparse-checkout-cone-mode: false
       - uses: treeform/setup-nim-action@v6
       - name: Install dependencies
         shell: bash
@@ -64,6 +74,16 @@ jobs:
       - run: nim check tests/draco/tests.nim
       - run: nim r -d:release tests/backend_shaders.nim
       - run: nim r -d:release tests/draco/tests.nim
+      - name: Load Khronos KHR_mesh_quantization sample
+        run: >-
+          nim r -d:release tests/test_sample_asset.nim
+          glTF-Sample-Assets/Models/AnimatedMorphCube/glTF-Quantized/AnimatedMorphCube.gltf
+          KHR_mesh_quantization
+      - name: Load Khronos EXT_meshopt_compression sample
+        run: >-
+          nim r -d:release tests/test_sample_asset.nim
+          glTF-Sample-Assets/Models/BrainStem/glTF-Meshopt-EXT/BrainStem.gltf
+          EXT_meshopt_compression
       - name: Run tests (Linux)
         if: runner.os == 'Linux'
         run: |

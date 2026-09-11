@@ -88,7 +88,8 @@ The table below reflects the current code, not the full glTF 2.0 spec.
 | `KHR_node_visibility` | Yes | Yes | No | Static visibility and visibility animation are supported. |
 | `KHR_animation_pointer` | Partial | Partial | No | Only the visibility target path is supported. |
 | `KHR_draco_mesh_compression` | No | No | No | Not supported yet. |
-| `KHR_mesh_quantization` | No | No | No | Not supported yet. |
+| `KHR_mesh_quantization` | Yes | Yes | No | Integer mesh attributes are decoded with their declared normalization and stride. |
+| `EXT_meshopt_compression` | Yes | Yes | No | Compressed buffer views are decoded in pure Nim, including standard attribute filters. |
 | `KHR_texture_basisu` | Yes | Yes | Partial | KTX2 textures; see [KHR_texture_basisu and KTX2](#khr_texture_basisu-and-ktx2). The embedded KTX2 module can read and write supported KTX2 payloads directly, while glTF export paths that generate new encoded sidecars still use [KTX-Software](#writing-ktx2-with-ktx-software). |
 | `KHR_lights_punctual` | No | No | No | Not supported yet. |
 | `KHR_materials_unlit` | No | No | No | Not supported yet. |

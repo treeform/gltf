@@ -1,7 +1,7 @@
 import
   std/[base64, json, os, strformat, strutils],
   chroma, flatty/binny, pixie, vmath, webby,
-  common, draco, internal, models
+  common, draco, internal, meshopt, models
 
 export common
 
@@ -13,6 +13,8 @@ const SupportedExtensions = [
   "KHR_texture_basisu",
   "EXT_texture_webp",
   "KHR_draco_mesh_compression",
+  "KHR_mesh_quantization",
+  "EXT_meshopt_compression",
   "EXT_mesh_gpu_instancing"
 ]
 
@@ -105,6 +107,52 @@ proc unsupportedUsedExtensions(jsonRoot: JsonNode): seq[string] =
 proc readFloat32(data: string, offset: int): float32 =
   ## Reads a float32 from a byte string.
   cast[ptr float32](data[offset].unsafeAddr)[]
+
+proc componentSize(componentType: ComponentType): int =
+  ## Returns the byte size of one accessor component.
+  case componentType
+  of ByteComponent, UnsignedByteComponent:
+    1
+  of ShortComponent, UnsignedShortComponent:
+    2
+  of UnsignedIntComponent, FloatComponent:
+    4
+
+proc readAccessorComponent(
+  accessor: Accessor,
+  data: string,
+  offset: int
+): float32 =
+  ## Reads one accessor component, applying glTF integer normalization.
+  case accessor.componentType
+  of ByteComponent:
+    let value = cast[int8](data[offset])
+    if accessor.normalized:
+      max(value.float32 / 127.0'f32, -1.0'f32)
+    else:
+      value.float32
+  of UnsignedByteComponent:
+    let value = data.readUint8(offset)
+    if accessor.normalized:
+      value.float32 / 255.0'f32
+    else:
+      value.float32
+  of ShortComponent:
+    let value = cast[int16](data.readUint16(offset))
+    if accessor.normalized:
+      max(value.float32 / 32767.0'f32, -1.0'f32)
+    else:
+      value.float32
+  of UnsignedShortComponent:
+    let value = data.readUint16(offset)
+    if accessor.normalized:
+      value.float32 / 65535.0'f32
+    else:
+      value.float32
+  of UnsignedIntComponent:
+    data.readUint32(offset).float32
+  of FloatComponent:
+    readFloat32(data, offset)
 
 proc readSparseIndices(
   accessor: Accessor,
@@ -211,14 +259,18 @@ proc readAccessorVec3(
     view = bufferViews[accessor.bufferView]
     buffer = buffers[view.buffer]
     start = view.byteOffset + accessor.byteOffset
-    stride = if view.byteStride > 0: view.byteStride else: 12
+    componentStride = accessor.componentType.componentSize()
+    elemSize = componentStride * 3
+    stride = if view.byteStride > 0: view.byteStride else: elemSize
+  if accessor.kind != atVEC3:
+    raise newException(GltfError, "Unsupported vec3 accessor kind")
   result.setLen(accessor.count)
   for i in 0 ..< accessor.count:
     let off = start + i * stride
     result[i] = vec3(
-      readFloat32(buffer, off),
-      readFloat32(buffer, off + 4),
-      readFloat32(buffer, off + 8)
+      readAccessorComponent(accessor, buffer, off),
+      readAccessorComponent(accessor, buffer, off + componentStride),
+      readAccessorComponent(accessor, buffer, off + componentStride * 2)
     )
   if accessor.sparse.used:
     let
@@ -226,12 +278,22 @@ proc readAccessorVec3(
       sparseView = bufferViews[accessor.sparse.values.bufferView]
       sparseBuffer = buffers[sparseView.buffer]
       sparseStart = sparseView.byteOffset + accessor.sparse.values.byteOffset
+      sparseStride =
+        if sparseView.byteStride > 0: sparseView.byteStride else: elemSize
     for i, dstIndex in indices:
-      let off = sparseStart + i * 12
+      let off = sparseStart + i * sparseStride
       result[dstIndex] = vec3(
-        readFloat32(sparseBuffer, off),
-        readFloat32(sparseBuffer, off + 4),
-        readFloat32(sparseBuffer, off + 8)
+        readAccessorComponent(accessor, sparseBuffer, off),
+        readAccessorComponent(
+          accessor,
+          sparseBuffer,
+          off + componentStride
+        ),
+        readAccessorComponent(
+          accessor,
+          sparseBuffer,
+          off + componentStride * 2
+        )
       )
 
 proc readAccessorQuat(
@@ -436,16 +498,6 @@ proc readMeshInstances(
         scales[i]
       else:
         vec3(1, 1, 1)
-
-proc componentSize(componentType: ComponentType): int =
-  ## Returns the byte size of one accessor component.
-  case componentType
-  of ByteComponent, UnsignedByteComponent:
-    1
-  of ShortComponent, UnsignedShortComponent:
-    2
-  of UnsignedIntComponent, FloatComponent:
-    4
 
 proc accessorComponentCount(kind: AccessorKind): int =
   ## Returns the number of components in one accessor element.
@@ -931,16 +983,16 @@ proc readAccessorVec2(
     view = bufferViews[accessor.bufferView]
     buffer = buffers[view.buffer]
     start = view.byteOffset + accessor.byteOffset
-    stride = if view.byteStride > 0: view.byteStride else: 8
+    componentStride = accessor.componentType.componentSize()
+    elemSize = componentStride * 2
+    stride = if view.byteStride > 0: view.byteStride else: elemSize
   assertRaise accessor.kind == atVEC2, "Unsupported vec2 accessor kind"
-  assertRaise accessor.componentType == FloatComponent,
-    "Unsupported vec2 component type"
   result.setLen(accessor.count)
   for i in 0 ..< accessor.count:
     let off = start + i * stride
     result[i] = vec2(
-      readFloat32(buffer, off),
-      readFloat32(buffer, off + 4)
+      readAccessorComponent(accessor, buffer, off),
+      readAccessorComponent(accessor, buffer, off + componentStride)
     )
   if accessor.sparse.used:
     let
@@ -948,11 +1000,13 @@ proc readAccessorVec2(
       sparseView = bufferViews[accessor.sparse.values.bufferView]
       sparseBuffer = buffers[sparseView.buffer]
       sparseStart = sparseView.byteOffset + accessor.sparse.values.byteOffset
+      sparseStride =
+        if sparseView.byteStride > 0: sparseView.byteStride else: elemSize
     for i, dstIndex in indices:
-      let off = sparseStart + i * 8
+      let off = sparseStart + i * sparseStride
       result[dstIndex] = vec2(
-        readFloat32(sparseBuffer, off),
-        readFloat32(sparseBuffer, off + 4)
+        readAccessorComponent(accessor, sparseBuffer, off),
+        readAccessorComponent(accessor, sparseBuffer, off + componentStride)
       )
 
 proc readAccessorVec4(
@@ -967,18 +1021,18 @@ proc readAccessorVec4(
     view = bufferViews[accessor.bufferView]
     buffer = buffers[view.buffer]
     start = view.byteOffset + accessor.byteOffset
-    stride = if view.byteStride > 0: view.byteStride else: 16
+    componentStride = accessor.componentType.componentSize()
+    elemSize = componentStride * 4
+    stride = if view.byteStride > 0: view.byteStride else: elemSize
   assertRaise accessor.kind == atVEC4, "Unsupported vec4 accessor kind"
-  assertRaise accessor.componentType == FloatComponent,
-    "Unsupported vec4 component type"
   result.setLen(accessor.count)
   for i in 0 ..< accessor.count:
     let off = start + i * stride
     result[i] = vec4(
-      readFloat32(buffer, off),
-      readFloat32(buffer, off + 4),
-      readFloat32(buffer, off + 8),
-      readFloat32(buffer, off + 12)
+      readAccessorComponent(accessor, buffer, off),
+      readAccessorComponent(accessor, buffer, off + componentStride),
+      readAccessorComponent(accessor, buffer, off + componentStride * 2),
+      readAccessorComponent(accessor, buffer, off + componentStride * 3)
     )
   if accessor.sparse.used:
     let
@@ -986,13 +1040,23 @@ proc readAccessorVec4(
       sparseView = bufferViews[accessor.sparse.values.bufferView]
       sparseBuffer = buffers[sparseView.buffer]
       sparseStart = sparseView.byteOffset + accessor.sparse.values.byteOffset
+      sparseStride =
+        if sparseView.byteStride > 0: sparseView.byteStride else: elemSize
     for i, dstIndex in indices:
-      let off = sparseStart + i * 16
+      let off = sparseStart + i * sparseStride
       result[dstIndex] = vec4(
-        readFloat32(sparseBuffer, off),
-        readFloat32(sparseBuffer, off + 4),
-        readFloat32(sparseBuffer, off + 8),
-        readFloat32(sparseBuffer, off + 12)
+        readAccessorComponent(accessor, sparseBuffer, off),
+        readAccessorComponent(accessor, sparseBuffer, off + componentStride),
+        readAccessorComponent(
+          accessor,
+          sparseBuffer,
+          off + componentStride * 2
+        ),
+        readAccessorComponent(
+          accessor,
+          sparseBuffer,
+          off + componentStride * 3
+        )
       )
 
 proc readAccessorMat4(
@@ -1253,6 +1317,63 @@ proc defaultRuntimeMaterial(): Material =
   result.doubleSided = false
   result.transmissionFactor = 0.0
 
+proc validateMeshAttribute(accessor: Accessor, semantic: string) =
+  ## Checks core and KHR_mesh_quantization vertex attribute layouts.
+  case semantic
+  of "POSITION":
+    assertRaise accessor.kind == atVEC3, "Unsupported position kind"
+    assertRaise accessor.componentType in {
+      FloatComponent,
+      ByteComponent,
+      UnsignedByteComponent,
+      ShortComponent,
+      UnsignedShortComponent,
+      UnsignedIntComponent
+    }, "Unsupported position component type"
+  of "NORMAL":
+    assertRaise accessor.kind == atVEC3, "Unsupported normal kind"
+    assertRaise accessor.componentType in {
+      FloatComponent,
+      ByteComponent,
+      ShortComponent
+    }, "Unsupported normal component type"
+    assertRaise accessor.componentType == FloatComponent or accessor.normalized,
+      "Integer normal accessors must be normalized"
+  of "TANGENT":
+    assertRaise accessor.kind == atVEC4, "Unsupported tangent kind"
+    assertRaise accessor.componentType in {
+      FloatComponent,
+      ByteComponent,
+      ShortComponent
+    }, "Unsupported tangent component type"
+    assertRaise accessor.componentType == FloatComponent or accessor.normalized,
+      "Integer tangent accessors must be normalized"
+  of "TEXCOORD":
+    assertRaise accessor.kind == atVEC2, "Unsupported texture coordinate kind"
+    assertRaise accessor.componentType in {
+      FloatComponent,
+      ByteComponent,
+      UnsignedByteComponent,
+      ShortComponent,
+      UnsignedShortComponent
+    }, "Unsupported texture coordinate component type"
+  else:
+    raise newException(GltfError, "Unsupported mesh attribute " & semantic)
+
+proc validateMorphAttribute(accessor: Accessor, semantic: string) =
+  ## Checks core and KHR_mesh_quantization morph target layouts.
+  assertRaise accessor.kind == atVEC3,
+    "Unsupported morph " & semantic.toLowerAscii() & " kind"
+  assertRaise accessor.componentType in {
+    FloatComponent,
+    ByteComponent,
+    ShortComponent
+  }, "Unsupported morph " & semantic.toLowerAscii() & " component type"
+  if semantic in ["NORMAL", "TANGENT"]:
+    assertRaise accessor.componentType == FloatComponent or accessor.normalized,
+      "Integer morph " & semantic.toLowerAscii() &
+      " accessors must be normalized"
+
 proc parseInterpolation(name: string): AnimInterpolation =
   ## Converts a glTF interpolation name into a runtime enum.
   case name
@@ -1487,53 +1608,19 @@ proc loadPrimitive(
 
   if primInfo.attributes.position >= 0:
     let accessor = accessors[primInfo.attributes.position]
-    if accessor.componentType == FloatComponent:
-      result.points = readAccessorVec3(
-        primInfo.attributes.position,
-        accessors,
-        bufferViews,
-        buffers
-      )
-    elif accessor.componentType == UnsignedShortComponent:
-      let
-        bufferView = bufferViews[accessor.bufferView]
-        buffer = buffers[bufferView.buffer]
-        start = bufferView.byteOffset + accessor.byteOffset
-      assertRaise accessor.kind == atVEC3, "Unsupported position kind"
-      result.points.setLen(accessor.count)
-      var stride = bufferView.byteStride
-      if stride == 0:
-        stride = 6
-      for i in 0 ..< accessor.count:
-        result.points[i] = vec3(
-          float32 buffer.readUint16(start + i * stride),
-          float32 buffer.readUint16(start + i * stride + 2),
-          float32 buffer.readUint16(start + i * stride + 4)
-        )
-    elif accessor.componentType == UnsignedIntComponent:
-      let
-        bufferView = bufferViews[accessor.bufferView]
-        buffer = buffers[bufferView.buffer]
-        start = bufferView.byteOffset + accessor.byteOffset
-      assertRaise accessor.kind == atVEC3, "Unsupported position kind"
-      assertRaise bufferView.byteStride == 0, "Unsupported position byteStride"
-      result.points.setLen(accessor.count)
-      var stride = bufferView.byteStride
-      if stride == 0:
-        stride = 12
-      for i in 0 ..< accessor.count:
-        result.points[i] = vec3(
-          float32 buffer.readUint32(start + i * stride),
-          float32 buffer.readUint32(start + i * stride + 4),
-          float32 buffer.readUint32(start + i * stride + 8)
-        )
-    else:
-      raise newException(
-        GltfError,
-        "Invalid position component type: " & $accessor.componentType.int
-      )
+    validateMeshAttribute(accessor, "POSITION")
+    result.points = readAccessorVec3(
+      primInfo.attributes.position,
+      accessors,
+      bufferViews,
+      buffers
+    )
 
   if primInfo.attributes.normal >= 0:
+    validateMeshAttribute(
+      accessors[primInfo.attributes.normal],
+      "NORMAL"
+    )
     result.normals = readAccessorVec3(
       primInfo.attributes.normal,
       accessors,
@@ -1542,6 +1629,10 @@ proc loadPrimitive(
     )
 
   if primInfo.attributes.tangent >= 0:
+    validateMeshAttribute(
+      accessors[primInfo.attributes.tangent],
+      "TANGENT"
+    )
     result.tangents = readAccessorVec4(
       primInfo.attributes.tangent,
       accessors,
@@ -1632,6 +1723,10 @@ proc loadPrimitive(
       )
 
   if primInfo.attributes.texcoord0 >= 0:
+    validateMeshAttribute(
+      accessors[primInfo.attributes.texcoord0],
+      "TEXCOORD"
+    )
     result.uvs = readAccessorVec2(
       primInfo.attributes.texcoord0,
       accessors,
@@ -1640,6 +1735,10 @@ proc loadPrimitive(
     )
 
   if primInfo.attributes.texcoord1 >= 0:
+    validateMeshAttribute(
+      accessors[primInfo.attributes.texcoord1],
+      "TEXCOORD"
+    )
     result.uvs1 = readAccessorVec2(
       primInfo.attributes.texcoord1,
       accessors,
@@ -1666,6 +1765,7 @@ proc loadPrimitive(
   for morphInfo in primInfo.morphTargets:
     var morphTarget = MorphTarget()
     if morphInfo.position >= 0:
+      validateMorphAttribute(accessors[morphInfo.position], "POSITION")
       morphTarget.positionDeltas = readAccessorVec3(
         morphInfo.position,
         accessors,
@@ -1673,6 +1773,7 @@ proc loadPrimitive(
         buffers
       )
     if morphInfo.normal >= 0:
+      validateMorphAttribute(accessors[morphInfo.normal], "NORMAL")
       morphTarget.normalDeltas = readAccessorVec3(
         morphInfo.normal,
         accessors,
@@ -1680,6 +1781,7 @@ proc loadPrimitive(
         buffers
       )
     if morphInfo.tangent >= 0:
+      validateMorphAttribute(accessors[morphInfo.tangent], "TANGENT")
       morphTarget.tangentDeltas = readAccessorVec3(
         morphInfo.tangent,
         accessors,
@@ -1764,24 +1866,46 @@ proc loadModelJsonInternal(
           &"Unsupported extension required: {extension}"
         )
 
+  var meshoptTargetBuffers: seq[int]
+  if "bufferViews" in jsonRoot:
+    for entry in jsonRoot["bufferViews"]:
+      if "extensions" in entry and
+        "EXT_meshopt_compression" in entry["extensions"]:
+          let bufferIndex = entry["buffer"].getInt()
+          if bufferIndex notin meshoptTargetBuffers:
+            meshoptTargetBuffers.add(bufferIndex)
+
   var buffers: seq[string]
   var bufferIndex = 0
-  for entry in jsonRoot["buffers"]:
+  for jsonBufferIndex in 0 ..< jsonRoot["buffers"].len:
+    let entry = jsonRoot["buffers"][jsonBufferIndex]
     var data: string
     let declaredByteLength = entry["byteLength"].getInt()
-    if "uri" in entry:
+    let explicitFallback =
+      "extensions" in entry and
+      "EXT_meshopt_compression" in entry["extensions"] and
+      entry["extensions"]["EXT_meshopt_compression"]{"fallback"}.getBool()
+    var hasData = true
+    if explicitFallback:
+      hasData = false
+    elif "uri" in entry:
       let uri = entry["uri"].getStr()
       if uri.startsWith("data:application/"):
         data = decode(uri.split(',')[1])
       else:
         data = readFile(joinPath(modelDir, uri))
-    else:
+    elif bufferIndex < externalBuffers.len:
       data = externalBuffers[bufferIndex]
       inc bufferIndex
-    assertRaise data.len >= declaredByteLength,
-      "Buffer length is shorter than declared byteLength"
-    if data.len > declaredByteLength:
-      data = data[0 ..< declaredByteLength]
+    elif jsonBufferIndex in meshoptTargetBuffers:
+      hasData = false
+    else:
+      raise newException(GltfError, "Missing external buffer data")
+    if hasData:
+      assertRaise data.len >= declaredByteLength,
+        "Buffer length is shorter than declared byteLength"
+      if data.len > declaredByteLength:
+        data = data[0 ..< declaredByteLength]
     buffers.add(data)
 
   var bufferViews: seq[BufferView]
@@ -1791,6 +1915,46 @@ proc loadModelJsonInternal(
     bufferView.byteOffset = entry{"byteOffset"}.getInt()
     bufferView.byteLength = entry["byteLength"].getInt()
     bufferView.byteStride = entry{"byteStride"}.getInt()
+
+    if "extensions" in entry and
+      "EXT_meshopt_compression" in entry["extensions"]:
+        let extension = entry["extensions"]["EXT_meshopt_compression"]
+        let
+          sourceBufferIndex = extension["buffer"].getInt()
+          sourceOffset = extension{"byteOffset"}.getInt()
+          sourceLength = extension["byteLength"].getInt()
+          stride = extension["byteStride"].getInt()
+          count = extension["count"].getInt()
+          mode = extension["mode"].getStr()
+          filter = extension{"filter"}.getStr()
+        assertRaise(
+          bufferView.byteStride == 0 or bufferView.byteStride == stride,
+          "EXT_meshopt_compression byteStride does not match bufferView"
+        )
+        assertRaise(
+          bufferView.byteLength == stride * count,
+          "EXT_meshopt_compression output length does not match bufferView"
+        )
+        assertRaise(
+          sourceBufferIndex >= 0 and sourceBufferIndex < buffers.len,
+          "Invalid EXT_meshopt_compression source buffer"
+        )
+        let sourceBuffer = buffers[sourceBufferIndex]
+        assertRaise(
+          sourceOffset >= 0 and sourceLength >= 0 and
+          sourceOffset + sourceLength <= sourceBuffer.len,
+          "EXT_meshopt_compression source range exceeds buffer"
+        )
+        let decoded = decodeMeshopt(
+          sourceBuffer[sourceOffset ..< sourceOffset + sourceLength],
+          count,
+          stride,
+          mode,
+          filter
+        )
+        buffers.add(decoded)
+        bufferView.buffer = buffers.high
+        bufferView.byteOffset = 0
 
     if "target" in entry:
       let target = entry["target"].getInt()
@@ -2183,10 +2347,17 @@ proc loadModelJsonInternal(
             ))
       if "targets" in primitive:
         for target in primitive["targets"]:
-          var morphTarget = MorphTargetInfo()
-          morphTarget.position = target{"POSITION"}.getInt()
-          morphTarget.normal = target{"NORMAL"}.getInt()
-          morphTarget.tangent = target{"TANGENT"}.getInt()
+          var morphTarget = MorphTargetInfo(
+            position: -1,
+            normal: -1,
+            tangent: -1
+          )
+          if "POSITION" in target:
+            morphTarget.position = target["POSITION"].getInt()
+          if "NORMAL" in target:
+            morphTarget.normal = target["NORMAL"].getInt()
+          if "TANGENT" in target:
+            morphTarget.tangent = target["TANGENT"].getInt()
           prim.morphTargets.add(morphTarget)
       primitiveDefs.add(prim)
       mesh.primitives.add(primitiveDefs.len - 1)
