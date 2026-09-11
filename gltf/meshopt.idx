@@ -1,0 +1,2 @@
+nimTitle	meshopt	gltf/meshopt.html	module gltf/meshopt		0
+nim	decodeMeshopt	gltf/meshopt.html#decodeMeshopt,string,int,int,string,string	proc decodeMeshopt(data: string; count, stride: int; mode, filter: string): string		441
