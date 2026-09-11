@@ -136,6 +136,10 @@
   <li><a class="reference" href="#beginFrame%2CRenderer%2CWindow%2CIVec2" title="beginFrame(renderer: Renderer; window: Window; size: IVec2)">beginFrame(renderer: Renderer; window: Window; size: IVec2)</a></li>
 
 </ul>
+<ul class="simple nested-toc-section">beginPass
+  <li><a class="reference" href="#beginPass%2CPbrContext" title="beginPass(ctx: PbrContext)">beginPass(ctx: PbrContext)</a></li>
+
+</ul>
 <ul class="simple nested-toc-section">captureScreenshot
   <li><a class="reference" href="#captureScreenshot%2CRenderer" title="captureScreenshot(renderer: Renderer): Image">captureScreenshot(renderer: Renderer): Image</a></li>
 
@@ -169,6 +173,18 @@
 </ul>
 <ul class="simple nested-toc-section">endFrame
   <li><a class="reference" href="#endFrame%2CRenderer" title="endFrame(renderer: Renderer)">endFrame(renderer: Renderer)</a></li>
+
+</ul>
+<ul class="simple nested-toc-section">endPass
+  <li><a class="reference" href="#endPass%2CPbrContext" title="endPass(ctx: PbrContext)">endPass(ctx: PbrContext)</a></li>
+
+</ul>
+<ul class="simple nested-toc-section">invalidateGlState
+  <li><a class="reference" href="#invalidateGlState%2CPbrContext" title="invalidateGlState(ctx: PbrContext)">invalidateGlState(ctx: PbrContext)</a></li>
+
+</ul>
+<ul class="simple nested-toc-section">invalidateUniformCache
+  <li><a class="reference" href="#invalidateUniformCache%2CPbrContext" title="invalidateUniformCache(ctx: PbrContext)">invalidateUniformCache(ctx: PbrContext)</a></li>
 
 </ul>
 <ul class="simple nested-toc-section">loadDefaultEnvironmentMap
@@ -283,8 +299,8 @@
   <dd>
     
     Reusable state for PBR rendering.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L117" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L117" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L159" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L159" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -409,8 +425,8 @@
   <dd>
     
     Attaches an environment map to a PBR context.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L615" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L615" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L704" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L704" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -423,8 +439,21 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1802" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1802" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L2023" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L2023" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="beginPass-procs-all">
+  <div id="beginPass,PbrContext">
+  <dt><pre><span class="Keyword">proc</span> <a href="#beginPass%2CPbrContext"><span class="Identifier">beginPass</span></a><span class="Other">(</span><span class="Identifier">ctx</span><span class="Other">:</span> <a href="#PbrContext"><span class="Identifier">PbrContext</span></a><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Starts a batched PBR pass. Until the matching endPass, the context assumes it owns the GL program binding, texture units 0-6, and the blend/depth/cull/front-face enables across draw calls, and defers blended primitives from all draws into one globally sorted flush at endPass. Nesting is allowed; only the outermost pair has effect.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L788" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L788" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -437,8 +466,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1826" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1826" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L2047" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L2047" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -450,8 +479,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L999" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L999" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1171" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1171" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -460,8 +489,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1005" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1005" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1177" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1177" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -471,8 +500,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L820" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L820" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L992" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L992" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -485,8 +514,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1818" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1818" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L2039" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L2039" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -496,8 +525,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1812" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1812" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L2033" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L2033" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -509,8 +538,8 @@
   <dd>
     
     Deletes the OpenGL resources owned by a PBR context.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L627" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L627" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L716" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L716" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -520,8 +549,8 @@
   <dd>
     
     Deletes the OpenGL texture owned by an environment map.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L360" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L360" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L448" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L448" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -534,8 +563,8 @@
   <dd>
     
     Draws a glTF file using PBR context state.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1793" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1793" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L2014" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L2014" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -545,8 +574,8 @@
   <dd>
     
     Draws a node tree using PBR context state.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1775" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1775" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1995" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1995" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -560,8 +589,8 @@
   <dd>
     
     Draws the skybox using a full-screen quad.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L528" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L528" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L617" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L617" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -573,8 +602,48 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1823" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1823" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L2044" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L2044" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="endPass-procs-all">
+  <div id="endPass,PbrContext">
+  <dt><pre><span class="Keyword">proc</span> <a href="#endPass%2CPbrContext"><span class="Identifier">endPass</span></a><span class="Other">(</span><span class="Identifier">ctx</span><span class="Other">:</span> <a href="#PbrContext"><span class="Identifier">PbrContext</span></a><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">GLerror</span><span class="Other">,</span> <span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">GltfError</span><span class="Other">]</span><span class="Other">,</span>
+                                <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Ends a batched PBR pass: flushes deferred blended primitives, sorted back-to-front across every draw in the pass, and restores the canonical GL state (blend off, depth writes on, CCW front faces, culling on).
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1668" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1668" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="invalidateGlState-procs-all">
+  <div id="invalidateGlState,PbrContext">
+  <dt><pre><span class="Keyword">proc</span> <a href="#invalidateGlState%2CPbrContext"><span class="Identifier">invalidateGlState</span></a><span class="Other">(</span><span class="Identifier">ctx</span><span class="Other">:</span> <a href="#PbrContext"><span class="Identifier">PbrContext</span></a><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Marks GL program, texture-unit, and enable state unknown. Call after running your own GL commands (binding other programs or textures, toggling blend/depth/cull) between draws inside a pass. Uniform values are per-program state and stay cached.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L214" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L214" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="invalidateUniformCache-procs-all">
+  <div id="invalidateUniformCache,PbrContext">
+  <dt><pre><span class="Keyword">proc</span> <a href="#invalidateUniformCache%2CPbrContext"><span class="Identifier">invalidateUniformCache</span></a><span class="Other">(</span><span class="Identifier">ctx</span><span class="Other">:</span> <a href="#PbrContext"><span class="Identifier">PbrContext</span></a><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Escape hatch for consumers that upload uniforms to pbrShader directly.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L231" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L231" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -587,8 +656,8 @@
   <dd>
     
     Loads a small procedural studio cubemap.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L524" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L524" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L613" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L613" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -602,8 +671,8 @@
   <dd>
     
     Loads an environment map from a cube texture path.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L514" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L514" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L603" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L603" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -616,8 +685,8 @@
   <dd>
     
     Loads a solid-color cubemap.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L518" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L518" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L607" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L607" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -630,8 +699,8 @@
   <dd>
     
     Creates an environment-map handle from an existing texture.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L353" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L353" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L441" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L441" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -644,8 +713,8 @@
   <dd>
     
     Creates reusable state for PBR rendering.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L610" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L610" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L699" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L699" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -655,8 +724,8 @@
   <dd>
     
     Creates reusable state for PBR rendering.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L572" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L572" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L661" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L661" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -668,8 +737,8 @@
   <dd>
     
     Creates an OpenGL renderer wrapper.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1798" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1798" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L2019" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L2019" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -682,8 +751,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1859" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1859" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L2080" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L2080" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -695,8 +764,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L1863" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L1863" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L2084" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L2084" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -709,8 +778,8 @@
   <dd>
     
     Uploads primitive data to OpenGL.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L822" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L822" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/renderer.nim#L994" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/renderer.nim#L994" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -726,7 +795,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-09-11 23:29:37 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-09-11 23:38:32 UTC</small>
       </div>
     </div>
   </div>
