@@ -330,16 +330,15 @@ proc applyClipAt*(clip: AnimationClip, time: float32) =
         )
 
 proc updateAnimation*(node: Node, dt: float32) =
-  ## Advances and applies active animation clips.
+  ## Advances active clips and applies morph weights, including static defaults.
   if node == nil:
     return
   node.resetToBase()
-  if node.animations.len == 0:
-    return
-
-  node.animTime += dt
-  if node.activeClips.len > 0:
-    for clipIdx in node.activeClips:
-      if clipIdx >= 0 and clipIdx < node.animations.len:
-        applyClipAt(node.animations[clipIdx], node.animTime)
+  if node.animations.len > 0:
+    node.animTime += dt
+    if node.activeClips.len > 0:
+      for clipIdx in node.activeClips:
+        if clipIdx >= 0 and clipIdx < node.animations.len:
+          applyClipAt(node.animations[clipIdx], node.animTime)
+  # Morph weights also define the rest pose of models with no animation clips.
   node.applyMorphs()

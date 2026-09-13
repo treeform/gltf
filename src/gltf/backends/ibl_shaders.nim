@@ -128,7 +128,9 @@ proc gltfIblFrag*(
         fresnel * visibility * distribution
     radiance += direct * sunLightColor.rgb * sunLightColor.a * nDotL
   var alpha = base.a
-  if alphaCutoff >= 0.0'f:
+  if opaqueMaterial != 0:
+    alpha = 1.0'f
+  elif alphaCutoff >= 0.0'f:
     if alpha < alphaCutoff:
       discardFragment()
     alpha = 1.0'f

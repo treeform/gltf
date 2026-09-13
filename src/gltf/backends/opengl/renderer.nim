@@ -894,7 +894,8 @@ proc setBlendCached(ctx: PbrContext, on: bool) =
     return
   if on:
     glEnable(GL_BLEND)
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
+      GL_ONE, GL_ONE_MINUS_SRC_ALPHA)
   else:
     glDisable(GL_BLEND)
   ctx.glState.blend = want

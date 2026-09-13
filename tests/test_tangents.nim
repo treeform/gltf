@@ -47,8 +47,7 @@ block mirroredSeam:
     doAssert mesh.morphTargets[0].positionDeltas[i].z == (original + 1).float32
   mesh.basePoints = mesh.points
   mesh.baseNormals = mesh.normals
-  let node = Node(mesh: Mesh(primitives: @[mesh]), morphWeights: @[0.5'f],
-    animations: @[AnimationClip()])
+  let node = Node(mesh: Mesh(primitives: @[mesh]), morphWeights: @[0.5'f])
   node.updateAnimation(0)
   doAssert mesh.tangents.len == 6 and mesh.baseTangents.len == 6
   for i in 0 ..< 6:
@@ -115,7 +114,6 @@ block readerMorphBase:
     "animations": []}, ".", @[buffer])
   let mesh = root.nodes[0].mesh.primitives[0]
   doAssert mesh.baseTangents.len == 3 and mesh.tangents == mesh.baseTangents
-  root.animations = @[AnimationClip()]
   root.updateAnimation(0)
   doAssert mesh.tangents.len == 3
   mesh.checkFinite()

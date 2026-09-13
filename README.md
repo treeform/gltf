@@ -211,6 +211,14 @@ The [reference-image tools](tools/reference/README.md) capture a pinned Treeform
 fork of the Khronos renderer and compare five fixed camera/animation cases with the Nim
 renderer in an HTML Xray report. Run `npm run compare` in `tools/reference`.
 
+glTF material texture `Image` buffers use **straight RGBA** bytes, including RGB
+where alpha is zero. Use `loadStraightAlphaImage(path)` or
+`decodeStraightAlphaImage(bytes)` when supplying a texture, and
+`encodeStraightAlphaPng(image)` when saving one. These helpers reuse Pixie's
+PNG/JPEG/WebP decoders before premultiplication. Use ordinary Pixie images for
+2D drawing and compositing; material texture buffers are for direct pixel
+access and GPU upload. glTF/GLB export preserves the straight texture bytes.
+
 The project includes standard build and docs workflows:
 
 - `.github/workflows/build.yml`

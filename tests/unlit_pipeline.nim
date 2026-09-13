@@ -1,5 +1,6 @@
 ## Exercise unlit materials through both real OpenGL presentation paths.
-import std/[json, math], flatty/binny, opengl, windy, vmath, chroma, pixie, gltf
+import std/[json, math], flatty/binny, opengl, windy, vmath, chroma, pixie,
+  pixie/fileformats/png, gltf
 
 proc constantTexture(target: GLenum): GLuint =
   glGenTextures(1, result.addr)
@@ -21,6 +22,18 @@ proc decode(v: float64): float64 =
 let window = newWindow("Unlit pipeline test", ivec2(32, 32), visible = false)
 makeContextCurrent(window)
 loadExtensions()
+# Check KTX2 export with the GPU decoder, including color hidden by zero alpha.
+let redTexture = newImage(4, 4)
+redTexture.fill(rgbx(255, 0, 0, 0))
+let ktxBytes = encodeKtx2Image(redTexture, VkFormatBc3UnormBlock,
+  generateMipmaps = false, straightAlpha = true)
+var ktxTexture = loadKtx2Texture(ktxBytes)
+glBindTexture(GL_TEXTURE_2D, ktxTexture)
+var ktxPixels: array[16, array[4, uint8]]
+glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, ktxPixels[0].addr)
+for pixel in ktxPixels:
+  doAssert pixel == [255'u8, 0, 0, 0]
+glDeleteTextures(1, ktxTexture.addr)
 let renderer = newRenderer(window)
 var positions = newString(72)
 for i, value in [-0.9'f32, -0.9, 0, 0.9, -0.9, 0, 0.9, 0.9, 0,
@@ -42,8 +55,9 @@ for i in 0 ..< primitive.points.len:
   primitive.uvs.add(vec2(0, 0))
   primitive.colors.add(rgbx(128, 255, 128, 255))
 let material = primitive.material
-material.baseColor = newImage(1, 1)
-material.baseColor.fill(rgbx(128, 64, 192, 255))
+var sourcePixel = [rgba(128, 64, 192, 128)]
+material.baseColor = decodeStraightAlphaImage(
+  encodePng(1, 1, 4, sourcePixel[0].addr, 4))
 material.baseColorPlaceholder = false
 let linear = [decode(128.0 / 255) * 0.5 * 128 / 255,
   decode(64.0 / 255) * 0.75, decode(192.0 / 255) * 128 / 255]
@@ -89,13 +103,14 @@ for hdr in [false, true]:
       for channel in 0 ..< 3:
         let expected =
           if testCase == 2: 0
-          elif testCase == 3 and hdr: round(pow(linear[channel] * 0.5, 1 / 2.2) * 255).int
-          elif testCase == 3: round(pow(linear[channel], 1 / 2.2) * 255 * 0.5).int
+          elif testCase == 3 and hdr: round(pow(linear[channel] * (128 / 255) * 0.5, 1 / 2.2) * 255).int
+          elif testCase == 3: round(pow(linear[channel], 1 / 2.2) * 255 * (128 / 255) * 0.5).int
           else: round(pow(linear[channel], 1 / 2.2) * 255).int
         doAssert abs(actual[channel].int - expected) <= 2,
           "Unlit HDR=" & $hdr & " case=" & $testCase & " channel=" & $channel &
           " got=" & $actual[channel] & " expected=" & $expected
       doAssert glGetError() == GL_NO_ERROR
+      doAssert actual[3] == 255, "Opaque background must stay opaque after blending"
   pbr.destroy()
 renderer.release(root)
 renderer.shutdown()

@@ -1,7 +1,7 @@
 import
   std/[json, os, strutils, tables, uri],
-  flatty/binny, pixie, pixie/fileformats/png, vmath,
-  common, internal, ktx2
+  flatty/binny, pixie, vmath,
+  common, internal, ktx2, texture_images
 
 export common
 
@@ -149,7 +149,7 @@ proc writeImageKtx2(
     outPath = joinPath(outputDir, fileName)
 
   if not fileExists(outPath):
-    writeKtx2ImageFile(outPath, img, ktx2FormatForSemantic(semantic))
+    writeKtx2ImageFile(outPath, img, ktx2FormatForSemantic(semantic), straightAlpha = true)
 
   var node = newJObject()
   node["name"] = newJString(fileName)
@@ -169,7 +169,7 @@ proc writeImagePng(
   usedImageFileNames: var Table[string, int]
 ): int =
   ## Encodes an image as PNG and writes it embedded or as a sidecar file.
-  let pngData = img.encodePng()
+  let pngData = img.encodeStraightAlphaPng()
   var node = newJObject()
   case imageWriteMode
   of iwmEmbedded:

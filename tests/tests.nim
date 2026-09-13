@@ -6,7 +6,9 @@ import
   test_meshopt,
   test_mesh_quantization,
   test_tangents,
-  test_unlit
+  test_morphs,
+  test_unlit,
+  test_texture_images
 
 proc writeBytes(path: string, bytes: openArray[byte]) =
   ## Writes raw bytes to a test fixture file.

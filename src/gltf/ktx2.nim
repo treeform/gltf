@@ -249,7 +249,8 @@ proc colorPalette(
 proc appendBc1ColorBlock(
   data: var string,
   pixels: array[16, ColorRGBX],
-  transparentMode: bool
+  transparentMode: bool,
+  straightAlpha = false
 ) =
   var
     minRgb = [255, 255, 255]
@@ -259,7 +260,8 @@ proc appendBc1ColorBlock(
   for pixel in pixels:
     if transparentMode and pixel.a < 128:
       continue
-    let rgb = straightRgb(pixel)
+    let rgb = if straightAlpha: [pixel.r.int, pixel.g.int, pixel.b.int]
+              else: straightRgb(pixel)
     for i in 0 .. 2:
       minRgb[i] = min(minRgb[i], rgb[i])
       maxRgb[i] = max(maxRgb[i], rgb[i])
@@ -287,7 +289,8 @@ proc appendBc1ColorBlock(
         3
       else:
         nearestColorIndex(
-          straightRgb(pixel),
+          (if straightAlpha: [pixel.r.int, pixel.g.int, pixel.b.int]
+           else: straightRgb(pixel)),
           palette,
           if transparentMode: 3 else: 4
         )
@@ -988,8 +991,9 @@ proc encodeKtx2*(
     result.add(levelBytes)
     result.padTo(levelAlignment)
 
-proc encodeKtx2ImageLevel*(image: Image, vkFormat: uint32): string =
+proc encodeKtx2ImageLevel*(image: Image, vkFormat: uint32, straightAlpha = false): string =
   ## Encodes one image level into one supported KTX2 payload level.
+  ## Set straightAlpha for glTF texture buffers; the default accepts Pixie images.
   if image == nil:
     raiseKtx2Error("cannot encode a nil image")
   if image.width <= 0 or image.height <= 0:
@@ -1005,13 +1009,13 @@ proc encodeKtx2ImageLevel*(image: Image, vkFormat: uint32): string =
     VkFormatBc1RgbSrgbBlock:
     for y in countup(0, image.height - 1, 4):
       for x in countup(0, image.width - 1, 4):
-        result.appendBc1ColorBlock(image.readBlockPixels(x, y), false)
+        result.appendBc1ColorBlock(image.readBlockPixels(x, y), false, straightAlpha)
   of
     VkFormatBc1RgbaUnormBlock,
     VkFormatBc1RgbaSrgbBlock:
     for y in countup(0, image.height - 1, 4):
       for x in countup(0, image.width - 1, 4):
-        result.appendBc1ColorBlock(image.readBlockPixels(x, y), true)
+        result.appendBc1ColorBlock(image.readBlockPixels(x, y), true, straightAlpha)
   of
     VkFormatBc2UnormBlock,
     VkFormatBc2SrgbBlock:
@@ -1019,7 +1023,7 @@ proc encodeKtx2ImageLevel*(image: Image, vkFormat: uint32): string =
       for x in countup(0, image.width - 1, 4):
         let pixels = image.readBlockPixels(x, y)
         result.appendBc2AlphaBlock(pixels.blockChannel(3))
-        result.appendBc1ColorBlock(pixels, false)
+        result.appendBc1ColorBlock(pixels, false, straightAlpha)
   of
     VkFormatBc3UnormBlock,
     VkFormatBc3SrgbBlock:
@@ -1027,7 +1031,7 @@ proc encodeKtx2ImageLevel*(image: Image, vkFormat: uint32): string =
       for x in countup(0, image.width - 1, 4):
         let pixels = image.readBlockPixels(x, y)
         result.appendBc4Block(pixels.blockChannel(3))
-        result.appendBc1ColorBlock(pixels, false)
+        result.appendBc1ColorBlock(pixels, false, straightAlpha)
   of VkFormatBc4UnormBlock:
     for y in countup(0, image.height - 1, 4):
       for x in countup(0, image.width - 1, 4):
@@ -1048,7 +1052,8 @@ proc encodeKtx2ImageLevel*(image: Image, vkFormat: uint32): string =
 proc encodeKtx2Image*(
   image: Image,
   vkFormat: uint32,
-  generateMipmaps = true
+  generateMipmaps = true,
+  straightAlpha = false
 ): string =
   ## Encodes an image into a supported KTX2 texture.
   if image == nil:
@@ -1058,7 +1063,7 @@ proc encodeKtx2Image*(
     levelsData: seq[string]
     levelImage = image
   while true:
-    levelsData.add(encodeKtx2ImageLevel(levelImage, vkFormat))
+    levelsData.add(encodeKtx2ImageLevel(levelImage, vkFormat, straightAlpha))
     if not generateMipmaps or
        (levelImage.width == 1 and levelImage.height == 1):
       break
@@ -1094,10 +1099,11 @@ proc writeKtx2ImageFile*(
   file: string,
   image: Image,
   vkFormat: uint32,
-  generateMipmaps = true
+  generateMipmaps = true,
+  straightAlpha = false
 ) =
   ## Encodes an image as a supported KTX2 texture file.
-  writeFile(file, encodeKtx2Image(image, vkFormat, generateMipmaps))
+  writeFile(file, encodeKtx2Image(image, vkFormat, generateMipmaps, straightAlpha))
 
 proc writeKtx2R32SfloatFile*(
   file: string,

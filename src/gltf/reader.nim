@@ -1,7 +1,7 @@
 import
   std/[base64, json, os, strformat, strutils],
   chroma, flatty/binny, pixie, vmath, webby,
-  common, draco, internal, meshopt, models, tangents
+  common, draco, internal, meshopt, models, tangents, texture_images
 
 export common
 
@@ -1456,6 +1456,7 @@ proc loadPrimitive(
     if pbr.baseColorTexture.index >= 0:
       let imageIndex = textures[pbr.baseColorTexture.index].source
       result.material.baseColor = images[imageIndex]
+      result.material.baseColorPlaceholder = false
       result.material.baseColorKtx2 = imageKtx2Data[imageIndex]
       result.material.baseColorName = imageNames[imageIndex]
       result.material.baseColorSampler =
@@ -1475,6 +1476,7 @@ proc loadPrimitive(
     if pbr.metallicRoughnessTexture.index >= 0:
       let imageIndex = textures[pbr.metallicRoughnessTexture.index].source
       result.material.metallicRoughness = images[imageIndex]
+      result.material.metallicRoughnessPlaceholder = false
       result.material.metallicRoughnessKtx2 = imageKtx2Data[imageIndex]
       result.material.metallicRoughnessName = imageNames[imageIndex]
       result.material.metallicRoughnessSampler =
@@ -1495,6 +1497,7 @@ proc loadPrimitive(
     if material.normalTexture.index >= 0:
       let imageIndex = textures[material.normalTexture.index].source
       result.material.normal = images[imageIndex]
+      result.material.normalPlaceholder = false
       result.material.normalKtx2 = imageKtx2Data[imageIndex]
       result.material.normalName = imageNames[imageIndex]
       result.material.normalSampler =
@@ -1517,6 +1520,7 @@ proc loadPrimitive(
     if material.occlusionTexture.index >= 0:
       let imageIndex = textures[material.occlusionTexture.index].source
       result.material.occlusion = images[imageIndex]
+      result.material.occlusionPlaceholder = false
       result.material.occlusionKtx2 = imageKtx2Data[imageIndex]
       result.material.occlusionName = imageNames[imageIndex]
       result.material.occlusionSampler =
@@ -1536,6 +1540,7 @@ proc loadPrimitive(
     if material.emissiveTexture.index >= 0:
       let imageIndex = textures[material.emissiveTexture.index].source
       result.material.emissive = images[imageIndex]
+      result.material.emissivePlaceholder = false
       result.material.emissiveKtx2 = imageKtx2Data[imageIndex]
       result.material.emissiveName = imageNames[imageIndex]
       result.material.emissiveSampler =
@@ -2001,14 +2006,14 @@ proc loadModelJsonInternal(
         if uri.startsWith("data:image/png") or
            uri.startsWith("data:image/jpeg") or
            uri.startsWith("data:image/webp"):
-          image = decodeImage(decode(uri.split(',')[1]))
+          image = decodeStraightAlphaImage(decode(uri.split(',')[1]))
         elif uri.startsWith("data:image/ktx2"):
           ktx2Data = decode(uri.split(',')[1])
         elif uri.endsWith(".png") or
              uri.endsWith(".jpg") or
              uri.endsWith(".jpeg") or
              uri.endsWith(".webp"):
-          image = readImage(joinPath(modelDir, uri))
+          image = loadStraightAlphaImage(joinPath(modelDir, uri))
         elif uri.endsWith(".ktx2"):
           ktx2Data = readFile(joinPath(modelDir, uri))
         else:
@@ -2023,7 +2028,7 @@ proc loadModelJsonInternal(
         if mimeType == "image/ktx2":
           ktx2Data = imageData
         else:
-          image = decodeImage(imageData)
+          image = decodeStraightAlphaImage(imageData)
       else:
         raise newException(GltfError, "Unsupported image type")
       images.add(image)

@@ -192,8 +192,8 @@ Current findings with the Treeform correction (worst RGB mean absolute error acr
 | --- | ---: | --- |
 | RiggedSimple | 0.00118 | Every pixel in all five poses is within one channel value of Nim. |
 | CesiumMan | 0.216 | Broad shading discrepancy corrected; smaller residual errors remain. |
-| AlphaBlendModeTest | 2.603 | Visible errors in opaque/blended/masked panels. |
-| FlightHelmet | 0.375 | Difference concentrated in the transmissive lenses. |
+| AlphaBlendModeTest | 0.042 | Straight-alpha texture loading corrects the panels; only 10 pixels exceed a channel error of two. |
+| FlightHelmet | 0.538 | Difference concentrated in the transmissive lenses; this HDR path still lacks transmission. |
 | NormalTangentTest | 0.278 | Smaller normal-map/reflection differences to investigate. |
 | Remaining 14 rendered files | Below 0.016 each | Close matches, including all 37 InterpolationTest captures. |
 | UnlitTest | 0.000 | Unlit shading now matches every reference pixel. |
@@ -203,6 +203,75 @@ visible differences above. That threshold is too loose to establish parity;
 inspect the actual RGB errors and X-rays. The batch now passes `--strict`.
 These captures record the current renderer's
 behavior for follow-up work; generating them does not fix these discrepancies.
+
+The glTF image loader preserves straight RGBA before Pixie's PNG/WebP image
+conversion can premultiply it. JPEG stays opaque. External files, data URIs
+and GLB image buffer views use the same helper, and PNG/KTX2 export accepts
+the straight texture buffers. Opaque/masked shading forces output alpha to
+one; OpenGL blending uses separate color and alpha factors so an opaque
+background stays opaque.
+
+With these changes, AlphaBlendModeTest's RGB MAE fell from 2.603 to 0.042,
+and pixels outside the tolerance of two fell from 12,095 to 10.
+TextureLinearInterpolationTest improved from 0.0050 to 0.000064. FlightHelmet
+increased from 0.375 to 0.538: a diagnostic render restoring premultiplied
+texture colors reproduces its old RGB error, but the lens material requires
+transmission rather than the current alpha-blend approximation. The other
+95 captures across the 5-, 25- and 68-capture runs retained identical scores.
+`tests/test_texture_images.nim` covers PNG variants, JPEG, lossy/lossless WebP,
+all five material slots and image input routes, and GLB/PNG round trips.
+`tests/unlit_pipeline.nim` also checks translucent texture colors, framebuffer
+alpha and BC3 export with RGB hidden by zero alpha using real OpenGL.
+
+## Third batch: 25 more files
+
+`tests/reference/manifest-batch-3.json` adds 25 new source files, bringing the
+combined coverage to 50 distinct files. Its 61 captures include rest poses and
+later/looping samples of every animation clip. All masters were captured twice
+at the same timestamp and verified byte-for-byte against the pinned Treeform
+renderer. They live in `tests/reference/batch-3`.
+
+This batch covers additional skinning and morph cases (BrainStem,
+RecursiveSkeletons, RiggedFigure, MorphPrimitivesTest and MorphStressTest),
+primitive modes with and without normals, sparse accessors, instancing, node
+visibility, texture encoding/filtering/wrapping, non-power-of-two textures,
+alpha coverage, and material color/normal/occlusion/metallic/roughness maps.
+The selected files do not use transmission. The earlier fast batches remain
+available independently.
+
+```sh
+# Build and compare the 61 captures, grouped into 25 file sections.
+npm run compare:batch-3 -- --strict
+
+# Reuse the native harness for a roughly seven-to-nine-second comparison.
+npm run compare:batch-3 -- --no-build --strict
+
+# Check the static morph regression in isolation.
+npm run compare:batch-3 -- --case=MorphPrimitivesTest --out=../../tests/tmp/reference-morph-primitives
+
+# Refresh only this batch's masters, with repeatability checks.
+npm run capture:batch-3 -- --verify
+```
+
+The report is `tests/tmp/reference-batch-3/xray_report.html`. The initial run
+rendered every capture without loading failures in 7.3 seconds, excluding
+compilation. Current findings after fixing static morph weights:
+
+| File | RGB MAE / 255 | Observation |
+| --- | ---: | --- |
+| PrimitiveModeNormalsTest | 1.553 | Visible differences in the point/line/triangle normal-handling test. |
+| TextureSettingsTest | 0.288 | The expected checkmarks are present, with visible edge/filtering differences. |
+| MorphPrimitivesTest | 0.018 | Both primitives now receive the mesh's default morph weight of 0.5; previously the grid was flat (MAE 6.827). |
+
+MorphPrimitivesTest exposed an early return in `updateAnimation` for models
+without animation clips. It skipped CPU morph application even though the mesh
+had nonzero default weights. Morph application now runs independently of the
+animation timeline. `tests/test_morphs.nim` covers this path with two primitives
+under a nested node, repeated updates, and a return to zero weight.
+
+The corrected batch passes `--strict` for all 61 captures; this does not imply
+identical pixels. MorphPrimitivesTest's Pixie score fell from 2.008% to 0.0054%,
+and 99.65% of its pixels are within two channel values of the unchanged master.
 
 ## Skinned normal correction in the Treeform fork
 

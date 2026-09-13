@@ -232,6 +232,8 @@ proc gltfPbrFrag*(
   fragColor = fragColor * color
   if fragColor.a < alphaCutoff:
     discardFragment()
+  if opaqueMaterial != 0 or alphaCutoff >= 0.0'f:
+    fragColor.a = 1.0'f
 
   let
     albedo: Vec3 = fragColor.rgb

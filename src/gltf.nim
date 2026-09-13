@@ -7,6 +7,7 @@ import
   gltf/reader,
   gltf/shaders,
   gltf/tangents,
+  gltf/texture_images,
   gltf/writer
 
 export
@@ -18,4 +19,5 @@ export
   reader,
   shaders,
   tangents,
+  texture_images,
   writer

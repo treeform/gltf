@@ -179,6 +179,8 @@ type
     channels*: seq[AnimationChannel]
 
   Material* = ref object
+    ## Texture Image buffers store straight RGBA, including RGB at zero alpha.
+    ## Load them with loadStraightAlphaImage; Pixie drawing images premultiply.
     ## Texture slots the source file left empty are filled with a 1x1
     ## constant image so renderers always have something to sample. Those
     ## fills are marked with the matching `*Placeholder` flag, since a 1x1
