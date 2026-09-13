@@ -14,6 +14,7 @@ const SupportedExtensions = [
   "KHR_materials_anisotropy",
   "KHR_materials_clearcoat",
   "KHR_materials_iridescence",
+  "KHR_materials_specular",
   "KHR_materials_volume",
   "KHR_materials_ior",
   "KHR_materials_unlit",
@@ -1333,6 +1334,12 @@ proc defaultRuntimeMaterial(): Material =
   result.diffuseTransmissionColorTransform = TextureTransform(scale: vec2(1))
   result.anisotropySampler = defaultTextureSampler()
   result.anisotropyTransform = TextureTransform(scale: vec2(1))
+  result.specularFactor = 1
+  result.specularColorFactor = vec3(1)
+  result.specularSampler = defaultTextureSampler()
+  result.specularColorSampler = defaultTextureSampler()
+  result.specularTransform = TextureTransform(scale: vec2(1))
+  result.specularColorTransform = TextureTransform(scale: vec2(1))
   result.iridescenceIor = 1.3
   result.iridescenceThicknessMinimum = 100
   result.iridescenceThicknessMaximum = 400
@@ -1628,6 +1635,8 @@ proc loadPrimitive(
     loadDataTexture(diffuseTransmission, material.diffuseTransmissionTexture)
     loadDataTexture(diffuseTransmissionColor, material.diffuseTransmissionColorTexture)
     loadDataTexture(anisotropy, material.anisotropyTexture)
+    loadDataTexture(specular, material.specularTexture)
+    loadDataTexture(specularColor, material.specularColorTexture)
     loadDataTexture(iridescence, material.iridescenceTexture)
     loadDataTexture(iridescenceThickness, material.iridescenceThicknessTexture)
     result.material.hasIridescence = material.hasIridescence
@@ -2177,6 +2186,8 @@ proc loadModelJsonInternal(
       material.diffuseTransmissionTexture = defaultMaterialTexture()
       material.diffuseTransmissionColorTexture = defaultMaterialTexture()
       material.anisotropyTexture = defaultMaterialTexture()
+      material.specularTexture = defaultMaterialTexture()
+      material.specularColorTexture = defaultMaterialTexture()
       material.iridescenceTexture = defaultMaterialTexture()
       material.iridescenceThicknessTexture = defaultMaterialTexture()
       material.iridescenceIor = 1.3
@@ -2311,17 +2322,20 @@ proc loadModelJsonInternal(
         if "KHR_materials_emissive_strength" in extensions:
           material.hasEmissiveStrength = true
           material.emissiveStrength = extensions["KHR_materials_emissive_strength"]{"emissiveStrength"}.getFloat(1).float32
-        # Constant-factor shading is supported by the OpenGL IBL path. Keep
-        # these extensions out of the fully-supported list until their texture
-        # inputs are implemented, so required textured assets are not misreported.
         if "KHR_materials_specular" in extensions:
           let specular = extensions["KHR_materials_specular"]
-          if "specularTexture" notin specular and "specularColorTexture" notin specular:
-            material.hasSpecular = true
-            material.specularFactor = specular{"specularFactor"}.getFloat(1).float32
-            if "specularColorFactor" in specular:
-              let c = specular["specularColorFactor"]
-              material.specularColorFactor = vec3(c[0].getFloat(), c[1].getFloat(), c[2].getFloat())
+          material.hasSpecular = true
+          material.specularFactor = specular{"specularFactor"}.getFloat(1).float32
+          if "specularColorFactor" in specular:
+            let c = specular["specularColorFactor"]
+            material.specularColorFactor = vec3(c[0].getFloat(), c[1].getFloat(), c[2].getFloat())
+          template readSpecularTexture(slot: untyped) =
+            if astToStr(slot) in specular:
+              let texture = specular[astToStr(slot)]
+              material.slot.index = texture["index"].getInt()
+              readTextureTransform(texture, material.slot)
+          readSpecularTexture(specularTexture)
+          readSpecularTexture(specularColorTexture)
         if "KHR_materials_sheen" in extensions:
           let sheen = extensions["KHR_materials_sheen"]
           if "sheenColorTexture" notin sheen and "sheenRoughnessTexture" notin sheen:

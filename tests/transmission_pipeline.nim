@@ -490,6 +490,46 @@ doAssert difference(capture().pixel(32, 24), filmMap) <= 1,
   "Thickness must use linear G, support reversed ranges, and ignore alpha"
 doAssert capture() == capture(), "Film must be repeatable"
 echo "Iridescence GPU: zero strength/thickness, interference hue, R/G maps, UV1 and reversed thickness range passed"
+
+# Specular alpha controls dielectric reflection; RGB tint is sampled as sRGB.
+renderer.release(root)
+material.iridescenceFactor = 0
+material.specularFactor = 1
+material.specularColorFactor = vec3(1)
+let fullSpecular = capture()
+material.specularFactor = 0
+let noSpecular = capture()
+doAssert noSpecular.pixel(32, 24).r < 3 and fullSpecular.pixel(32, 24).r > 50
+renderer.release(root)
+material.specularFactor = 1
+material.specular = newImage(2, 1)
+material.specular[0, 0] = rgbx(255, 255, 255, 0)
+material.specular[1, 0] = rgbx(0, 0, 0, 255)
+material.specularSampler.magFilter = NearestMagFilter
+material.specularSampler.minFilter = NearestMinFilter
+material.specularTransform.texCoord = 1
+let specularMask = capture()
+doAssert difference(specularMask.pixel(20, 16), fullSpecular.pixel(20, 16)) <= 1
+doAssert difference(specularMask.pixel(44, 16), noSpecular.pixel(44, 16)) <= 1
+material.specularTransform.offset.x = 0.5
+doAssert difference(capture().pixel(20, 16), noSpecular.pixel(20, 16)) <= 1
+renderer.release(root)
+material.specular = nil
+material.specularColor = newImage(1, 1)
+material.specularColor.fill(rgbx(128, 64, 192, 0))
+let specularTint = capture().pixel(32, 24)
+doAssert specularTint.b > specularTint.r and specularTint.r > specularTint.g and specularTint.g > 3
+renderer.release(root)
+material.specularColor = nil
+material.specularColorFactor = vec3(0.215861, 0.051269, 0.527115)
+doAssert difference(capture().pixel(32, 24), specularTint) <= 1,
+  "Specular color must use sRGB transfer and preserve color under zero alpha"
+material.metallicFactor = 1
+material.baseColorFactor = color(0.2, 0.3, 0.4, 1)
+let metalWithSpecular = capture()
+material.specularFactor = 0
+doAssert capture() == metalWithSpecular, "Specular extension must not attenuate metals"
+echo "Specular GPU: reflection strength/alpha, sRGB color, UV1/offset and metallic independence passed"
 ctx.destroy()
 renderer.release(root)
 renderer.shutdown()

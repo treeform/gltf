@@ -83,6 +83,7 @@ type
     hasSpecular*: bool
     specularFactor*: float32
     specularColorFactor*: Vec3
+    specularTexture*, specularColorTexture*: MaterialTexture
     sheenColorFactor*: Vec3
     sheenRoughnessFactor*: float32
     hasAnisotropy*: bool

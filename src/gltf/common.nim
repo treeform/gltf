@@ -278,6 +278,10 @@ type
     hasSpecular*: bool
     specularFactor*: float32
     specularColorFactor*: Vec3
+    specular*, specularColor*: Image
+    specularKtx2*, specularName*, specularColorKtx2*, specularColorName*: string
+    specularTransform*, specularColorTransform*: TextureTransform
+    specularSampler*, specularColorSampler*: TextureSampler
     sheenColorFactor*: Vec3
     sheenRoughnessFactor*: float32
     hasAnisotropy*: bool

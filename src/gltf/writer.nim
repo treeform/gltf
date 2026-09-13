@@ -457,10 +457,16 @@ proc writeGLB*(
     if mat.hasSpecular or mat.sheenColorFactor != vec3(0):
       if "extensions" notin matNode: matNode["extensions"] = newJObject()
       if mat.hasSpecular:
-        matNode["extensions"]["KHR_materials_specular"] = %*{
+        let specular = %*{
           "specularFactor": mat.specularFactor,
-          "specularColorFactor": [mat.specularColorFactor.x, mat.specularColorFactor.y, mat.specularColorFactor.z]
-        }
+          "specularColorFactor": [mat.specularColorFactor.x, mat.specularColorFactor.y, mat.specularColorFactor.z]}
+        if mat.specular != nil or mat.specularKtx2.len > 0:
+          specular["specularTexture"] = dataTextureInfo(mat.specular, mat.specularKtx2,
+            mat.specularName, mat.specularSampler, mat.specularTransform)
+        if mat.specularColor != nil or mat.specularColorKtx2.len > 0:
+          specular["specularColorTexture"] = dataTextureInfo(mat.specularColor, mat.specularColorKtx2,
+            mat.specularColorName, mat.specularColorSampler, mat.specularColorTransform, tsColor)
+        matNode["extensions"]["KHR_materials_specular"] = specular
       if mat.sheenColorFactor != vec3(0):
         matNode["extensions"]["KHR_materials_sheen"] = %*{
           "sheenRoughnessFactor": mat.sheenRoughnessFactor,

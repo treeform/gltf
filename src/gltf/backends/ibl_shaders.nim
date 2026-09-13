@@ -18,6 +18,11 @@ var
   sheenRoughnessFactor*: Uniform[float32]
   specularFactor*: Uniform[float32]
   specularColorFactor*: Uniform[Vec3]
+  specularTexture*, specularColorTexture*: Uniform[Sampler2d]
+  hasSpecularTexture*, hasSpecularColorTexture*: Uniform[bool]
+  specularTexCoord*, specularColorTexCoord*: Uniform[int]
+  specularUvOffset*, specularUvScale*, specularColorUvOffset*, specularColorUvScale*: Uniform[Vec2]
+  specularUvRotation*, specularColorUvRotation*: Uniform[float32]
   anisotropyEnabled*, hasAnisotropyTexture*: Uniform[bool]
   anisotropyParameters*: Uniform[Vec3] # cos(rotation), sin(rotation), strength
   anisotropyTexture*: Uniform[Sampler2d]
@@ -385,6 +390,16 @@ proc gltfIblFrag*(
     anisotropicT = normalize(t) * direction.x + normalize(b) * direction.y
     anisotropicB = cross(ng, anisotropicT)
     anisotropy = clamp(anisotropy, 0.0'f, 1.0'f)
+  var specularWeight = specularFactor
+  var specularTint: Vec3 = specularColorFactor
+  if hasSpecularTexture:
+    let specularUv: Vec2 = transformUv(selectUv(specularTexCoord, uv, uv1),
+      specularUvOffset, specularUvScale, specularUvRotation)
+    specularWeight *= texture(specularTexture, specularUv).a
+  if hasSpecularColorTexture:
+    let specularUv: Vec2 = transformUv(selectUv(specularColorTexCoord, uv, uv1),
+      specularColorUvOffset, specularColorUvScale, specularColorUvRotation)
+    specularTint *= texture(specularColorTexture, specularUv).rgb
   let
     v: Vec3 = normalize(cameraPosition - worldPos)
     nDotV = clamp(dot(n, v), 0.0'f, 1.0'f)
@@ -393,7 +408,7 @@ proc gltfIblFrag*(
     reflectedDiffuse: Vec3 = texture(diffuseEnvironment, environmentRotation * n).rgb *
       environmentMapStrength * base.rgb
     f0 = (materialIor - 1.0'f) / (materialIor + 1.0'f)
-    dielectricF0: Vec3 = min(vec3(f0 * f0) * specularColorFactor, vec3(1.0'f))
+    dielectricF0: Vec3 = min(vec3(f0 * f0) * specularTint, vec3(1.0'f))
     coatWeight = coat * (f0 * f0 + (1.0'f - f0 * f0) *
       pow(1.0'f - clamp(dot(coatNormal, v), 0.0'f, 1.0'f), 5.0'f))
   var specularReflection: Vec3 = reflection
@@ -454,7 +469,7 @@ proc gltfIblFrag*(
   var filmMetal: Vec3 = vec3(0.0'f)
   var
     dielectric: Vec3 = mix(diffuse, specular,
-      iblFresnel(nDotV, roughness, dielectricF0, brdf, specularFactor))
+      iblFresnel(nDotV, roughness, dielectricF0, brdf, specularWeight))
     metal: Vec3 = specular * iblFresnel(nDotV, roughness, base.rgb, brdf, 1.0'f)
   if iridescence > 0.0'f:
     filmDielectric = filmFresnel(iridescenceIor, nDotV, filmThickness, dielectricF0)
@@ -511,13 +526,13 @@ proc gltfIblFrag*(
       if anisotropyEnabled:
         specularBrdf = vec3(anisotropicBrdf(n, v, l, h, anisotropicT, anisotropicB,
           roughness * roughness, anisotropy) * exitAttenuation)
-      var dielectricFresnel: Vec3 = specularFactor * (dielectricF0 +
+      var dielectricFresnel: Vec3 = specularWeight * (dielectricF0 +
         (vec3(1.0'f) - dielectricF0) * schlick)
       var backDiffuse: Vec3 = vec3(0.0'f)
       if diffuseTransmission > 0.0'f and dot(n, l) < 0.0'f:
         let mirrored: Vec3 = normalize(l + 2.0'f * n * dot(-l, n))
         let diffuseVdotH = clamp(dot(v, normalize(mirrored + v)), 0.0'f, 1.0'f)
-        dielectricFresnel = specularFactor * (dielectricF0 +
+        dielectricFresnel = specularWeight * (dielectricF0 +
           (vec3(1.0'f) - dielectricF0) * pow(1.0'f - diffuseVdotH, 5.0'f))
         backDiffuse = volumeAttenuation(diffuseTransmissionColor *
           clamp(dot(-n, l), 0.0'f, 1.0'f) / ShaderPi, diffuseThickness)

@@ -100,7 +100,7 @@ The table below reflects the current code, not the full glTF 2.0 spec.
 | `KHR_texture_basisu` | Yes | Yes | Partial | KTX2 textures; see [KHR_texture_basisu and KTX2](#khr_texture_basisu-and-ktx2). The embedded KTX2 module can read and write supported KTX2 payloads directly, while glTF export paths that generate new encoded sidecars still use [KTX-Software](#writing-ktx2-with-ktx-software). |
 | `KHR_lights_punctual` | Yes | Partial | Yes | OpenGL IBL renders up to 32 directional/point/spot lights, with inverse-square/range/cone falloff and animated node transforms/visibility. Light-property animation remains unsupported. |
 | `KHR_materials_sheen` | Partial | Partial | Partial | Constant color/roughness factors load and export. OpenGL IBL uses Charlie environment filtering, direct sheen and energy compensation. Texture inputs and required-extension declarations remain unsupported. |
-| `KHR_materials_specular` | Partial | Partial | Partial | Constant strength/color factors load and export; OpenGL IBL applies tinted dielectric reflections. Texture inputs and required-extension declarations remain unsupported. |
+| `KHR_materials_specular` | Yes | Partial | Yes | OpenGL IBL applies tinted dielectric reflections with linear alpha-strength and sRGB color textures, including UV transforms and sampler settings. |
 | `KHR_materials_unlit` | Yes | Yes | Yes | Base color, texture, vertex color, alpha modes and double-sided rendering; independent of lighting. The matched HDR path bypasses exposure and tone mapping. |
 | `EXT_texture_webp` | No | No | No | Not supported yet. |
 
