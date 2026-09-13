@@ -1,0 +1,69 @@
+{
+  "startedAt": "2026-09-13T15:16:32.497Z",
+  "manifestSha256": "5bd69229b529df4e6a31782cbbdeb387116fa3c717a0cd3609edecdd5d49efac",
+  "browser": "Chrome/152.0.7977.75",
+  "gpu": {
+    "vendor": "Google Inc. (NVIDIA)",
+    "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3090 (0x00002204) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+    "samples": 4,
+    "contextAttributes": {
+      "alpha": false,
+      "antialias": true,
+      "depth": true,
+      "desynchronized": false,
+      "failIfMajorPerformanceCaveat": false,
+      "powerPreference": "default",
+      "premultipliedAlpha": true,
+      "preserveDrawingBuffer": false,
+      "stencil": false,
+      "xrCompatible": false
+    }
+  },
+  "captures": [
+    {
+      "id": "AnimatedCube__a0_t0p74",
+      "status": "ok",
+      "timeSeconds": 0.74,
+      "animation": "animation_AnimatedCube",
+      "sha256": "1c11668d2d0285e126adb57e5e1b4d65e8b59e40bdb6e409080178c43aa5443e",
+      "bytes": 322594,
+      "warnings": []
+    },
+    {
+      "id": "DamagedHelmet__rest",
+      "status": "ok",
+      "timeSeconds": 0,
+      "sha256": "1bc0ba203887c0858a04cce7ff4fc94cfe6957554ca25f30682b7d051851052d",
+      "bytes": 257354,
+      "warnings": []
+    },
+    {
+      "id": "Fox__a2_t0p428583",
+      "status": "ok",
+      "timeSeconds": 0.428583,
+      "animation": "Run",
+      "sha256": "51e6bf95a0eecd93ca50fdf56816e2731794fe12ba95ed3ab15e343d20b16563",
+      "bytes": 34375,
+      "warnings": []
+    },
+    {
+      "id": "OrientationTest__rest",
+      "status": "ok",
+      "timeSeconds": 0,
+      "sha256": "478bda648c264bcfee97d1b55cc8420391a5f103f2537444bcc8a177878de144",
+      "bytes": 53969,
+      "warnings": []
+    },
+    {
+      "id": "SimpleMorph__a0_t1p48",
+      "status": "ok",
+      "timeSeconds": 1.48,
+      "animation": "Animation 0",
+      "sha256": "db3396c3bb79501fe649cdc9d83b0c26c30a25d811f5ae21fedcff7b0232ef61",
+      "bytes": 14305,
+      "warnings": []
+    }
+  ],
+  "finishedAt": "2026-09-13T15:16:37.116Z"
+}

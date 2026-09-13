@@ -68,6 +68,10 @@ proc compileShaderFiles*(vertShaderSrc: string, fragShaderSrc: string): GLuint =
   glAttachShader(program, vertShader)
   glAttachShader(program, fragShader)
 
+  when not defined(emscripten):
+    glBindFragDataLocation(program, 0, "fragColor")
+    glBindFragDataLocation(program, 1, "toneMapFlag")
+
   glLinkProgram(program)
 
   var isLinked: GLint

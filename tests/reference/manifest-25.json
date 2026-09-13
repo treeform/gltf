@@ -1,0 +1,817 @@
+{
+  "version": 1,
+  "sources": {
+    "renderer": {
+      "repository": "https://github.com/KhronosGroup/glTF-Sample-Renderer.git",
+      "revision": "863b981fb755359063e370ff7b6e956bda0716e2"
+    },
+    "assets": {
+      "repository": "https://github.com/KhronosGroup/glTF-Sample-Assets.git",
+      "revision": "90d7ede14c7e280af263824604b427a1ca02cb66"
+    },
+    "environment": {
+      "url": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Environments/3a030b54c2e4f0f4d469eec2f98f47398c9a2a30/neutral.hdr",
+      "licenseUrl": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Environments/3a030b54c2e4f0f4d469eec2f98f47398c9a2a30/neutral.hdr.license",
+      "sha256": "dad135da12b0bc55c488574bd56bf011407c9ed3040493f240528cdfb51782e8"
+    },
+    "draco": {
+      "url": "https://www.gstatic.com/draco/versioned/decoders/1.5.7/draco_decoder_gltf.js"
+    }
+  },
+  "environment": {
+    "url": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Environments/3a030b54c2e4f0f4d469eec2f98f47398c9a2a30/neutral.hdr",
+    "licenseUrl": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Environments/3a030b54c2e4f0f4d469eec2f98f47398c9a2a30/neutral.hdr.license",
+    "sha256": "dad135da12b0bc55c488574bd56bf011407c9ed3040493f240528cdfb51782e8"
+  },
+  "settings": {
+    "width": 512,
+    "height": 512,
+    "renderFrames": 2,
+    "toneMap": "KHR_PBR_NEUTRAL",
+    "fit": {
+      "yawDegrees": 20,
+      "pitchDegrees": 20,
+      "verticalFovDegrees": 45,
+      "padding": 1.25
+    },
+    "rendering": {
+      "clearColor": [
+        0.7058824,
+        0.74509805,
+        0.8627451,
+        1
+      ],
+      "exposure": 1,
+      "useIBL": true,
+      "iblIntensity": 1,
+      "environmentRotation": 90,
+      "usePunctual": true,
+      "renderEnvironmentMap": false,
+      "blurEnvironmentMap": false,
+      "useDirectionalLightsWithDisabledIBL": false,
+      "internalMSAA": 4,
+      "floatingPointFramebuffer": true
+    },
+    "excludedModels": {
+      "ABeautifulGame": "Slow to load and provides little additional coverage for this suite."
+    }
+  },
+  "cases": [
+    {
+      "id": "AnimatedCube__rest",
+      "model": "Models/AnimatedCube/glTF/AnimatedCube.gltf",
+      "scene": 0,
+      "animationIndices": [],
+      "timeSeconds": 0,
+      "camera": {
+        "position": [
+          -2.3465043814782054,
+          2.497097742356506,
+          6.446967639000288
+        ],
+        "target": [
+          -5.960464477539063e-8,
+          0,
+          0
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "verticalFovDegrees": 45,
+        "near": 0.002235185157702696,
+        "far": 16.241765997550047
+      }
+    },
+    {
+      "id": "AnimatedCube__a0_t0",
+      "model": "Models/AnimatedCube/glTF/AnimatedCube.gltf",
+      "scene": 0,
+      "animationIndices": [
+        0
+      ],
+      "timeSeconds": 0,
+      "animationName": "animation_AnimatedCube",
+      "animationEndSeconds": 2,
+      "camera": {
+        "position": [
+          -2.3465043814782054,
+          2.497097742356506,
+          6.446967639000288
+        ],
+        "target": [
+          -5.960464477539063e-8,
+          0,
+          0
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "verticalFovDegrees": 45,
+        "near": 0.002235185157702696,
+        "far": 16.241765997550047
+      }
+    },
+    {
+      "id": "AnimatedCube__a0_t0p74",
+      "model": "Models/AnimatedCube/glTF/AnimatedCube.gltf",
+      "scene": 0,
+      "animationIndices": [
+        0
+      ],
+      "timeSeconds": 0.74,
+      "animationName": "animation_AnimatedCube",
+      "animationEndSeconds": 2,
+      "camera": {
+        "position": [
+          -2.3465043814782054,
+          2.497097742356506,
+          6.446967639000288
+        ],
+        "target": [
+          -5.960464477539063e-8,
+          0,
+          0
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "verticalFovDegrees": 45,
+        "near": 0.002235185157702696,
+        "far": 16.241765997550047
+      }
+    },
+    {
+      "id": "AnimatedCube__a0_t1p46",
+      "model": "Models/AnimatedCube/glTF/AnimatedCube.gltf",
+      "scene": 0,
+      "animationIndices": [
+        0
+      ],
+      "timeSeconds": 1.46,
+      "animationName": "animation_AnimatedCube",
+      "animationEndSeconds": 2,
+      "camera": {
+        "position": [
+          -2.3465043814782054,
+          2.497097742356506,
+          6.446967639000288
+        ],
+        "target": [
+          -5.960464477539063e-8,
+          0,
+          0
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "verticalFovDegrees": 45,
+        "near": 0.002235185157702696,
+        "far": 16.241765997550047
+      }
+    },
+    {
+      "id": "AnimatedCube__a0_t2p74",
+      "model": "Models/AnimatedCube/glTF/AnimatedCube.gltf",
+      "scene": 0,
+      "animationIndices": [
+        0
+      ],
+      "timeSeconds": 2.74,
+      "animationName": "animation_AnimatedCube",
+      "animationEndSeconds": 2,
+      "camera": {
+        "position": [
+          -2.3465043814782054,
+          2.497097742356506,
+          6.446967639000288
+        ],
+        "target": [
+          -5.960464477539063e-8,
+          0,
+          0
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "verticalFovDegrees": 45,
+        "near": 0.002235185157702696,
+        "far": 16.241765997550047
+      }
+    },
+    {
+      "id": "DamagedHelmet__rest",
+      "model": "Models/DamagedHelmet/glTF/DamagedHelmet.gltf",
+      "scene": 0,
+      "animationIndices": [],
+      "timeSeconds": 0,
+      "camera": {
+        "position": [
+          -1.7290024048310126,
+          1.8373356059552475,
+          4.556421972728192
+        ],
+        "target": [
+          -0.0024815797805786133,
+          0.000010520219802856445,
+          -0.18715500831604004
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "verticalFovDegrees": 45,
+        "near": 0.001644613941957737,
+        "far": 11.950434938034263
+      }
+    },
+    {
+      "id": "Fox__rest",
+      "model": "Models/Fox/glTF/Fox.gltf",
+      "scene": 0,
+      "animationIndices": [],
+      "timeSeconds": 0,
+      "camera": {
+        "position": [
+          -104.37848422129136,
+          147.9863452854364,
+          269.3807187024538
+        ],
+        "target": [
+          -1.8141145706176758,
+          38.83962285518646,
+          -12.41257095336914
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "verticalFovDegrees": 45,
+        "near": 0.09769867228255275,
+        "far": 709.9183564351549
+      }
+    },
+    {
+      "id": "Fox__a0_t0",
+      "model": "Models/Fox/glTF/Fox.gltf",
+      "scene": 0,
+      "animationIndices": [
+        0
+      ],
+      "timeSeconds": 0,
+      "animationName": "Survey",
+      "animationEndSeconds": 3.4166667461395264,
+      "camera": {
+        "position": [
+          -104.37848422129136,
+          147.9863452854364,
+          269.3807187024538
+        ],
+        "target": [
+          -1.8141145706176758,
+          38.83962285518646,
+          -12.41257095336914
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "verticalFovDegrees": 45,
+        "near": 0.09769867228255275,
+        "far": 709.9183564351549
+      }
+    },
+    {
+      "id": "Fox__a0_t1p264167",
+      "model": "Models/Fox/glTF/Fox.gltf",
+      "scene": 0,
+      "animationIndices": [
+        0
+      ],
+      "timeSeconds": 1.264167,
+      "animationName": "Survey",
+      "animationEndSeconds": 3.4166667461395264,
+      "camera": {
+        "position": [
+          -104.37848422129136,
+          147.9863452854364,
+          269.3807187024538
+        ],
+        "target": [
+          -1.8141145706176758,
+          38.83962285518646,
+          -12.41257095336914
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "verticalFovDegrees": 45,
+        "near": 0.09769867228255275,
+        "far": 709.9183564351549
+      }
+    },
+    {
+      "id": "Fox__a0_t2p494167",
+      "model": "Models/Fox/glTF/Fox.gltf",
+      "scene": 0,
+      "animationIndices": [
+        0
+      ],
+      "timeSeconds": 2.494167,
+      "animationName": "Survey",
+      "animationEndSeconds": 3.4166667461395264,
+      "camera": {
+        "position": [
+          -104.37848422129136,
+          147.9863452854364,
+          269.3807187024538
+        ],
+        "target": [
+          -1.8141145706176758,
+          38.83962285518646,
+          -12.41257095336914
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "verticalFovDegrees": 45,
+        "near": 0.09769867228255275,
+        "far": 709.9183564351549
+      }
+    },
+    {
+      "id": "Fox__a0_t4p680833",
+      "model": "Models/Fox/glTF/Fox.gltf",
+      "scene": 0,
+      "animationIndices": [
+        0
+      ],
+      "timeSeconds": 4.680833,
+      "animationName": "Survey",
+      "animationEndSeconds": 3.4166667461395264,
+      "camera": {
+        "position": [
+          -104.37848422129136,
+          147.9863452854364,
+          269.3807187024538
+        ],
+        "target": [
+          -1.8141145706176758,
+          38.83962285518646,
+          -12.41257095336914
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "verticalFovDegrees": 45,
+        "near": 0.09769867228255275,
+        "far": 709.9183564351549
+      }
+    },
+    {
+      "id": "Fox__a1_t0",
+      "model": "Models/Fox/glTF/Fox.gltf",
+      "scene": 0,
+      "animationIndices": [
+        1
+      ],
+      "timeSeconds": 0,
+      "animationName": "Walk",
+      "animationEndSeconds": 0.7083333134651184,
+      "camera": {
+        "position": [
+          -104.37848422129136,
+          147.9863452854364,
+          269.3807187024538
+        ],
+        "target": [
+          -1.8141145706176758,
+          38.83962285518646,
+          -12.41257095336914
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "verticalFovDegrees": 45,
+        "near": 0.09769867228255275,
+        "far": 709.9183564351549
+      }
+    },
+    {
+      "id": "Fox__a1_t0p262083",
+      "model": "Models/Fox/glTF/Fox.gltf",
+      "scene": 0,
+      "animationIndices": [
+        1
+      ],
+      "timeSeconds": 0.262083,
+      "animationName": "Walk",
+      "animationEndSeconds": 0.7083333134651184,
+      "camera": {
+        "position": [
+          -104.37848422129136,
+          147.9863452854364,
+          269.3807187024538
+        ],
+        "target": [
+          -1.8141145706176758,
+          38.83962285518646,
+          -12.41257095336914
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "verticalFovDegrees": 45,
+        "near": 0.09769867228255275,
+        "far": 709.9183564351549
+      }
+    },
+    {
+      "id": "Fox__a1_t0p517083",
+      "model": "Models/Fox/glTF/Fox.gltf",
+      "scene": 0,
+      "animationIndices": [
+        1
+      ],
+      "timeSeconds": 0.517083,
+      "animationName": "Walk",
+      "animationEndSeconds": 0.7083333134651184,
+      "camera": {
+        "position": [
+          -104.37848422129136,
+          147.9863452854364,
+          269.3807187024538
+        ],
+        "target": [
+          -1.8141145706176758,
+          38.83962285518646,
+          -12.41257095336914
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "verticalFovDegrees": 45,
+        "near": 0.09769867228255275,
+        "far": 709.9183564351549
+      }
+    },
+    {
+      "id": "Fox__a1_t0p970417",
+      "model": "Models/Fox/glTF/Fox.gltf",
+      "scene": 0,
+      "animationIndices": [
+        1
+      ],
+      "timeSeconds": 0.970417,
+      "animationName": "Walk",
+      "animationEndSeconds": 0.7083333134651184,
+      "camera": {
+        "position": [
+          -104.37848422129136,
+          147.9863452854364,
+          269.3807187024538
+        ],
+        "target": [
+          -1.8141145706176758,
+          38.83962285518646,
+          -12.41257095336914
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "verticalFovDegrees": 45,
+        "near": 0.09769867228255275,
+        "far": 709.9183564351549
+      }
+    },
+    {
+      "id": "Fox__a2_t0",
+      "model": "Models/Fox/glTF/Fox.gltf",
+      "scene": 0,
+      "animationIndices": [
+        2
+      ],
+      "timeSeconds": 0,
+      "animationName": "Run",
+      "animationEndSeconds": 1.1583333015441895,
+      "camera": {
+        "position": [
+          -104.37848422129136,
+          147.9863452854364,
+          269.3807187024538
+        ],
+        "target": [
+          -1.8141145706176758,
+          38.83962285518646,
+          -12.41257095336914
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "verticalFovDegrees": 45,
+        "near": 0.09769867228255275,
+        "far": 709.9183564351549
+      }
+    },
+    {
+      "id": "Fox__a2_t0p428583",
+      "model": "Models/Fox/glTF/Fox.gltf",
+      "scene": 0,
+      "animationIndices": [
+        2
+      ],
+      "timeSeconds": 0.428583,
+      "animationName": "Run",
+      "animationEndSeconds": 1.1583333015441895,
+      "camera": {
+        "position": [
+          -104.37848422129136,
+          147.9863452854364,
+          269.3807187024538
+        ],
+        "target": [
+          -1.8141145706176758,
+          38.83962285518646,
+          -12.41257095336914
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "verticalFovDegrees": 45,
+        "near": 0.09769867228255275,
+        "far": 709.9183564351549
+      }
+    },
+    {
+      "id": "Fox__a2_t0p845583",
+      "model": "Models/Fox/glTF/Fox.gltf",
+      "scene": 0,
+      "animationIndices": [
+        2
+      ],
+      "timeSeconds": 0.845583,
+      "animationName": "Run",
+      "animationEndSeconds": 1.1583333015441895,
+      "camera": {
+        "position": [
+          -104.37848422129136,
+          147.9863452854364,
+          269.3807187024538
+        ],
+        "target": [
+          -1.8141145706176758,
+          38.83962285518646,
+          -12.41257095336914
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "verticalFovDegrees": 45,
+        "near": 0.09769867228255275,
+        "far": 709.9183564351549
+      }
+    },
+    {
+      "id": "Fox__a2_t1p586917",
+      "model": "Models/Fox/glTF/Fox.gltf",
+      "scene": 0,
+      "animationIndices": [
+        2
+      ],
+      "timeSeconds": 1.586917,
+      "animationName": "Run",
+      "animationEndSeconds": 1.1583333015441895,
+      "camera": {
+        "position": [
+          -104.37848422129136,
+          147.9863452854364,
+          269.3807187024538
+        ],
+        "target": [
+          -1.8141145706176758,
+          38.83962285518646,
+          -12.41257095336914
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "verticalFovDegrees": 45,
+        "near": 0.09769867228255275,
+        "far": 709.9183564351549
+      }
+    },
+    {
+      "id": "OrientationTest__rest",
+      "model": "Models/OrientationTest/glTF/OrientationTest.gltf",
+      "scene": 0,
+      "animationIndices": [],
+      "timeSeconds": 0,
+      "camera": {
+        "position": [
+          -9.692788892283735,
+          10.314850492469768,
+          26.630718613090142
+        ],
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "verticalFovDegrees": 45,
+        "near": 0.009232958860045761,
+        "far": 67.09044069709054
+      }
+    },
+    {
+      "id": "SimpleMorph__rest",
+      "model": "Models/SimpleMorph/glTF/SimpleMorph.gltf",
+      "scene": 0,
+      "animationIndices": [],
+      "timeSeconds": 0,
+      "camera": {
+        "position": [
+          -0.9850979644593021,
+          2.3575726797393903,
+          3.5307775900103064
+        ],
+        "target": [
+          0.29999998211860657,
+          0.9900000095367432,
+          0
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "verticalFovDegrees": 45,
+        "near": 0.0012241323527977428,
+        "far": 8.895044401872255
+      }
+    },
+    {
+      "id": "SimpleMorph__a0_t0",
+      "model": "Models/SimpleMorph/glTF/SimpleMorph.gltf",
+      "scene": 0,
+      "animationIndices": [
+        0
+      ],
+      "timeSeconds": 0,
+      "animationName": "Animation 0",
+      "animationEndSeconds": 4,
+      "camera": {
+        "position": [
+          -0.9850979644593021,
+          2.3575726797393903,
+          3.5307775900103064
+        ],
+        "target": [
+          0.29999998211860657,
+          0.9900000095367432,
+          0
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "verticalFovDegrees": 45,
+        "near": 0.0012241323527977428,
+        "far": 8.895044401872255
+      }
+    },
+    {
+      "id": "SimpleMorph__a0_t1p48",
+      "model": "Models/SimpleMorph/glTF/SimpleMorph.gltf",
+      "scene": 0,
+      "animationIndices": [
+        0
+      ],
+      "timeSeconds": 1.48,
+      "animationName": "Animation 0",
+      "animationEndSeconds": 4,
+      "camera": {
+        "position": [
+          -0.9850979644593021,
+          2.3575726797393903,
+          3.5307775900103064
+        ],
+        "target": [
+          0.29999998211860657,
+          0.9900000095367432,
+          0
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "verticalFovDegrees": 45,
+        "near": 0.0012241323527977428,
+        "far": 8.895044401872255
+      }
+    },
+    {
+      "id": "SimpleMorph__a0_t2p92",
+      "model": "Models/SimpleMorph/glTF/SimpleMorph.gltf",
+      "scene": 0,
+      "animationIndices": [
+        0
+      ],
+      "timeSeconds": 2.92,
+      "animationName": "Animation 0",
+      "animationEndSeconds": 4,
+      "camera": {
+        "position": [
+          -0.9850979644593021,
+          2.3575726797393903,
+          3.5307775900103064
+        ],
+        "target": [
+          0.29999998211860657,
+          0.9900000095367432,
+          0
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "verticalFovDegrees": 45,
+        "near": 0.0012241323527977428,
+        "far": 8.895044401872255
+      }
+    },
+    {
+      "id": "SimpleMorph__a0_t5p48",
+      "model": "Models/SimpleMorph/glTF/SimpleMorph.gltf",
+      "scene": 0,
+      "animationIndices": [
+        0
+      ],
+      "timeSeconds": 5.48,
+      "animationName": "Animation 0",
+      "animationEndSeconds": 4,
+      "camera": {
+        "position": [
+          -0.9850979644593021,
+          2.3575726797393903,
+          3.5307775900103064
+        ],
+        "target": [
+          0.29999998211860657,
+          0.9900000095367432,
+          0
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "verticalFovDegrees": 45,
+        "near": 0.0012241323527977428,
+        "far": 8.895044401872255
+      }
+    }
+  ],
+  "failures": []
+}

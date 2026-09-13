@@ -64,7 +64,7 @@ The table below reflects the current code, not the full glTF 2.0 spec.
 | Primitive modes | Yes | Yes | Yes | Points, lines, strips, fans, and triangles are read and rendered. |
 | Positions | Yes | Yes | Yes | `POSITION` is supported. |
 | Normals | Yes | Yes | Yes | `NORMAL` is supported. |
-| Tangents | Yes | Yes | No | Reads authored tangents and falls back to generated tangents when missing. |
+| Tangents | Yes | Yes | No | Preserves authored tangents; generates missing ones with MikkTSpace, including mirrored seams and morph attributes. |
 | UV set 0 | Yes | Yes | Yes | `TEXCOORD_0` is supported. |
 | UV set 1 | Yes | Yes | No | `TEXCOORD_1` is loaded and used by texture inputs with `texCoord: 1`. |
 | Vertex colors | Yes | Yes | Yes | `COLOR_0` is supported. |
@@ -206,6 +206,10 @@ Current controls:
 - `experiments/` contains rendering experiments and shader work.
 
 ## Development
+
+The [reference-image tools](tools/reference/README.md) capture the official
+Khronos renderer and compare five fixed camera/animation cases with the Nim
+renderer in an HTML Xray report. Run `npm run compare` in `tools/reference`.
 
 The project includes standard build and docs workflows:
 

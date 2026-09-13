@@ -5,7 +5,10 @@ import
   opengl, windy, pixie, vmath,
   ../../common, ../../models, ../../shaders, ../../ktx2,
   ./common as openglCommon,
+  ./ibl,
   ../shaders as shaderSources
+
+export ibl.IblEnvironment, ibl.loadIblEnvironment
 
 const
   VertexEntryPoint* = "main"
@@ -54,6 +57,8 @@ type
     jointMatrices: GLint
     environmentMap: GLint
     environmentMipCount: GLint
+    environmentRotation: GLint
+    hasVertexTangent: GLint
     baseColorTexture: GLint
     baseColorFactor: GLint
     baseColorTransform: TextureTransformUniforms
@@ -149,7 +154,7 @@ type
     ## while a pass is active. Unknown values force a real GL call.
     programBound: bool
     activeUnit: int
-    boundTexture: array[7, GLuint]
+    boundTexture: array[9, GLuint]
     textureEpoch: uint64
     blend: int8
     depthMask: int8
@@ -179,6 +184,12 @@ type
     fogStrength*: float32
     environmentMapStrength*: float32
     environmentMap*: EnvironmentMap
+    iblEnvironment*: IblEnvironment
+    environmentRotation*: float32 ## IBL rotation about Y, in degrees.
+    exposure*: float32 ## Linear exposure multiplier before PBR Neutral.
+    hdrTarget: HdrTarget
+    ownsIblEnvironment: bool
+    maxIblAnisotropy: float32
     useShadows*: bool
     drawSkybox*: bool
     skyboxLod*: float32
@@ -261,6 +272,8 @@ proc loadPbrUniforms(shader: GLuint): PbrUniforms =
   result.jointMatrices = uniformLocation(shader, "jointMatrices")
   result.environmentMap = uniformLocation(shader, "environmentMap")
   result.environmentMipCount = uniformLocation(shader, "environmentMipCount")
+  result.environmentRotation = uniformLocation(shader, "environmentRotation")
+  result.hasVertexTangent = uniformLocation(shader, "hasVertexTangent")
   result.baseColorTexture = uniformLocation(shader, "baseColorTexture")
   result.baseColorFactor = uniformLocation(shader, "baseColorFactor")
   result.baseColorTransform =
@@ -686,6 +699,8 @@ proc newPbrContext*(
   ctx.fogStrength = 0.0'f
   ctx.environmentMapStrength = 1.0'f
   ctx.environmentMap = EnvironmentMap()
+  ctx.environmentRotation = 90.0'f
+  ctx.exposure = 1.0'f
   ctx.ownsEnvironmentMap = false
   ctx.useShadows = false
   ctx.drawSkybox = false
@@ -713,10 +728,59 @@ proc attachEnvironmentMap*(
   ctx.environmentMap = environmentMap
   ctx.ownsEnvironmentMap = owned
 
+proc attachIblEnvironment*(ctx: PbrContext, environment: IblEnvironment,
+    owned = true) =
+  ## Opt into linear core metallic/roughness shading with a prefiltered HDR
+  ## environment. Wrap all scene draws in beginIblFrame/endIblFrame. Existing
+  ## procedural-lighting contexts keep their original shader and texture data.
+  doAssert not ctx.hdrTarget.active
+  doAssert environment.specular != 0 and environment.diffuse != 0 and environment.lut != 0
+  let shader = compileShaderFiles(PbrVertexShader, shaderSources.IblFragSrc)
+  if ctx.ownsIblEnvironment:
+    ctx.iblEnvironment.destroy()
+  if ctx.ownsEnvironmentMap:
+    ctx.environmentMap.destroy()
+  glDeleteProgram(ctx.pbrShader)
+  ctx.pbrShader = shader
+  ctx.pbrUniforms = loadPbrUniforms(shader)
+  ctx.iblEnvironment = environment
+  ctx.ownsIblEnvironment = owned
+  ctx.maxIblAnisotropy = maxIblAnisotropy()
+  ctx.environmentMap = EnvironmentMap(textureId: environment.specular,
+    mipCount: environment.mipCount.float32)
+  ctx.ownsEnvironmentMap = false
+  ctx.environmentMapStrength = environment.intensityScale
+  glUseProgram(shader)
+  for (name, unit) in [("baseColorTexture", 0), ("metallicRoughnessTexture", 1),
+      ("normalTexture", 2), ("occlusionTexture", 3), ("emissiveTexture", 4),
+      ("environmentMap", 5), ("diffuseEnvironment", 7), ("ggxLut", 8)]:
+    glUniform1i(uniformLocation(shader, name.cstring), unit.GLint)
+  ctx.passValues = PbrPassValues()
+  inc textureBindEpoch
+  ctx.invalidateGlState()
+
+proc beginIblFrame*(ctx: PbrContext) =
+  ## Clear the HDR target using size/clearColor before drawing the whole scene.
+  doAssert ctx.iblEnvironment.specular != 0, "Attach an IBL environment first"
+  ctx.hdrTarget.beginHdr(ctx.size, ctx.clearColor)
+  inc textureBindEpoch
+  ctx.invalidateGlState()
+
+proc endIblFrame*(ctx: PbrContext) =
+  ## Present the scene with exposure, Khronos PBR Neutral and display transfer.
+  doAssert ctx.passDepth == 0, "Finish batched draws before presenting HDR"
+  ctx.hdrTarget.endHdr(ctx.exposure)
+  inc textureBindEpoch
+  ctx.invalidateGlState()
+
 proc destroy*(ctx: PbrContext) =
   ## Deletes the OpenGL resources owned by a PBR context.
   if ctx == nil:
     return
+  ctx.hdrTarget.destroy()
+  if ctx.ownsIblEnvironment:
+    ctx.iblEnvironment.destroy()
+    inc textureBindEpoch
   if ctx.ownsEnvironmentMap:
     ctx.environmentMap.destroy()
   ctx.ownsEnvironmentMap = false
@@ -871,7 +935,8 @@ proc uploadTextureToGpu(
   textureId: var GLuint,
   image: Image,
   ktx2Data: string,
-  sampler: TextureSampler
+  sampler: TextureSampler,
+  srgb = false
 ) =
   ## Uploads a texture to OpenGL.
   if ktx2Data.len > 0:
@@ -898,7 +963,7 @@ proc uploadTextureToGpu(
     glTexImage2D(
       GL_TEXTURE_2D,
       0,
-      GL_RGB.GLint,
+      (if srgb: GL_SRGB8 else: GL_RGB).GLint,
       image.width.GLint,
       image.height.GLint,
       0,
@@ -910,7 +975,7 @@ proc uploadTextureToGpu(
     glTexImage2D(
       GL_TEXTURE_2D,
       0,
-      GL_RGBA.GLint,
+      (if srgb: GL_SRGB8_ALPHA8 else: GL_RGBA).GLint,
       image.width.GLint,
       image.height.GLint,
       0,
@@ -971,6 +1036,10 @@ proc clearMaterialFromGpu(material: Material) =
   if material == nil or material.data == nil:
     return
   let data = material.data
+  if data.baseColorSrgbId != 0:
+    glDeleteTextures(1, data.baseColorSrgbId.addr)
+  if data.emissiveSrgbId != 0:
+    glDeleteTextures(1, data.emissiveSrgbId.addr)
   if data.baseColorId != 0.GLuint:
     glDeleteTextures(1, data.baseColorId.addr)
     data.baseColorId = 0
@@ -1299,6 +1368,14 @@ proc applyPassUniforms(
     glUniform1f(u.environmentMapStrength, ctx.environmentMapStrength)
   ctx.syncPassValue(environmentMipCount, ctx.environmentMap.mipCount):
     glUniform1f(u.environmentMipCount, ctx.environmentMap.mipCount)
+  if ctx.iblEnvironment.specular != 0:
+    let
+      angle = degToRad(ctx.environmentRotation)
+      c = cos(angle)
+      s = sin(angle)
+      rotation = mat3(vec3(c, 0.0'f, -s), vec3(0.0'f, 1.0'f, 0.0'f), vec3(s, 0.0'f, c))
+    glUniformMatrix3fv(u.environmentRotation, 1, GL_FALSE,
+      cast[ptr float32](rotation.unsafeAddr))
   ctx.syncPassValue(useShadow, useShadow):
     glUniform1i(u.useShadow, useShadow.GLint)
   ctx.passValues.valid = true
@@ -1319,12 +1396,33 @@ proc applyMaterial(
     ctx.lastMaterial = nil
     return
   let materialData = material.ensureData()
-
-  ctx.bindTextureCached(0, GL_TEXTURE_2D, materialData.baseColorId)
+  if ctx.iblEnvironment.specular != 0:
+    glUniform1i(u.hasVertexTangent, (primitive.tangents.len > 0).GLint)
+    if materialData.baseColorSrgbId == 0:
+      uploadTextureToGpu(materialData.baseColorSrgbId, material.baseColor,
+        material.baseColorKtx2, material.baseColorSampler, srgb = true)
+    if materialData.emissiveSrgbId == 0:
+      uploadTextureToGpu(materialData.emissiveSrgbId, material.emissive,
+        material.emissiveKtx2, material.emissiveSampler, srgb = true)
+    ctx.bindTextureCached(0, GL_TEXTURE_2D, materialData.baseColorSrgbId)
+    ctx.bindTextureCached(4, GL_TEXTURE_2D, materialData.emissiveSrgbId)
+  else:
+    ctx.bindTextureCached(0, GL_TEXTURE_2D, materialData.baseColorId)
+    ctx.bindTextureCached(4, GL_TEXTURE_2D, materialData.emissiveId)
   ctx.bindTextureCached(1, GL_TEXTURE_2D, materialData.metallicRoughnessId)
   ctx.bindTextureCached(2, GL_TEXTURE_2D, materialData.normalId)
   ctx.bindTextureCached(3, GL_TEXTURE_2D, materialData.occlusionId)
-  ctx.bindTextureCached(4, GL_TEXTURE_2D, materialData.emissiveId)
+  if ctx.iblEnvironment.specular != 0 and ctx.maxIblAnisotropy > 1.0'f and
+      (ctx.lastMaterial != material or ctx.lastMaterialVersion != material.materialVersion):
+    # Match the reference's trilinear texture filtering with hardware AF.
+    for (unit, sampler) in [(0, material.baseColorSampler),
+        (1, material.metallicRoughnessSampler), (2, material.normalSampler),
+        (3, material.occlusionSampler), (4, material.emissiveSampler)]:
+      if sampler.magFilter != NearestMagFilter and sampler.minFilter in
+          {NearestMipmapLinearMinFilter, LinearMipmapLinearMinFilter}:
+        glActiveTexture(GLenum(GL_TEXTURE0.int + unit))
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, ctx.maxIblAnisotropy)
+    ctx.glState.activeUnit = -1
   let activeShadowTex =
     if shadowTex != 0.GLuint:
       shadowTex
@@ -1335,8 +1433,8 @@ proc applyMaterial(
   # Depends on the primitive, not just the material.
   let useNormalTexture =
     material.hasNormalTexture and
-    primitive.normals.len > 0 and
-    primitive.tangents.len > 0
+    (ctx.iblEnvironment.specular != 0 or
+      (primitive.normals.len > 0 and primitive.tangents.len > 0))
   ctx.syncPassValue(useNormalTexture, useNormalTexture):
     glUniform1i(u.useNormalTexture, useNormalTexture.ord.GLint)
 
@@ -1482,6 +1580,9 @@ proc renderPbrPrimitive(
     GL_TEXTURE_CUBE_MAP,
     ctx.environmentMap.textureId
   )
+  if ctx.iblEnvironment.specular != 0:
+    ctx.bindTextureCached(7, GL_TEXTURE_CUBE_MAP, ctx.iblEnvironment.diffuse)
+    ctx.bindTextureCached(8, GL_TEXTURE_2D, ctx.iblEnvironment.lut)
   ctx.applyMaterial(primitive, shadowTex)
 
   if tint.a < 1 and (

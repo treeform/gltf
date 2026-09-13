@@ -6,6 +6,7 @@ import
   gltf/pbr,
   gltf/reader,
   gltf/shaders,
+  gltf/tangents,
   gltf/writer
 
 export
@@ -16,4 +17,5 @@ export
   pbr,
   reader,
   shaders,
+  tangents,
   writer

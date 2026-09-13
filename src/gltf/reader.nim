@@ -1,7 +1,7 @@
 import
   std/[base64, json, os, strformat, strutils],
   chroma, flatty/binny, pixie, vmath, webby,
-  common, draco, internal, meshopt, models
+  common, draco, internal, meshopt, models, tangents
 
 export common
 
@@ -1790,59 +1790,10 @@ proc loadPrimitive(
       )
     result.morphTargets.add(morphTarget)
 
+  result.generateTangents()
   result.basePoints = result.points
   result.baseNormals = result.normals
   result.baseTangents = result.tangents
-
-  if result.tangents.len == 0 and
-    result.normals.len > 0 and
-    result.uvs.len > 0:
-    result.tangents.setLen(result.normals.len)
-
-    template computeTangents(idx: untyped) =
-      var counts = newSeq[int](result.normals.len)
-      var tmpTangents = newSeq[Vec3](result.normals.len)
-      for i in 0 ..< idx.len div 3:
-        let
-          i0 = idx[i * 3].int
-          i1 = idx[i * 3 + 1].int
-          i2 = idx[i * 3 + 2].int
-          v0 = result.points[i0]
-          v1 = result.points[i1]
-          v2 = result.points[i2]
-          uv0 = result.uvs[i0]
-          uv1 = result.uvs[i1]
-          uv2 = result.uvs[i2]
-          edge1 = v1 - v0
-          edge2 = v2 - v0
-          deltaUv1 = uv1 - uv0
-          deltaUv2 = uv2 - uv0
-          f = 1.0 / (deltaUv1.x * deltaUv2.y - deltaUv2.x * deltaUv1.y)
-          tangent = vec3(
-            f * (deltaUv2.y * edge1.x - deltaUv1.y * edge2.x),
-            f * (deltaUv2.y * edge1.y - deltaUv1.y * edge2.y),
-            f * (deltaUv2.y * edge1.z - deltaUv1.y * edge2.z)
-          )
-        tmpTangents[i0] += tangent
-        tmpTangents[i1] += tangent
-        tmpTangents[i2] += tangent
-        counts[i0] += 1
-        counts[i1] += 1
-        counts[i2] += 1
-
-      for i in 0 ..< result.tangents.len:
-        if counts[i] > 0:
-          let tangent = normalize(tmpTangents[i] / counts[i].float32)
-          let handedness = 1.0
-          result.tangents[i].x = tangent.x
-          result.tangents[i].y = tangent.y
-          result.tangents[i].z = tangent.z
-          result.tangents[i].w = handedness
-
-    if result.indices16.len > 0:
-      computeTangents(result.indices16)
-    if result.indices32.len > 0:
-      computeTangents(result.indices32)
 
 type
   LoadResult = object

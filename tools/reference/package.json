@@ -1,0 +1,15 @@
+{
+  "name": "gltf-reference-images",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "setup": "node setup.mjs",
+    "manifest": "node capture.mjs --init",
+    "capture": "node capture.mjs",
+    "compare": "node compare.mjs",
+    "test": "node --test test.mjs"
+  },
+  "dependencies": {
+    "puppeteer": "25.10.0"
+  }
+}

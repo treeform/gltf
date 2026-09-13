@@ -4,7 +4,8 @@ import
   pixie,
   vmath,
   test_meshopt,
-  test_mesh_quantization
+  test_mesh_quantization,
+  test_tangents
 
 proc writeBytes(path: string, bytes: openArray[byte]) =
   ## Writes raw bytes to a test fixture file.

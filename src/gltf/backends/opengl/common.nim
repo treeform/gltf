@@ -18,10 +18,12 @@ type
   MaterialData* = ref object
     materialVersion*: uint64
     baseColorId*: GLuint
+    baseColorSrgbId*: GLuint
     metallicRoughnessId*: GLuint
     normalId*: GLuint
     occlusionId*: GLuint
     emissiveId*: GLuint
+    emissiveSrgbId*: GLuint
 
   GltfFileData* = ref object
     sceneVersion*: uint64

@@ -1,5 +1,5 @@
 import
-  std/[algorithm, os, sequtils, strformat, strutils, tables, times],
+  std/[algorithm, json, math, os, sequtils, strformat, strutils, tables, times],
   chroma, pixie, windy, vmath,
   gltf
 
@@ -30,10 +30,25 @@ type
     unsupportedUsedExtensions: seq[string]
     exceptionName: string
     message: string
+    caseId: string
+    animationTime: float32
+    pixels: int
+    differentPixels: int
+    pixelsOverTolerance: int
+    meanAbsoluteError: float64
+    rootMeanSquareError: float64
+    maxChannelError: int
 
 var
   renderer: Renderer
   pbrContext: PbrContext
+  referenceCase: JsonNode
+  referenceSettings: JsonNode
+  iblDirectory: string
+
+proc jsonVec3(value: JsonNode): Vec3 =
+  vec3(value[0].getFloat().float32, value[1].getFloat().float32,
+    value[2].getFloat().float32)
 
 proc hasModel(node: Node): bool =
   ## Returns true when the node tree has geometry to draw.
@@ -145,6 +160,8 @@ proc screenshotPath(
   index: int
 ): string =
   ## Returns the output path for one screenshot.
+  if referenceCase != nil:
+    return joinPath(screenshotsDir, referenceCase["id"].getStr() & ".png")
   let rootDir =
     if dirExists(modelsPath):
       modelsPath
@@ -179,9 +196,33 @@ proc xray(
   xray.writeFile(xrayPath)
   score
 
+proc measurePixels(result: var AssetResult, baseline, generated: Image) =
+  ## Measures unaligned RGB bytes. A pixel differs if any RGB channel differs.
+  if baseline.width != generated.width or baseline.height != generated.height:
+    raise newException(ValueError, "Reference and generated dimensions differ")
+  result.pixels = baseline.width * baseline.height
+  var absoluteSum, squareSum: float64
+  for i in 0 ..< result.pixels:
+    let
+      a = baseline.data[i]
+      b = generated.data[i]
+      dr = abs(a.r.int - b.r.int)
+      dg = abs(a.g.int - b.g.int)
+      db = abs(a.b.int - b.b.int)
+      delta = max(dr, max(dg, db))
+    if delta > 0:
+      inc result.differentPixels
+    if delta > 2:
+      inc result.pixelsOverTolerance
+    result.maxChannelError = max(result.maxChannelError, delta)
+    absoluteSum += (dr + dg + db).float64
+    squareSum += (dr * dr + dg * dg + db * db).float64
+  result.meanAbsoluteError = absoluteSum / (result.pixels * 3).float64
+  result.rootMeanSquareError = sqrt(squareSum / (result.pixels * 3).float64)
+
 proc renderScene(window: Window, model: Node) =
   ## Renders one frame for a loaded model.
-  let
+  var
     aspectRatio = window.size.x.float32 / window.size.y.float32
     bounds = model.computeBounds()
     camCenter = bounds.center
@@ -203,11 +244,33 @@ proc renderScene(window: Window, model: Node) =
     # the upper-left/front when shading the model.
     sunLightDirection = safeNormalize(vec3(1, -4, -2), vec3(1, -1, -1))
     rimLightDirection = safeNormalize(vec3(-1, 1, -1), vec3(-1, 1, -1))
+    background = BackgroundColor
+
+  if referenceCase != nil:
+    let
+      camera = referenceCase["camera"]
+      eye = jsonVec3(camera["position"])
+      target = jsonVec3(camera["target"])
+      up = jsonVec3(camera["up"])
+      fov = camera["verticalFovDegrees"].getFloat().float32
+      near = camera["near"].getFloat().float32
+      far = camera["far"].getFloat().float32
+      clear = referenceSettings["rendering"]["clearColor"]
+    cameraMat = lookAt(eye, target, up)
+    cameraPosition = eye
+    when defined(useDirectX):
+      proj = perspectiveDxRh(fov, aspectRatio, near, far)
+    elif defined(useVulkan):
+      proj = perspectiveVkRh(fov, aspectRatio, near, far)
+    else:
+      proj = perspective(fov, aspectRatio, near, far)
+    background = color(clear[0].getFloat(), clear[1].getFloat(),
+      clear[2].getFloat(), clear[3].getFloat())
 
   renderer.beginFrame(window, window.size)
-  renderer.clearScreen(BackgroundColor)
+  renderer.clearScreen(background)
   pbrContext.size = window.size
-  pbrContext.clearColor = BackgroundColor
+  pbrContext.clearColor = background
   pbrContext.transform = mat4()
   pbrContext.view = cameraMat
   pbrContext.proj = proj
@@ -224,7 +287,18 @@ proc renderScene(window: Window, model: Node) =
   pbrContext.drawSkybox = false
   pbrContext.skyboxLod = 0
   pbrContext.vsync = false
+  when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
+    if iblDirectory.len > 0:
+      pbrContext.sunLightColor = color(0, 0, 0, 0)
+      pbrContext.environmentRotation = referenceSettings["rendering"]["environmentRotation"].getFloat().float32
+      pbrContext.environmentMapStrength = referenceSettings["rendering"]["iblIntensity"].getFloat().float32 *
+        pbrContext.iblEnvironment.intensityScale
+      pbrContext.exposure = referenceSettings["rendering"]["exposure"].getFloat().float32
+      pbrContext.beginIblFrame()
   pbrContext.draw(model)
+  when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
+    if iblDirectory.len > 0:
+      pbrContext.endIblFrame()
   renderer.endFrame()
 
 proc testModel(
@@ -239,6 +313,10 @@ proc testModel(
 ): AssetResult =
   ## Loads one model, renders it, and saves a screenshot.
   result.modelPath = modelPath
+  result.caseId = modelPath.extractFilename()
+  if referenceCase != nil:
+    result.caseId = referenceCase["id"].getStr()
+    result.animationTime = referenceCase["timeSeconds"].getFloat().float32
   result.score = -1
   let
     outPath = screenshotPath(generatedDir, modelsPath, modelPath, index)
@@ -266,6 +344,19 @@ proc testModel(
     if result.unsupportedUsedExtensions.len > 0:
       echo "  unsupported used extensions: ", result.unsupportedUsedExtensions.join(", ")
     model = gltfFile.root
+    if referenceCase != nil:
+      let scene = referenceCase["scene"].getInt()
+      if scene < 0 or scene >= gltfFile.scenes.len:
+        raise newException(ValueError, "Reference scene is unavailable")
+      model.nodes = gltfFile.scenes[scene].nodes
+      model.activeClips.setLen(0)
+      for clip in referenceCase["animationIndices"]:
+        let index = clip.getInt()
+        if index < 0 or index >= model.animations.len:
+          raise newException(ValueError, "Reference animation is unavailable")
+        model.activeClips.add(index)
+      model.animTime = referenceCase["timeSeconds"].getFloat().float32
+      model.updateAnimation(0)
     if not model.hasModel():
       result.status = "skip"
       result.message = "Loaded, but no renderable geometry was found."
@@ -278,7 +369,8 @@ proc testModel(
         result.status = "stop"
         result.message = "Window was closed."
         return
-      model.updateAnimation(1.0'f / 60.0'f)
+      if referenceCase == nil:
+        model.updateAnimation(1.0'f / 60.0'f)
       renderScene(window, model)
       if frame == 1:
         echo "  phase: screenshot"
@@ -288,6 +380,7 @@ proc testModel(
         )
         if fileExists(baselinePath):
           echo "  phase: xray"
+          result.measurePixels(readImage(baselinePath), image)
           result.score = xray(image, baselinePath, outPath, xrayPath)
           if updateBaselines and result.score > UpdateXrayScore:
             echo "  phase: update"
@@ -311,6 +404,8 @@ proc testModel(
           image.writeFile(outPath)
           result.status = "ok"
           result.message = "Rendered successfully; baseline screenshot not found."
+          if referenceCase != nil:
+            result.status = "missing_reference"
       when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
         window.swapBuffers()
     let renderElapsed = epochTime() - renderStart
@@ -370,10 +465,19 @@ proc writeSummary(path: string, results: seq[AssetResult]) =
 
 proc writeReport(path: string, results: seq[AssetResult]) =
   ## Writes an HTML xray report with master/generated/xray images side by side.
-  let reportDir = path.parentDir()
+  let
+    reportDir = path.parentDir()
+    orderedResults = results.sorted(proc(a, b: AssetResult): int =
+      result = cmp(b.score, a.score)
+      if result == 0:
+        result = cmp(a.caseId, b.caseId)
+    )
   var entries: seq[string]
-  for result in results:
+  for result in orderedResults:
     if result.status == "skip":
+      continue
+    if result.pixels == 0:
+      entries.add(&"<div><b>{result.caseId}</b>: {result.status}</div>")
       continue
     if not fileExists(result.screenshotPath):
       continue
@@ -385,40 +489,102 @@ proc writeReport(path: string, results: seq[AssetResult]) =
       baseline =
         if fileExists(result.baselinePath):
           let relBaseline = relativePath(result.baselinePath, reportDir)
-          &"""<div><div>Baseline</div><img src="{relBaseline}"></div>"""
+          &"""<div class="tile"><div class="tile-label">Baseline</div><img src="{relBaseline}"></div>"""
         else:
-          "<div><div>Baseline</div><div>(none)</div></div>"
+          "<div class=\"tile\"><div class=\"tile-label\">Baseline</div><div>(none)</div></div>"
       xrayImg =
         if fileExists(result.xrayPath):
           let relXray = relativePath(result.xrayPath, reportDir)
-          &"""<div><div>Xray</div><img src="{relXray}"></div>"""
+          &"""<div class="tile"><div class="tile-label">Xray</div><img src="{relXray}"></div>"""
         else:
           ""
-    entries.add(&"""<div style="background:{bg};border:1px solid #ccc;padding:8px;break-inside:avoid">
-<b>{result.modelPath}</b> score: {result.score:0.3f} — {result.status}
-<div style="display:flex;gap:8px;flex-wrap:wrap">
+    let
+      exactPercent =
+        if result.pixels > 0:
+          100.0 * (result.pixels - result.differentPixels).float64 / result.pixels.float64
+        else: 0.0
+      tolerancePercent =
+        if result.pixels > 0:
+          100.0 * (result.pixels - result.pixelsOverTolerance).float64 / result.pixels.float64
+        else: 0.0
+    entries.add(&"""<div style="background:{bg};border:1px solid #ccc;padding:16px;break-inside:avoid">
+<b>{result.caseId}</b>
+<div class="tiles">
 {baseline}
-<div><div>Generated</div><img src="{relGenerated}"></div>
+<div class="tile"><div class="tile-label">Generated</div><img src="{relGenerated}"></div>
 {xrayImg}
+<div class="tile"><div class="tile-label">Statistics</div><div class="statistics">
+<p>time {result.animationTime:0.6f}s · {result.status}</p>
+<p>{result.differentPixels} / {result.pixels} pixels differ<br>{exactPercent:0.2f}% exact<br>{tolerancePercent:0.2f}% within ±2</p>
+<p>RGB mean absolute error {result.meanAbsoluteError:0.3f} / 255<br>RMSE {result.rootMeanSquareError:0.3f}<br>max channel error {result.maxChannelError}<br>Pixie score {result.score:0.3f}%</p>
+</div></div>
 </div></div>""")
   let html = """<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Xray Report</title>
-<style>body{font-family:monospace;margin:16px}img{display:block;max-width:256px;background:repeating-conic-gradient(#eee 0% 25%,#fff 0% 50%) 0 0/16px 16px}</style>
+<style>body{font-family:monospace;margin:16px}.tiles{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.tile{width:256px}.tile-label{margin-bottom:6px}img{display:block;max-width:256px;background:repeating-conic-gradient(#eee 0% 25%,#fff 0% 50%) 0 0/16px 16px}.statistics{box-sizing:border-box;width:256px;height:256px;padding:12px;background:#ffffffb3;border:1px solid #ccc;font-size:13px;line-height:1.35}.statistics p{margin:0 0 12px}.statistics p:last-child{margin-bottom:0}</style>
 </head><body>
 <h1>Xray Report</h1>
-""" & entries.join("\n") & "\n</body></html>"
+<p>Sorted by Pixie score, worst first.</p>
+<p>Same model, camera, scene, animation clip and absolute time. Images are compared without alignment or resizing.</p>
+<p>Pixel counts use RGB bytes over the entire image, including the background. Within ±2 means every RGB channel differs by at most 2 on the 0–255 scale. Xray: green = generated darker; blue = generated brighter; red = alpha difference.</p>
+""" & (if iblDirectory.len > 0:
+  "<p><b>Matched lighting:</b> shared Khronos neutral HDR environment, rotation and exposure; linear sRGB textures, GGX image-based lighting, HDR framebuffer and PBR Neutral tone mapping. Core metallic/roughness pilot on OpenGL; advanced material extensions and model punctual lights are not yet matched.</p>"
+elif referenceSettings != nil:
+  "<p><b>Lighting currently differs:</b> Khronos uses the neutral HDR studio and PBR Neutral tone mapping. Nim uses its current procedural environment and sun/rim/ambient lighting. These measurements include that difference.</p>"
+else: "") & entries.join("\n") & "\n</body></html>"
   writeFile(path, html)
+  var metrics = newJArray()
+  for result in orderedResults:
+    metrics.add(%*{
+      "id": result.caseId,
+      "status": result.status,
+      "timeSeconds": result.animationTime,
+      "pixels": result.pixels,
+      "differentPixels": result.differentPixels,
+      "pixelsOverTolerance2": result.pixelsOverTolerance,
+      "meanAbsoluteErrorRgb": result.meanAbsoluteError,
+      "rootMeanSquareErrorRgb": result.rootMeanSquareError,
+      "maxChannelErrorRgb": result.maxChannelError,
+      "pixieScore": result.score
+    })
+  writeFile(path.parentDir() / "metrics.json", metrics.pretty() & "\n")
 
 let rawParams = commandLineParams()
 
 var
   updateBaselines = false
   positionalParams: seq[string]
+  manifestPath: string
+  caseFilter: string
 for param in rawParams:
   if param == "--update":
     updateBaselines = true
+  elif param.startsWith("--manifest="):
+    manifestPath = resolvePath(param[11 .. ^1])
+  elif param.startsWith("--case="):
+    caseFilter = param[7 .. ^1]
+  elif param.startsWith("--ibl="):
+    iblDirectory = resolvePath(param[6 .. ^1])
   else:
     positionalParams.add(param)
+
+var referenceCases: seq[JsonNode]
+if manifestPath.len > 0:
+  if updateBaselines:
+    quit("--update cannot overwrite Khronos references. Regenerate them with tools/reference.", 1)
+  let manifest = parseFile(manifestPath)
+  doAssert manifest["version"].getInt() == 1, "Unsupported reference manifest"
+  referenceSettings = manifest["settings"]
+  var ids: seq[string]
+  for item in manifest["cases"]:
+    let id = item["id"].getStr()
+    doAssert id.len > 0 and id == sanitizeFileName(id) and id notin ids,
+      "Invalid or duplicate reference id"
+    ids.add(id)
+    if caseFilter.len == 0 or caseFilter in id:
+      referenceCases.add(item)
+  if referenceCases.len == 0:
+    quit("No reference cases match the selection.", 1)
 
 let
   modelsPath =
@@ -429,11 +595,15 @@ let
   tmpDir =
     if positionalParams.len > 1:
       resolvePath(positionalParams[1])
+    elif manifestPath.len > 0:
+      joinPath(defaultTmpDir(), "reference")
     else:
       defaultTmpDir()
   masterScreenshotsDir =
     if positionalParams.len > 2:
       resolvePath(positionalParams[2])
+    elif manifestPath.len > 0:
+      joinPath(manifestPath.parentDir(), "images")
     else:
       defaultMasterScreenshotsDir()
 
@@ -447,7 +617,15 @@ createDir(tmpDir)
 createDir(generatedDir)
 createDir(xrayDir)
 
-let modelPaths = discoverModels(modelsPath)
+var modelPaths: seq[string]
+if manifestPath.len > 0:
+  for item in referenceCases:
+    let relative = item["model"].getStr().replace('\\', '/')
+    doAssert relative.startsWith("Models/") and ".." notin relative.split('/'),
+      "Reference model must be relative to the sample asset repository"
+    modelPaths.add(joinPath(modelsPath, relative[7 .. ^1]))
+else:
+  modelPaths = discoverModels(modelsPath)
 if modelPaths.len == 0:
   quit("No .gltf or .glb files found under: " & modelsPath, 1)
 
@@ -463,7 +641,12 @@ echo &"Update xray score: {UpdateXrayScore:0.3f}"
 
 var window = newWindow(
   "glTF Sample Assets",
-  ivec2(WindowSize, WindowSize),
+  if referenceSettings != nil:
+    ivec2(referenceSettings["width"].getInt().int32,
+      referenceSettings["height"].getInt().int32)
+  else:
+    ivec2(WindowSize, WindowSize),
+  visible = manifestPath.len == 0,
   msaa = msaa8x
 )
 when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
@@ -474,10 +657,15 @@ elif defined(useDirectX) or defined(useVulkan):
 renderer = newRenderer(window)
 pbrContext = newPbrContext(renderer)
 when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
-  pbrContext.attachEnvironmentMap(loadDefaultEnvironmentMap())
+  if iblDirectory.len > 0:
+    pbrContext.attachIblEnvironment(loadIblEnvironment(iblDirectory))
+  else:
+    pbrContext.attachEnvironmentMap(loadDefaultEnvironmentMap())
 
 var results: seq[AssetResult]
 for i, modelPath in modelPaths:
+  if manifestPath.len > 0:
+    referenceCase = referenceCases[i]
   if window.closeRequested:
     echo "Window closed. Stopping early."
     break

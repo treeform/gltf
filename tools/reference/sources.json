@@ -1,0 +1,18 @@
+{
+  "renderer": {
+    "repository": "https://github.com/KhronosGroup/glTF-Sample-Renderer.git",
+    "revision": "863b981fb755359063e370ff7b6e956bda0716e2"
+  },
+  "assets": {
+    "repository": "https://github.com/KhronosGroup/glTF-Sample-Assets.git",
+    "revision": "90d7ede14c7e280af263824604b427a1ca02cb66"
+  },
+  "environment": {
+    "url": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Environments/3a030b54c2e4f0f4d469eec2f98f47398c9a2a30/neutral.hdr",
+    "licenseUrl": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Environments/3a030b54c2e4f0f4d469eec2f98f47398c9a2a30/neutral.hdr.license",
+    "sha256": "dad135da12b0bc55c488574bd56bf011407c9ed3040493f240528cdfb51782e8"
+  },
+  "draco": {
+    "url": "https://www.gstatic.com/draco/versioned/decoders/1.5.7/draco_decoder_gltf.js"
+  }
+}

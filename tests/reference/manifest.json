@@ -1,0 +1,210 @@
+{
+  "version": 1,
+  "sources": {
+    "renderer": {
+      "repository": "https://github.com/KhronosGroup/glTF-Sample-Renderer.git",
+      "revision": "863b981fb755359063e370ff7b6e956bda0716e2"
+    },
+    "assets": {
+      "repository": "https://github.com/KhronosGroup/glTF-Sample-Assets.git",
+      "revision": "90d7ede14c7e280af263824604b427a1ca02cb66"
+    },
+    "environment": {
+      "url": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Environments/3a030b54c2e4f0f4d469eec2f98f47398c9a2a30/neutral.hdr",
+      "licenseUrl": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Environments/3a030b54c2e4f0f4d469eec2f98f47398c9a2a30/neutral.hdr.license",
+      "sha256": "dad135da12b0bc55c488574bd56bf011407c9ed3040493f240528cdfb51782e8"
+    },
+    "draco": {
+      "url": "https://www.gstatic.com/draco/versioned/decoders/1.5.7/draco_decoder_gltf.js"
+    }
+  },
+  "environment": {
+    "url": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Environments/3a030b54c2e4f0f4d469eec2f98f47398c9a2a30/neutral.hdr",
+    "licenseUrl": "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Environments/3a030b54c2e4f0f4d469eec2f98f47398c9a2a30/neutral.hdr.license",
+    "sha256": "dad135da12b0bc55c488574bd56bf011407c9ed3040493f240528cdfb51782e8"
+  },
+  "settings": {
+    "width": 512,
+    "height": 512,
+    "renderFrames": 2,
+    "toneMap": "KHR_PBR_NEUTRAL",
+    "fit": {
+      "yawDegrees": 20,
+      "pitchDegrees": 20,
+      "verticalFovDegrees": 45,
+      "padding": 1.25,
+      "marginPixels": 8
+    },
+    "rendering": {
+      "clearColor": [
+        0.7058824,
+        0.74509805,
+        0.8627451,
+        1
+      ],
+      "exposure": 1,
+      "useIBL": true,
+      "iblIntensity": 1,
+      "environmentRotation": 90,
+      "usePunctual": true,
+      "renderEnvironmentMap": false,
+      "blurEnvironmentMap": false,
+      "useDirectionalLightsWithDisabledIBL": false,
+      "internalMSAA": 4,
+      "floatingPointFramebuffer": true
+    },
+    "excludedModels": {
+      "ABeautifulGame": "Slow to load and provides little additional coverage for this suite."
+    }
+  },
+  "cases": [
+    {
+      "id": "AnimatedCube__a0_t0p74",
+      "model": "Models/AnimatedCube/glTF/AnimatedCube.gltf",
+      "scene": 0,
+      "animationIndices": [
+        0
+      ],
+      "timeSeconds": 0.74,
+      "animationName": "animation_AnimatedCube",
+      "animationEndSeconds": 2,
+      "camera": {
+        "position": [
+          -1.3989837169647217,
+          1.488767147064209,
+          3.8436756134033203
+        ],
+        "target": [
+          -2.3004140814464336e-7,
+          -4.946634390989857e-8,
+          -2.2835813240362768e-7
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "verticalFovDegrees": 45,
+        "near": 0.0024771762766189536,
+        "far": 14.261569118780653
+      }
+    },
+    {
+      "id": "DamagedHelmet__rest",
+      "model": "Models/DamagedHelmet/glTF/DamagedHelmet.gltf",
+      "scene": 0,
+      "animationIndices": [],
+      "timeSeconds": 0,
+      "camera": {
+        "position": [
+          -1.1503163576126099,
+          1.037437081336975,
+          2.5975165367126465
+        ],
+        "target": [
+          -0.09125585854053497,
+          -0.08959159255027771,
+          -0.31222838163375854
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "verticalFovDegrees": 45,
+        "near": 0.0016592927417705486,
+        "far": 9.932382402962752
+      }
+    },
+    {
+      "id": "Fox__a2_t0p428583",
+      "model": "Models/Fox/glTF/Fox.gltf",
+      "scene": 0,
+      "animationIndices": [
+        2
+      ],
+      "timeSeconds": 0.428583,
+      "animationName": "Run",
+      "animationEndSeconds": 1.1583333015441895,
+      "camera": {
+        "position": [
+          -56.308223724365234,
+          98.4091796875,
+          150.16810607910156
+        ],
+        "target": [
+          0.6417312622070312,
+          37.80430603027344,
+          -6.300619125366211
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "verticalFovDegrees": 45,
+        "near": 0.0944266494775118,
+        "far": 554.9034092246379
+      }
+    },
+    {
+      "id": "OrientationTest__rest",
+      "model": "Models/OrientationTest/glTF/OrientationTest.gltf",
+      "scene": 0,
+      "animationIndices": [],
+      "timeSeconds": 0,
+      "camera": {
+        "position": [
+          -6.738840103149414,
+          7.171323776245117,
+          18.51481056213379
+        ],
+        "target": [
+          3.688300012072432e-7,
+          -2.9437407533805526e-7,
+          -3.5830240108225553e-7
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "verticalFovDegrees": 45,
+        "near": 0.011988586604733622,
+        "far": 68.92189427630974
+      }
+    },
+    {
+      "id": "SimpleMorph__a0_t1p48",
+      "model": "Models/SimpleMorph/glTF/SimpleMorph.gltf",
+      "scene": 0,
+      "animationIndices": [
+        0
+      ],
+      "timeSeconds": 1.48,
+      "animationName": "Animation 0",
+      "animationEndSeconds": 4,
+      "camera": {
+        "position": [
+          -0.33904069662094116,
+          1.893530249595642,
+          2.3327202796936035
+        ],
+        "target": [
+          0.5616469979286194,
+          0.9350383877754211,
+          -0.14189893007278442
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ],
+        "verticalFovDegrees": 45,
+        "near": 0.0011498554104874366,
+        "far": 7.40186439655044
+      }
+    }
+  ],
+  "failures": []
+}

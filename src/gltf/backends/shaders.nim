@@ -463,6 +463,8 @@ proc gltfShadowDepthFrag*(fragmentUv: Vec2) =
     if texColor.a < alphaCutoff:
       discardFragment()
 
+include ./ibl_shaders
+
 const
   OpenGlShaderTarget =
     when defined(emscripten):
@@ -471,6 +473,9 @@ const
       glsl4Desktop
   PbrVertSrc* = toShader(gltfPbrVert, OpenGlShaderTarget, shaderVertex)
   PbrFragSrc* = toShader(gltfPbrFrag, OpenGlShaderTarget, shaderFragment)
+  IblFragSrc* = toShader(gltfIblFrag, OpenGlShaderTarget, shaderFragment)
+  HdrPostVertSrc* = toShader(hdrPostVert, OpenGlShaderTarget, shaderVertex)
+  HdrPostFragSrc* = toShader(hdrPostFrag, OpenGlShaderTarget, shaderFragment)
   SkyboxVertSrc* = toShader(gltfSkyboxVert, OpenGlShaderTarget, shaderVertex)
   SkyboxFragSrc* =
     toShader(gltfSkyboxFrag, OpenGlShaderTarget, shaderFragment)
