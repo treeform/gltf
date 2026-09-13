@@ -118,7 +118,7 @@ block invalidMaterialPointers:
     "/materials/0/unknownProperty"
   ]:
     let root = colorAnimation("LINEAR", keyColors, pointer)
-    doAssert root.animations.len == 0
+    doAssert root.animations.len == 1 and root.animations[0].channels.len == 0
     root.updateAnimation(1)
     root.checkColors(color(0.8, 0.1, 0.2, 0.75))
 

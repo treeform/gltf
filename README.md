@@ -93,7 +93,7 @@ The table below reflects the current code, not the full glTF 2.0 spec.
 | `KHR_materials_clearcoat` | Yes | Partial | Yes | OpenGL IBL layers clearcoat over reflection, transmission, sheen and emission; supports strength/R, roughness/G and independent normal textures with UV transforms. |
 | `KHR_materials_iridescence` | Yes | Partial | Yes | OpenGL IBL evaluates thin-film interference for dielectric/metal reflection and transmission, with film IOR, thickness range and linear R-strength/G-thickness maps and UV transforms. |
 | `KHR_node_visibility` | Yes | Yes | No | Static visibility and visibility animation are supported. |
-| `KHR_animation_pointer` | Partial | Partial | No | Node visibility and material `baseColorFactor` targets are supported. Color tracks support `STEP`, `LINEAR`, and `CUBICSPLINE`. |
+| `KHR_animation_pointer` | Partial | Partial | No | Node visibility, material `baseColorFactor` and all supported textures’ UV offset/scale/rotation targets are supported, including individual offset/scale components. Tracks support `STEP`, `LINEAR`, and `CUBICSPLINE`; clip indices and durations are preserved. |
 | `KHR_draco_mesh_compression` | No | No | No | Not supported yet. |
 | `KHR_mesh_quantization` | Yes | Yes | No | Integer mesh attributes are decoded with their declared normalization and stride. |
 | `EXT_meshopt_compression` | Yes | Yes | No | Compressed buffer views are decoded in pure Nim, including standard attribute filters. |

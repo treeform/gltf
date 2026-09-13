@@ -164,9 +164,30 @@ type
     inverseBindMatrices*: seq[Mat4]
     skeleton*: Node
 
+  MaterialTextureSlot* = enum
+    BaseColorTextureSlot,
+    MetallicRoughnessTextureSlot,
+    NormalTextureSlot,
+    OcclusionTextureSlot,
+    EmissiveTextureSlot,
+    TransmissionTextureSlot,
+    ThicknessTextureSlot,
+    DiffuseTransmissionTextureSlot,
+    DiffuseTransmissionColorTextureSlot,
+    AnisotropyTextureSlot,
+    ClearcoatTextureSlot,
+    ClearcoatRoughnessTextureSlot,
+    ClearcoatNormalTextureSlot,
+    IridescenceTextureSlot,
+    IridescenceThicknessTextureSlot,
+    SpecularTextureSlot,
+    SpecularColorTextureSlot,
+    SheenColorTextureSlot,
+    SheenRoughnessTextureSlot
+
   AnimPath* = enum
     AnimTranslation, AnimRotation, AnimScale, AnimVisibility, AnimWeights,
-    AnimBaseColorFactor
+    AnimBaseColorFactor, AnimTextureOffset, AnimTextureScale, AnimTextureRotation
 
   AnimInterpolation* = enum
     aiStep, aiLinear, aiCubicSpline
@@ -175,6 +196,10 @@ type
     target*: Node
     materialTargets*: seq[Material] # Runtime copies of the same glTF material.
     baseColorFactor*: Color # Authored value restored when the clip is inactive.
+    textureSlot*: MaterialTextureSlot
+    textureComponent*: int # 0: entire property; 1/2: X/Y component.
+    baseTextureTransform*: TextureTransform
+    valuesVec2*, inTangentsVec2*, outTangentsVec2*: seq[Vec2]
     path*: AnimPath
     interpolation*: AnimInterpolation
     times*: seq[float32]
@@ -342,6 +367,51 @@ type
     dvAoBake,
     dvMetallic,
     dvSpecular
+
+const MaterialTexturePaths*: array[MaterialTextureSlot, string] = [
+  "pbrMetallicRoughness/baseColorTexture",
+  "pbrMetallicRoughness/metallicRoughnessTexture",
+  "normalTexture",
+  "occlusionTexture",
+  "emissiveTexture",
+  "extensions/KHR_materials_transmission/transmissionTexture",
+  "extensions/KHR_materials_volume/thicknessTexture",
+  "extensions/KHR_materials_diffuse_transmission/diffuseTransmissionTexture",
+  "extensions/KHR_materials_diffuse_transmission/diffuseTransmissionColorTexture",
+  "extensions/KHR_materials_anisotropy/anisotropyTexture",
+  "extensions/KHR_materials_clearcoat/clearcoatTexture",
+  "extensions/KHR_materials_clearcoat/clearcoatRoughnessTexture",
+  "extensions/KHR_materials_clearcoat/clearcoatNormalTexture",
+  "extensions/KHR_materials_iridescence/iridescenceTexture",
+  "extensions/KHR_materials_iridescence/iridescenceThicknessTexture",
+  "extensions/KHR_materials_specular/specularTexture",
+  "extensions/KHR_materials_specular/specularColorTexture",
+  "extensions/KHR_materials_sheen/sheenColorTexture",
+  "extensions/KHR_materials_sheen/sheenRoughnessTexture"
+]
+
+proc textureTransform*(material: Material, slot: MaterialTextureSlot): var TextureTransform =
+  ## Select a texture transform without copying the material.
+  case slot
+  of BaseColorTextureSlot: return material.baseColorTransform
+  of MetallicRoughnessTextureSlot: return material.metallicRoughnessTransform
+  of NormalTextureSlot: return material.normalTransform
+  of OcclusionTextureSlot: return material.occlusionTransform
+  of EmissiveTextureSlot: return material.emissiveTransform
+  of TransmissionTextureSlot: return material.transmissionTransform
+  of ThicknessTextureSlot: return material.thicknessTransform
+  of DiffuseTransmissionTextureSlot: return material.diffuseTransmissionTransform
+  of DiffuseTransmissionColorTextureSlot: return material.diffuseTransmissionColorTransform
+  of AnisotropyTextureSlot: return material.anisotropyTransform
+  of ClearcoatTextureSlot: return material.clearcoatTransform
+  of ClearcoatRoughnessTextureSlot: return material.clearcoatRoughnessTransform
+  of ClearcoatNormalTextureSlot: return material.clearcoatNormalTransform
+  of IridescenceTextureSlot: return material.iridescenceTransform
+  of IridescenceThicknessTextureSlot: return material.iridescenceThicknessTransform
+  of SpecularTextureSlot: return material.specularTransform
+  of SpecularColorTextureSlot: return material.specularColorTransform
+  of SheenColorTextureSlot: return material.sheenColorTransform
+  of SheenRoughnessTextureSlot: return material.sheenRoughnessTransform
 
 proc emissiveRadiance*(material: Material): Color =
   ## Preserve the core default for older code constructing Material directly.

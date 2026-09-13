@@ -8,6 +8,7 @@ import
   test_tangents,
   test_morphs,
   test_material_animation,
+  test_texture_animation,
   test_vertex_colors,
   test_ibl_materials,
   test_transmission,

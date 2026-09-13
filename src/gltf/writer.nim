@@ -927,7 +927,7 @@ proc writeGLB*(
       if channel.valuesWeights.len != channel.times.len:
         return
       return
-    of AnimVisibility, AnimBaseColorFactor:
+    of AnimVisibility, AnimBaseColorFactor, AnimTextureOffset, AnimTextureScale, AnimTextureRotation:
       return
     if valueCount == 0:
       return

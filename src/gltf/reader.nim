@@ -206,37 +206,14 @@ proc readAccessorFloats(
     view = bufferViews[accessor.bufferView]
     buffer = buffers[view.buffer]
     start = view.byteOffset + accessor.byteOffset
-    elemSize =
-      case accessor.componentType
-      of FloatComponent:
-        4
-      of UnsignedByteComponent:
-        1
-      of UnsignedShortComponent:
-        2
-      of UnsignedIntComponent:
-        4
-      else:
-        0
+    elemSize = accessor.componentType.componentSize()
     stride = if view.byteStride > 0: view.byteStride else: elemSize
   if accessor.kind != atSCALAR:
     raise newException(GltfError, "Unsupported scalar accessor kind")
-  if elemSize == 0:
-    raise newException(GltfError, "Unsupported scalar accessor component type")
   result.setLen(accessor.count)
   for i in 0 ..< accessor.count:
     let off = start + i * stride
-    case accessor.componentType
-    of FloatComponent:
-      result[i] = readFloat32(buffer, off)
-    of UnsignedByteComponent:
-      result[i] = buffer.readUint8(off).float32
-    of UnsignedShortComponent:
-      result[i] = buffer.readUint16(off).float32
-    of UnsignedIntComponent:
-      result[i] = buffer.readUint32(off).float32
-    else:
-      discard
+    result[i] = readAccessorComponent(accessor, buffer, off)
   if accessor.sparse.used:
     let
       indices = readSparseIndices(accessor, bufferViews, buffers)
@@ -246,17 +223,7 @@ proc readAccessorFloats(
       sparseStride = elemSize
     for i, dstIndex in indices:
       let off = sparseStart + i * sparseStride
-      case accessor.componentType
-      of FloatComponent:
-        result[dstIndex] = readFloat32(sparseBuffer, off)
-      of UnsignedByteComponent:
-        result[dstIndex] = sparseBuffer.readUint8(off).float32
-      of UnsignedShortComponent:
-        result[dstIndex] = sparseBuffer.readUint16(off).float32
-      of UnsignedIntComponent:
-        result[dstIndex] = sparseBuffer.readUint32(off).float32
-      else:
-        discard
+      result[dstIndex] = readAccessorComponent(accessor, sparseBuffer, off)
 
 proc readAccessorVec3(
   accessorIdx: int,
@@ -1432,6 +1399,16 @@ proc parseInterpolation(name: string): AnimInterpolation =
     aiCubicSpline
   else:
     aiLinear
+
+proc splitCubicVec2(channel: var AnimationChannel) =
+  let triplets = channel.valuesVec2
+  channel.valuesVec2.setLen(channel.times.len)
+  channel.inTangentsVec2.setLen(channel.times.len)
+  channel.outTangentsVec2.setLen(channel.times.len)
+  for i in 0 ..< channel.times.len:
+    channel.inTangentsVec2[i] = triplets[i * 3]
+    channel.valuesVec2[i] = triplets[i * 3 + 1]
+    channel.outTangentsVec2[i] = triplets[i * 3 + 2]
 
 proc splitCubicVec3(channel: var AnimationChannel) =
   ## Splits vec3 cubic spline triplets into tangents and values.
@@ -2801,6 +2778,7 @@ proc loadModelJsonInternal(
         AnimSampler = object
           input, output: int
           interpolation: string
+          times: seq[float32]
 
       var samplers: seq[AnimSampler]
       if "samplers" in animEntry:
@@ -2812,6 +2790,8 @@ proc loadModelJsonInternal(
             sampler.interpolation = s["interpolation"].getStr()
           else:
             sampler.interpolation = "LINEAR"
+          if sampler.input >= 0 and sampler.input < accessors.len:
+            sampler.times = readAccessorFloats(sampler.input, accessors, bufferViews, buffers)
           samplers.add(sampler)
 
       if "channels" in animEntry:
@@ -2822,12 +2802,15 @@ proc loadModelJsonInternal(
           if samplerIdx < 0 or samplerIdx >= samplers.len:
             continue
           let sampler = samplers[samplerIdx]
+          if sampler.times.len > 0: clip.duration = max(clip.duration, sampler.times[^1])
           if not ("target" in ch):
             continue
           let target = ch["target"]
           var
             nodeIdx = -1
             materialIdx = -1
+            textureSlot: MaterialTextureSlot
+            textureComponent = 0
             path: AnimPath
             isPath = true
 
@@ -2859,6 +2842,33 @@ proc loadModelJsonInternal(
                 path = AnimBaseColorFactor
               except ValueError:
                 isPath = false
+            elif pointer.startsWith("/materials/"):
+              isPath = false
+              var parts = pointer.split('/')
+              # Component pointers target one element of offset or scale.
+              if parts.len > 2 and parts[^1] in ["0", "1"] and parts[^2] in ["offset", "scale"]:
+                textureComponent = parseInt(parts[^1]) + 1
+                parts.setLen(parts.len - 1)
+              if parts.len >= 7 and parts[^3] == "extensions" and parts[^2] == "KHR_texture_transform":
+                let texturePath = parts[3 .. ^4].join("/")
+                try:
+                  materialIdx = parseInt(parts[2])
+                  if materialIdx >= 0 and materialIdx < materials.len:
+                    # Defaults are valid targets only when their enclosing object exists.
+                    var parent = jsonRoot["materials"][materialIdx]
+                    for token in parts[3 .. ^2]:
+                      if parent.kind == JObject and token in parent: parent = parent[token]
+                      else: parent = newJNull()
+                    if parent.kind == JObject:
+                      for slot in MaterialTextureSlot:
+                        if texturePath == MaterialTexturePaths[slot]:
+                          textureSlot = slot
+                          case parts[^1]
+                          of "offset": path = AnimTextureOffset; isPath = true
+                          of "scale": path = AnimTextureScale; isPath = true
+                          of "rotation": path = AnimTextureRotation; isPath = true
+                          else: discard
+                except ValueError: discard
             else:
               isPath = false
           else:
@@ -2881,27 +2891,23 @@ proc loadModelJsonInternal(
           if not isPath:
             echo "[gltf] skipping unsupported animation target"
             continue
-          if path == AnimBaseColorFactor:
+          if path in {AnimBaseColorFactor, AnimTextureOffset, AnimTextureScale, AnimTextureRotation}:
             if materialIdx < 0 or materialIdx >= materials.len:
               continue
           elif nodeIdx < 0 or nodeIdx >= nodes.len:
             continue
 
-          let times =
-            readAccessorFloats(
-              sampler.input,
-              accessors,
-              bufferViews,
-              buffers
-            )
+          let times = sampler.times
           if times.len == 0:
             echo "[gltf] animation sampler missing times"
             continue
 
           var channel = AnimationChannel()
           if path == AnimBaseColorFactor:
-            channel.baseColorFactor =
-              materials[materialIdx].pbrMetallicRoughness.baseColorFactor
+            channel.baseColorFactor = materials[materialIdx].pbrMetallicRoughness.baseColorFactor
+          elif path in {AnimTextureOffset, AnimTextureScale, AnimTextureRotation}:
+            channel.textureSlot = textureSlot
+            channel.textureComponent = textureComponent
           else:
             channel.target = nodes[nodeIdx]
           channel.path = path
@@ -2909,6 +2915,11 @@ proc loadModelJsonInternal(
           channel.times = times
 
           case path
+          of AnimTextureOffset, AnimTextureScale, AnimTextureRotation:
+            if path != AnimTextureRotation and textureComponent == 0:
+              channel.valuesVec2 = readAccessorVec2(sampler.output, accessors, bufferViews, buffers)
+            else:
+              channel.valuesFloat = readAccessorFloats(sampler.output, accessors, bufferViews, buffers)
           of AnimBaseColorFactor:
             channel.valuesVec4 = readAccessorVec4(
               sampler.output, accessors, bufferViews, buffers
@@ -2960,6 +2971,13 @@ proc loadModelJsonInternal(
             continue
           if channel.interpolation == aiCubicSpline:
             case path
+            of AnimTextureOffset, AnimTextureScale, AnimTextureRotation:
+              if path != AnimTextureRotation and textureComponent == 0:
+                if channel.valuesVec2.len != channel.times.len * 3: continue
+                splitCubicVec2(channel)
+              else:
+                if channel.valuesFloat.len != channel.times.len * 3: continue
+                splitCubicFloat(channel)
             of AnimBaseColorFactor:
               if channel.valuesVec4.len != channel.times.len * 3:
                 echo "[gltf] animation sampler length mismatch"
@@ -2992,7 +3010,8 @@ proc loadModelJsonInternal(
                 channel.inTangentsWeights[i] = triplets[i * 3]
                 channel.valuesWeights[i] = triplets[i * 3 + 1]
                 channel.outTangentsWeights[i] = triplets[i * 3 + 2]
-          elif channel.times.len != channel.valuesVec3.len and
+          elif channel.times.len != channel.valuesVec2.len and
+             channel.times.len != channel.valuesVec3.len and
              channel.times.len != channel.valuesVec4.len and
              channel.times.len != channel.valuesQuat.len and
              channel.times.len != channel.valuesFloat.len and
@@ -3003,11 +3022,11 @@ proc loadModelJsonInternal(
           if channel.times.len > 0:
             clip.duration = max(clip.duration, channel.times[^1])
           clip.channels.add(channel)
-          if path == AnimBaseColorFactor:
+          if path in {AnimBaseColorFactor, AnimTextureOffset, AnimTextureScale, AnimTextureRotation}:
             materialChannels.add((channel, materialIdx))
 
-      if clip.channels.len > 0:
-        clips.add(clip)
+      # Keep source indices and timing even if every channel is unsupported.
+      clips.add(clip)
 
   var sceneRoots: seq[seq[int]]
   var scenes: seq[Scene]
@@ -3114,6 +3133,9 @@ proc loadModelJsonInternal(
   # Primitives and mesh instances own separate runtime material copies.
   for (channel, materialIdx) in materialChannels:
     channel.materialTargets = runtimeMaterials[materialIdx]
+    if channel.path in {AnimTextureOffset, AnimTextureScale, AnimTextureRotation} and
+        channel.materialTargets.len > 0:
+      channel.baseTextureTransform = channel.materialTargets[0].textureTransform(channel.textureSlot)
   if scenes.len > 0:
     let selectedScene = max(0, min(sceneId, scenes.high))
     for sceneNode in scenes[selectedScene].nodes:
