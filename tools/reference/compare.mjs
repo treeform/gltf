@@ -13,6 +13,7 @@ const spec = JSON.parse(await readFile(manifest, 'utf8'));
 validateManifest(spec);
 const baselines = path.resolve(args.baselines || path.join(path.dirname(manifest), 'images'));
 const referenceRun = JSON.parse(await readFile(path.join(path.dirname(baselines), 'run.json'), 'utf8'));
+if (JSON.stringify(referenceRun.sources) !== JSON.stringify(spec.sources)) throw new Error('The master images use different renderer sources. Recapture before comparing.');
 if (referenceRun.manifestSha256 !== sha256(await readFile(manifest))) throw new Error('The master images use a different manifest. Recapture before comparing.');
 for (const item of spec.cases.filter(c => !args.case || c.id.includes(args.case))) {
   const capture = referenceRun.captures.find(c => c.id === item.id && c.status === 'ok');

@@ -41,6 +41,20 @@ proc gltfIblFrag*(
   tangent: Vec3, bitangent: Vec3, vPosLightSpace: Vec4,
   fragColor: var Vec4, toneMapFlag: var uint32
 ) =
+  if unlitMaterial != 0:
+    let baseUv = transformUv(selectUv(baseColorTexCoord, uv, uv1),
+      baseColorUvOffset, baseColorUvScale, baseColorUvRotation)
+    var base = texture(baseColorTexture, baseUv) * baseColorFactor * color
+    if opaqueMaterial != 0:
+      base.a = 1.0'f
+    elif alphaCutoff >= 0.0'f:
+      if base.a < alphaCutoff:
+        discardFragment()
+      base.a = 1.0'f
+    fragColor = base * tint
+    # Khronos applies display transfer but no exposure or tone map to unlit.
+    toneMapFlag = uint32(1)
+    return
   let
     baseUv: Vec2 = transformUv(selectUv(baseColorTexCoord, uv, uv1),
       baseColorUvOffset, baseColorUvScale, baseColorUvRotation)

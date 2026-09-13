@@ -341,6 +341,8 @@ proc writeGLB*(
 
     matNode["pbrMetallicRoughness"] = pbr
     matNode["doubleSided"] = newJBool(mat.doubleSided)
+    if mat.unlit:
+      matNode["extensions"] = %*{"KHR_materials_unlit": {}}
 
     if not isPlaceholder(mat.normal, mat.normalPlaceholder) and
         mat.hasNormalTexture:
@@ -842,6 +844,11 @@ proc writeGLB*(
   jsonRoot["asset"] = %*{"version": "2.0"}
   var extensionsUsed: seq[string]
   var extensionsRequired: seq[string]
+  for material in materials:
+    if material.hasKey("extensions") and
+        material["extensions"].hasKey("KHR_materials_unlit"):
+      extensionsUsed.add("KHR_materials_unlit")
+      break
   if usesNodeVisibility:
     extensionsUsed.add("KHR_node_visibility")
   if usesKhrTextureBasisu:

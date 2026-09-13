@@ -223,6 +223,7 @@ type
     emissivePlaceholder*: bool
 
     alphaMode*: AlphaMode
+    unlit*: bool
     alphaCutoff*: float32
     doubleSided*: bool
     transmissionFactor*: float32

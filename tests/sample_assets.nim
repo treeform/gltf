@@ -1,5 +1,5 @@
 import
-  std/[algorithm, json, math, os, sequtils, strformat, strutils, tables, times],
+  std/[algorithm, json, math, os, sequtils, strformat, strutils, tables, times, xmltree],
   chroma, pixie, windy, vmath,
   gltf
 
@@ -31,6 +31,7 @@ type
     exceptionName: string
     message: string
     caseId: string
+    captureLabel: string
     animationTime: float32
     pixels: int
     differentPixels: int
@@ -44,6 +45,7 @@ var
   pbrContext: PbrContext
   referenceCase: JsonNode
   referenceSettings: JsonNode
+  referenceRenderer: JsonNode
   iblDirectory: string
 
 proc jsonVec3(value: JsonNode): Vec3 =
@@ -314,9 +316,24 @@ proc testModel(
   ## Loads one model, renders it, and saves a screenshot.
   result.modelPath = modelPath
   result.caseId = modelPath.extractFilename()
+  result.captureLabel = "Default view"
   if referenceCase != nil:
     result.caseId = referenceCase["id"].getStr()
     result.animationTime = referenceCase["timeSeconds"].getFloat().float32
+    let clips = referenceCase["animationIndices"]
+    if clips.len == 0:
+      result.captureLabel = "Rest pose"
+    else:
+      let animationName =
+        if referenceCase.hasKey("animationName") and
+            referenceCase["animationName"].getStr().len > 0:
+          referenceCase["animationName"].getStr()
+        else:
+          "Animation " & clips.mapIt($(it.getInt() + 1)).join(", ")
+      result.captureLabel = &"{animationName} · {result.animationTime:0.3f} seconds"
+      if referenceCase.hasKey("animationEndSeconds") and
+          result.animationTime > referenceCase["animationEndSeconds"].getFloat():
+        result.captureLabel.add(" (looped)")
   result.score = -1
   let
     outPath = screenshotPath(generatedDir, modelsPath, modelPath, index)
@@ -465,19 +482,56 @@ proc writeSummary(path: string, results: seq[AssetResult]) =
 
 proc writeReport(path: string, results: seq[AssetResult]) =
   ## Writes an HTML xray report with master/generated/xray images side by side.
-  let
-    reportDir = path.parentDir()
-    orderedResults = results.sorted(proc(a, b: AssetResult): int =
-      result = cmp(b.score, a.score)
-      if result == 0:
-        result = cmp(a.caseId, b.caseId)
-    )
-  var entries: seq[string]
+  let reportDir = path.parentDir()
+  var
+    groups = initOrderedTable[string, seq[AssetResult]]()
+    worstScores = initTable[string, float32]()
+    unavailable = initTable[string, bool]()
+    orderedResults: seq[AssetResult]
+    entries: seq[string]
+    currentModel: string
+  for item in results:
+    groups.mgetOrPut(item.modelPath, @[]).add(item)
+    worstScores[item.modelPath] = max(worstScores.getOrDefault(item.modelPath, -1'f), item.score)
+    unavailable[item.modelPath] = unavailable.getOrDefault(item.modelPath) or
+      item.pixels == 0 or item.status notin ["ok", "diff_error"]
+  let modelOrder = toSeq(groups.keys).sorted(proc(a, b: string): int =
+    result = cmp(unavailable[b], unavailable[a])
+    if result == 0:
+      result = cmp(worstScores[b], worstScores[a])
+    if result == 0:
+      result = cmp(a, b)
+  )
+  for modelPath in modelOrder:
+    # Keep manifest order within each model, including rest and looping poses.
+    orderedResults.add(groups[modelPath])
   for result in orderedResults:
-    if result.status == "skip":
-      continue
+    if result.modelPath != currentModel:
+      if currentModel.len > 0:
+        entries.add("</section>")
+      currentModel = result.modelPath
+      let
+        fileLabel = xmltree.escape(relativePath(currentModel,
+          getCurrentDir().parentDir()).replace('\\', '/'))
+        captures = groups[currentModel]
+        passed = captures.countIt(it.status == "ok")
+        worst = worstScores[currentModel]
+        worstLabel = if worst >= 0: &"{worst:0.3f}%" else: "unavailable"
+      entries.add(&"""<section class="model-group" data-file="{fileLabel}">
+<header class="model-heading"><h2>{fileLabel}</h2>
+<p>{captures.len} captures · {passed} / {captures.len} ok · worst Pixie score {worstLabel}</p></header>""")
     if result.pixels == 0:
-      entries.add(&"<div><b>{result.caseId}</b>: {result.status}</div>")
+      let
+        reason = xmltree.escape(result.message)
+        referenceImage =
+          if fileExists(result.baselinePath):
+            let relBaseline = xmltree.escape(relativePath(result.baselinePath, reportDir))
+            &"""<div class="tile"><div class="tile-label">Baseline</div><img src="{relBaseline}"></div>"""
+          else: ""
+      entries.add(&"""<div style="background:#fff3df;padding:16px">
+<b>{xmltree.escape(result.captureLabel)}</b>
+<p><b>Not compared ({xmltree.escape(result.status)}):</b> {reason}</p>
+<div class="tiles">{referenceImage}</div></div>""")
       continue
     if not fileExists(result.screenshotPath):
       continue
@@ -508,7 +562,7 @@ proc writeReport(path: string, results: seq[AssetResult]) =
           100.0 * (result.pixels - result.pixelsOverTolerance).float64 / result.pixels.float64
         else: 0.0
     entries.add(&"""<div style="background:{bg};border:1px solid #ccc;padding:16px;break-inside:avoid">
-<b>{result.caseId}</b>
+<b>{xmltree.escape(result.captureLabel)}</b>
 <div class="tiles">
 {baseline}
 <div class="tile"><div class="tile-label">Generated</div><img src="{relGenerated}"></div>
@@ -519,25 +573,34 @@ proc writeReport(path: string, results: seq[AssetResult]) =
 <p>RGB mean absolute error {result.meanAbsoluteError:0.3f} / 255<br>RMSE {result.rootMeanSquareError:0.3f}<br>max channel error {result.maxChannelError}<br>Pixie score {result.score:0.3f}%</p>
 </div></div>
 </div></div>""")
+  if currentModel.len > 0:
+    entries.add("</section>")
   let html = """<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Xray Report</title>
-<style>body{font-family:monospace;margin:16px}.tiles{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.tile{width:256px}.tile-label{margin-bottom:6px}img{display:block;max-width:256px;background:repeating-conic-gradient(#eee 0% 25%,#fff 0% 50%) 0 0/16px 16px}.statistics{box-sizing:border-box;width:256px;height:256px;padding:12px;background:#ffffffb3;border:1px solid #ccc;font-size:13px;line-height:1.35}.statistics p{margin:0 0 12px}.statistics p:last-child{margin-bottom:0}</style>
+<style>body{font-family:monospace;margin:16px}.model-group{border:2px solid #aab4c2;margin:24px 0}.model-heading{position:sticky;top:0;z-index:1;background:#eef1f6;padding:12px 16px;border-bottom:1px solid #aab4c2}.model-heading h2{margin:0 0 6px;font-size:18px;overflow-wrap:anywhere}.model-heading p{margin:0}.tiles{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.tile{width:256px}.tile-label{margin-bottom:6px}img{display:block;max-width:256px;background:repeating-conic-gradient(#eee 0% 25%,#fff 0% 50%) 0 0/16px 16px}.statistics{box-sizing:border-box;width:256px;height:256px;padding:12px;background:#ffffffb3;border:1px solid #ccc;font-size:13px;line-height:1.35}.statistics p{margin:0 0 12px}.statistics p:last-child{margin-bottom:0}</style>
 </head><body>
 <h1>Xray Report</h1>
-<p>Sorted by Pixie score, worst first.</p>
+<p>Grouped by source file: missing, skipped and failed comparisons first, then each file's worst Pixie score. All frames, poses and views stay together in manifest order.</p>
 <p>Same model, camera, scene, animation clip and absolute time. Images are compared without alignment or resizing.</p>
 <p>Pixel counts use RGB bytes over the entire image, including the background. Within ±2 means every RGB channel differs by at most 2 on the 0–255 scale. Xray: green = generated darker; blue = generated brighter; red = alpha difference.</p>
+<p>The ok label uses the existing 2% Pixie threshold; visible differences can still pass it. Skipped or failed captures are not comparisons.</p>
 """ & (if iblDirectory.len > 0:
   "<p><b>Matched lighting:</b> shared Khronos neutral HDR environment, rotation and exposure; linear sRGB textures, GGX image-based lighting, HDR framebuffer and PBR Neutral tone mapping. Core metallic/roughness pilot on OpenGL; advanced material extensions and model punctual lights are not yet matched.</p>"
 elif referenceSettings != nil:
   "<p><b>Lighting currently differs:</b> Khronos uses the neutral HDR studio and PBR Neutral tone mapping. Nim uses its current procedural environment and sun/rim/ambient lighting. These measurements include that difference.</p>"
+else: "") & (if referenceRenderer != nil:
+  "<p><b>Reference renderer:</b> " &
+  xmltree.escape(referenceRenderer["repository"].getStr()) & " @ " &
+  xmltree.escape(referenceRenderer["revision"].getStr()) & "</p>"
 else: "") & entries.join("\n") & "\n</body></html>"
   writeFile(path, html)
   var metrics = newJArray()
   for result in orderedResults:
     metrics.add(%*{
       "id": result.caseId,
+      "label": result.captureLabel,
       "status": result.status,
+      "message": result.message,
       "timeSeconds": result.animationTime,
       "pixels": result.pixels,
       "differentPixels": result.differentPixels,
@@ -575,6 +638,7 @@ if manifestPath.len > 0:
   let manifest = parseFile(manifestPath)
   doAssert manifest["version"].getInt() == 1, "Unsupported reference manifest"
   referenceSettings = manifest["settings"]
+  referenceRenderer = manifest["sources"]["renderer"]
   var ids: seq[string]
   for item in manifest["cases"]:
     let id = item["id"].getStr()

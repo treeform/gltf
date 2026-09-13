@@ -66,6 +66,8 @@ var
   useShadow*: Uniform[bool]
   useNormalTexture*: Uniform[bool]
   alphaCutoff*: Uniform[float32]
+  unlitMaterial*: Uniform[int]
+  opaqueMaterial*: Uniform[int]
 
   ambientLightColor*: Uniform[Vec4]
   sunLightDirection*: Uniform[Vec3]
@@ -114,6 +116,10 @@ func safeNormalize(v: Vec3): Vec3 =
     normalize(v)
   else:
     vec3(0.0'f, 0.0'f, 0.0'f)
+
+func srgbChannelToLinear(v: float32): float32 =
+  if v <= 0.04045'f: v / 12.92'f
+  else: pow((v + 0.055'f) / 1.055'f, 2.4'f)
 
 proc fogAmount(worldPos: Vec3): float32 =
   ## Returns the fog blend amount for one world position.
@@ -407,6 +413,23 @@ proc gltfPbrFrag*(
     litColor += emissiveValue
     litColor = applyFog(litColor, worldPos)
     fragColor = vec4(litColor, fragColor.a) * tint
+
+  # The legacy backends sample color textures in their encoded format.
+  # Decode before multiplying the linear factors, then apply display transfer.
+  # Keep these uniforms last to preserve the shared constant-buffer layout.
+  if unlitMaterial != 0:
+    let sampled = texture(baseColorTexture, baseColorUv)
+    let linearColor = vec3(srgbChannelToLinear(sampled.r),
+      srgbChannelToLinear(sampled.g), srgbChannelToLinear(sampled.b)) *
+      baseColorFactor.rgb * color.rgb
+    let displayColor = vec3(
+      pow(max(linearColor.r, 0.0'f), 1.0'f / 2.2'f),
+      pow(max(linearColor.g, 0.0'f), 1.0'f / 2.2'f),
+      pow(max(linearColor.b, 0.0'f), 1.0'f / 2.2'f))
+    var alpha = sampled.a * baseColorFactor.a * color.a
+    if opaqueMaterial != 0 or alphaCutoff >= 0.0'f:
+      alpha = 1.0'f
+    fragColor = vec4(displayColor, alpha) * tint
 
 proc gltfSkyboxVert*(
   vertexPosition: Vec2,

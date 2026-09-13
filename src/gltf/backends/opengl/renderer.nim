@@ -81,6 +81,8 @@ type
     shadowBias: GLint
     shadowMapTexelSize: GLint
     alphaCutoff: GLint
+    unlitMaterial: GLint
+    opaqueMaterial: GLint
     ambientLightColor: GLint
     sunLightDirection: GLint
     sunLightColor: GLint
@@ -299,6 +301,8 @@ proc loadPbrUniforms(shader: GLuint): PbrUniforms =
   result.shadowBias = uniformLocation(shader, "shadowBias")
   result.shadowMapTexelSize = uniformLocation(shader, "shadowMapTexelSize")
   result.alphaCutoff = uniformLocation(shader, "alphaCutoff")
+  result.unlitMaterial = uniformLocation(shader, "unlitMaterial")
+  result.opaqueMaterial = uniformLocation(shader, "opaqueMaterial")
   result.ambientLightColor = uniformLocation(shader, "ambientLightColor")
   result.sunLightDirection = uniformLocation(shader, "sunLightDirection")
   result.sunLightColor = uniformLocation(shader, "sunLightColor")
@@ -1460,6 +1464,8 @@ proc applyMaterial(
       ctx.lastMaterialVersion == material.materialVersion:
     return
 
+  glUniform1i(u.unlitMaterial, material.unlit.ord.GLint)
+  glUniform1i(u.opaqueMaterial, (material.alphaMode == OpaqueAlphaMode).ord.GLint)
   glUniform4f(
     u.baseColorFactor,
     material.baseColorFactor.r,

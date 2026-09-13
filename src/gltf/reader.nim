@@ -8,6 +8,7 @@ export common
 const SupportedExtensions = [
   "KHR_texture_transform",
   "KHR_materials_transmission",
+  "KHR_materials_unlit",
   "KHR_node_visibility",
   "KHR_animation_pointer",
   "KHR_texture_basisu",
@@ -1449,6 +1450,7 @@ proc loadPrimitive(
   result.material = defaultRuntimeMaterial()
   if primInfo.material >= 0:
     let material = materials[primInfo.material]
+    result.material.unlit = material.unlit
 
     let pbr = material.pbrMetallicRoughness
     if pbr.baseColorTexture.index >= 0:
@@ -2176,6 +2178,7 @@ proc loadModelJsonInternal(
       material.transmissionFactor = 0
       if "extensions" in entry:
         let extensions = entry["extensions"]
+        material.unlit = "KHR_materials_unlit" in extensions
         if "KHR_materials_transmission" in extensions:
           let transmission = extensions["KHR_materials_transmission"]
           if "transmissionFactor" in transmission:

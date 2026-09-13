@@ -25,7 +25,7 @@ const
   TextureDescriptorCount = 7
   RootTextureDescriptorCount = 7
   VertexConstantRegisters = 532
-  PixelConstantRegisters = 24
+  PixelConstantRegisters = 25
   StudioEnvSize = 8
   PreferredMsaaSamples = 8'u32
 
@@ -1473,18 +1473,20 @@ proc shadyPixelConstants(
   result.putColor(60, sunLightColor)
   result.putColor(64, rimLightColor)
   result.putFloat(68, 3.0'f32)
-  result[69] = 0
-  result.putFloat(70, 0.0005'f32)
-  result.putVec2(72, vec2(1.0'f32 / 2048.0'f32, 1.0'f32 / 2048.0'f32))
-  result[74] = 0
-  result.putColor(76, tint)
-  result.putColor(80, ambientLightColor)
-  result.putColor(84, fogColor)
-  result.putFloat(88, fogStart)
-  result.putFloat(89, fogEnd)
-  result.putFloat(90, fogDensity)
-  result.putFloat(91, fogStrength)
-  result.putFloat(92, environmentMapStrength)
+  result.putColor(72, ambientLightColor)
+  result.putFloat(76, environmentMapStrength)
+  result[77] = 0
+  result.putFloat(78, 0.0005'f32)
+  result.putVec2(80, vec2(1.0'f32 / 2048.0'f32, 1.0'f32 / 2048.0'f32))
+  result[82] = 0
+  result.putColor(84, tint)
+  result.putColor(88, fogColor)
+  result.putFloat(92, fogStart)
+  result.putFloat(93, fogEnd)
+  result.putFloat(94, fogDensity)
+  result.putFloat(95, fogStrength)
+  result[96] = (material != nil and material.unlit).ord.uint32
+  result[97] = (material != nil and material.alphaMode == OpaqueAlphaMode).ord.uint32
 
 proc drawPrimitive(
   renderer: Renderer,

@@ -92,7 +92,7 @@ The table below reflects the current code, not the full glTF 2.0 spec.
 | `EXT_meshopt_compression` | Yes | Yes | No | Compressed buffer views are decoded in pure Nim, including standard attribute filters. |
 | `KHR_texture_basisu` | Yes | Yes | Partial | KTX2 textures; see [KHR_texture_basisu and KTX2](#khr_texture_basisu-and-ktx2). The embedded KTX2 module can read and write supported KTX2 payloads directly, while glTF export paths that generate new encoded sidecars still use [KTX-Software](#writing-ktx2-with-ktx-software). |
 | `KHR_lights_punctual` | No | No | No | Not supported yet. |
-| `KHR_materials_unlit` | No | No | No | Not supported yet. |
+| `KHR_materials_unlit` | Yes | Yes | Yes | Base color, texture, vertex color, alpha modes and double-sided rendering; independent of lighting. The matched HDR path bypasses exposure and tone mapping. |
 | `EXT_texture_webp` | No | No | No | Not supported yet. |
 
 ## KHR_texture_basisu and KTX2
@@ -207,8 +207,8 @@ Current controls:
 
 ## Development
 
-The [reference-image tools](tools/reference/README.md) capture the official
-Khronos renderer and compare five fixed camera/animation cases with the Nim
+The [reference-image tools](tools/reference/README.md) capture a pinned Treeform
+fork of the Khronos renderer and compare five fixed camera/animation cases with the Nim
 renderer in an HTML Xray report. Run `npm run compare` in `tools/reference`.
 
 The project includes standard build and docs workflows:

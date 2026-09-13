@@ -6,7 +6,11 @@
     "setup": "node setup.mjs",
     "manifest": "node capture.mjs --init",
     "capture": "node capture.mjs",
+    "capture:25": "node capture.mjs --manifest=../../tests/reference/manifest-25.json --out=../../tests/reference/expanded",
+    "capture:batch-2": "node capture.mjs --manifest=../../tests/reference/manifest-batch-2.json --out=../../tests/reference/batch-2",
     "compare": "node compare.mjs",
+    "compare:25": "node compare.mjs --manifest=../../tests/reference/manifest-25.json --baselines=../../tests/reference/expanded/images --out=../../tests/tmp/reference-25",
+    "compare:batch-2": "node compare.mjs --manifest=../../tests/reference/manifest-batch-2.json --baselines=../../tests/reference/batch-2/images --out=../../tests/tmp/reference-batch-2",
     "test": "node --test test.mjs"
   },
   "dependencies": {

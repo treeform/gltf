@@ -1,7 +1,8 @@
 {
   "renderer": {
-    "repository": "https://github.com/KhronosGroup/glTF-Sample-Renderer.git",
-    "revision": "863b981fb755359063e370ff7b6e956bda0716e2"
+    "repository": "https://github.com/treeform/glTF-Sample-Renderer.git",
+    "revision": "01e68e767460117925e89a003467b3a38cd46f8e",
+    "upstreamRevision": "863b981fb755359063e370ff7b6e956bda0716e2"
   },
   "assets": {
     "repository": "https://github.com/KhronosGroup/glTF-Sample-Assets.git",

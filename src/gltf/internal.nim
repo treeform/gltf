@@ -66,6 +66,7 @@ type
     emissiveTexture*: MaterialTexture
     emissiveFactor*: Color
     alphaMode*: string
+    unlit*: bool
     alphaCutoff*: float32
     doubleSided*: bool
     transmissionFactor*: float32
