@@ -374,6 +374,65 @@ material.anisotropy = newImage(1, 1)
 material.anisotropy.fill(rgbx(128, 255, 255, 0))
 doAssert difference(capture().pixel(32, 24), rotatedAnisotropy.pixel(32, 24)) <= 2
 echo "Anisotropy GPU: zero strength, rotated lobe, RG direction/B strength, linear data, UV1 and transforms passed"
+
+# Isolate a clearcoat highlight from a black nonreflective base layer.
+renderer.release(root)
+material.hasAnisotropy = false
+material.anisotropyStrength = 0
+material.anisotropy = nil
+material.metallicFactor = 0
+material.baseColorFactor = color(0, 0, 0, 1)
+material.hasSpecular = true
+material.specularFactor = 0
+material.ior = 1.5
+material.clearcoatFactor = 1
+material.clearcoatRoughnessFactor = 0.3
+ctx.sunLightDirection = vec3(0, 0, -1)
+let coating = capture()
+doAssert coating.pixel(32, 24).r > 100
+renderer.release(root)
+material.normal = newImage(1, 1)
+material.normal.fill(rgbx(230, 128, 204, 255))
+material.hasNormalTexture = true
+material.normalScale = 1
+doAssert difference(capture().pixel(32, 24), coating.pixel(32, 24)) <= 1,
+  "The base normal map must not change the clearcoat normal"
+renderer.release(root)
+material.clearcoatNormal = material.normal
+material.clearcoatNormalScale = 1
+doAssert capture().pixel(32, 24).r < coating.pixel(32, 24).r - 80
+material.clearcoatNormalScale = 0
+doAssert difference(capture().pixel(32, 24), coating.pixel(32, 24)) <= 1
+renderer.release(root)
+material.clearcoatNormal = nil
+material.clearcoat = newImage(2, 1)
+material.clearcoat[0, 0] = rgbx(0, 255, 255, 255)
+material.clearcoat[1, 0] = rgbx(255, 0, 0, 0)
+material.clearcoatSampler.magFilter = NearestMagFilter
+material.clearcoatSampler.minFilter = NearestMinFilter
+material.clearcoatTransform.texCoord = 1
+let coatMasked = capture()
+doAssert difference(coatMasked.pixel(20, 16), coating.pixel(20, 16)) <= 1
+doAssert coatMasked.pixel(44, 16).r < 3
+material.clearcoatTransform.offset.x = 0.5
+doAssert capture().pixel(20, 16).r < 3
+renderer.release(root)
+material.clearcoat = nil
+material.clearcoatRoughness = newImage(1, 1)
+material.clearcoatRoughness.fill(rgbx(255, 128, 0, 0))
+material.clearcoatRoughnessFactor = 0.6
+let roughMap = capture().pixel(32, 24)
+renderer.release(root)
+material.clearcoatRoughness = nil
+material.clearcoatRoughnessFactor = 0.6'f * 128.0'f / 255.0'f
+doAssert difference(capture().pixel(32, 24), roughMap) <= 1, "Clearcoat roughness uses linear green"
+ctx.sunLightColor = color(0, 0, 0, 0)
+material.emissiveFactor = color(0.5, 0.5, 0.5, 1)
+let coatedEmission = capture().pixel(32, 24)
+material.clearcoatFactor = 0
+let uncoatedEmission = capture().pixel(32, 24)
+doAssert coatedEmission.r < uncoatedEmission.r - 1, "Clearcoat must attenuate emission"
+echo "Clearcoat GPU: independent normals, normal scale, R/G maps, UV1, transforms and emission layering passed"
 ctx.destroy()
 renderer.release(root)
 renderer.shutdown()

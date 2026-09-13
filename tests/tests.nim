@@ -15,6 +15,7 @@ import
   test_punctual_lights,
   test_emissive_strength,
   test_anisotropy,
+  test_clearcoat,
   test_unlit,
   test_texture_images
 

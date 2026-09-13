@@ -12,6 +12,7 @@ const SupportedExtensions = [
   "KHR_lights_punctual",
   "KHR_materials_emissive_strength",
   "KHR_materials_anisotropy",
+  "KHR_materials_clearcoat",
   "KHR_materials_volume",
   "KHR_materials_ior",
   "KHR_materials_unlit",
@@ -1331,6 +1332,13 @@ proc defaultRuntimeMaterial(): Material =
   result.diffuseTransmissionColorTransform = TextureTransform(scale: vec2(1))
   result.anisotropySampler = defaultTextureSampler()
   result.anisotropyTransform = TextureTransform(scale: vec2(1))
+  result.clearcoatNormalScale = 1
+  result.clearcoatSampler = defaultTextureSampler()
+  result.clearcoatRoughnessSampler = defaultTextureSampler()
+  result.clearcoatNormalSampler = defaultTextureSampler()
+  result.clearcoatTransform = TextureTransform(scale: vec2(1))
+  result.clearcoatRoughnessTransform = TextureTransform(scale: vec2(1))
+  result.clearcoatNormalTransform = TextureTransform(scale: vec2(1))
   result.ior = 1.5
   result.attenuationColor = vec3(1)
   result.transmissionSampler = defaultTextureSampler()
@@ -1612,6 +1620,13 @@ proc loadPrimitive(
     loadDataTexture(diffuseTransmission, material.diffuseTransmissionTexture)
     loadDataTexture(diffuseTransmissionColor, material.diffuseTransmissionColorTexture)
     loadDataTexture(anisotropy, material.anisotropyTexture)
+    loadDataTexture(clearcoat, material.clearcoatTexture)
+    loadDataTexture(clearcoatRoughness, material.clearcoatRoughnessTexture)
+    loadDataTexture(clearcoatNormal, material.clearcoatNormalTexture)
+    result.material.hasClearcoat = material.hasClearcoat
+    result.material.clearcoatFactor = material.clearcoatFactor
+    result.material.clearcoatRoughnessFactor = material.clearcoatRoughnessFactor
+    result.material.clearcoatNormalScale = material.clearcoatNormalTexture.scale
     result.material.hasAnisotropy = material.hasAnisotropy
     result.material.anisotropyStrength = material.anisotropyStrength
     result.material.anisotropyRotation = material.anisotropyRotation
@@ -2147,6 +2162,10 @@ proc loadModelJsonInternal(
       material.diffuseTransmissionTexture = defaultMaterialTexture()
       material.diffuseTransmissionColorTexture = defaultMaterialTexture()
       material.anisotropyTexture = defaultMaterialTexture()
+      material.clearcoatTexture = defaultMaterialTexture()
+      material.clearcoatRoughnessTexture = defaultMaterialTexture()
+      material.clearcoatNormalTexture = defaultMaterialTexture()
+      material.clearcoatNormalTexture.scale = 1
       if "name" in entry:
         material.name = entry["name"].getStr()
 
@@ -2291,6 +2310,20 @@ proc loadModelJsonInternal(
               let c = sheen["sheenColorFactor"]
               material.sheenColorFactor = vec3(c[0].getFloat(), c[1].getFloat(), c[2].getFloat())
         material.unlit = "KHR_materials_unlit" in extensions
+        if "KHR_materials_clearcoat" in extensions:
+          let coat = extensions["KHR_materials_clearcoat"]
+          material.hasClearcoat = true
+          material.clearcoatFactor = coat{"clearcoatFactor"}.getFloat().float32
+          material.clearcoatRoughnessFactor = coat{"clearcoatRoughnessFactor"}.getFloat().float32
+          template readCoatTexture(slot: untyped) =
+            if astToStr(slot) in coat:
+              let texture = coat[astToStr(slot)]
+              material.slot.index = texture["index"].getInt()
+              material.slot.scale = texture{"scale"}.getFloat(1).float32
+              readTextureTransform(texture, material.slot)
+          readCoatTexture(clearcoatTexture)
+          readCoatTexture(clearcoatRoughnessTexture)
+          readCoatTexture(clearcoatNormalTexture)
         if "KHR_materials_anisotropy" in extensions:
           let anisotropy = extensions["KHR_materials_anisotropy"]
           material.hasAnisotropy = true

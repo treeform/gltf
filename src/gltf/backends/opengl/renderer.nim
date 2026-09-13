@@ -64,6 +64,9 @@ type
     specularFactor, specularColorFactor: GLint
     anisotropyEnabled, anisotropyParameters, hasAnisotropyTexture: GLint
     anisotropyTransform: TextureTransformUniforms
+    clearcoatFactor, clearcoatRoughnessFactor, clearcoatNormalScale: GLint
+    hasClearcoatTexture, hasClearcoatRoughnessTexture, hasClearcoatNormalTexture: GLint
+    clearcoatTransform, clearcoatRoughnessTransform, clearcoatNormalTransform: TextureTransformUniforms
     punctualLightCount, punctualLightDirections, punctualLightColors: GLint
     punctualLightPositions, punctualLightParameters: GLint
     baseColorTexture: GLint
@@ -174,7 +177,7 @@ type
     ## while a pass is active. Unknown values force a real GL call.
     programBound: bool
     activeUnit: int
-    boundTexture: array[18, GLuint]
+    boundTexture: array[21, GLuint]
     textureEpoch: uint64
     blend: int8
     depthMask: int8
@@ -309,6 +312,15 @@ proc loadPbrUniforms(shader: GLuint): PbrUniforms =
   result.anisotropyParameters = uniformLocation(shader, "anisotropyParameters")
   result.hasAnisotropyTexture = uniformLocation(shader, "hasAnisotropyTexture")
   result.anisotropyTransform = loadTextureTransformUniforms(shader, "anisotropy")
+  result.clearcoatFactor = uniformLocation(shader, "clearcoatFactor")
+  result.clearcoatRoughnessFactor = uniformLocation(shader, "clearcoatRoughnessFactor")
+  result.clearcoatNormalScale = uniformLocation(shader, "clearcoatNormalScale")
+  result.hasClearcoatTexture = uniformLocation(shader, "hasClearcoatTexture")
+  result.hasClearcoatRoughnessTexture = uniformLocation(shader, "hasClearcoatRoughnessTexture")
+  result.hasClearcoatNormalTexture = uniformLocation(shader, "hasClearcoatNormalTexture")
+  result.clearcoatTransform = loadTextureTransformUniforms(shader, "clearcoat")
+  result.clearcoatRoughnessTransform = loadTextureTransformUniforms(shader, "clearcoatRoughness")
+  result.clearcoatNormalTransform = loadTextureTransformUniforms(shader, "clearcoatNormal")
   result.punctualLightCount = uniformLocation(shader, "punctualLightCount")
   result.punctualLightDirections = uniformLocation(shader, "punctualLightDirections")
   result.punctualLightColors = uniformLocation(shader, "punctualLightColors")
@@ -816,7 +828,8 @@ proc attachIblEnvironment*(ctx: PbrContext, environment: IblEnvironment,
       ("charlieEnvironment", 9), ("charlieLut", 10), ("sheenEnergyLut", 11),
       ("transmissionBuffer", 12), ("transmissionTexture", 13), ("thicknessTexture", 14),
       ("diffuseTransmissionTexture", 15), ("diffuseTransmissionColorTexture", 16),
-      ("anisotropyTexture", 17)]:
+      ("anisotropyTexture", 17), ("clearcoatTexture", 18),
+      ("clearcoatRoughnessTexture", 19), ("clearcoatNormalTexture", 20)]:
     glUniform1i(uniformLocation(shader, name.cstring), unit.GLint)
   glUniform1f(uniformLocation(shader, "transmissionBufferLod"), log2(TransmissionSize.float32))
   ctx.passValues = PbrPassValues()
@@ -1112,6 +1125,14 @@ proc uploadMaterialToGpu(material: Material) =
   if data.anisotropyId == 0:
     uploadTextureToGpu(data.anisotropyId, material.anisotropy,
       material.anisotropyKtx2, material.anisotropySampler)
+  if data.clearcoatId == 0:
+    uploadTextureToGpu(data.clearcoatId, material.clearcoat, material.clearcoatKtx2, material.clearcoatSampler)
+  if data.clearcoatRoughnessId == 0:
+    uploadTextureToGpu(data.clearcoatRoughnessId, material.clearcoatRoughness,
+      material.clearcoatRoughnessKtx2, material.clearcoatRoughnessSampler)
+  if data.clearcoatNormalId == 0:
+    uploadTextureToGpu(data.clearcoatNormalId, material.clearcoatNormal,
+      material.clearcoatNormalKtx2, material.clearcoatNormalSampler)
   if data.diffuseTransmissionColorId == 0:
     uploadTextureToGpu(data.diffuseTransmissionColorId, material.diffuseTransmissionColor,
       material.diffuseTransmissionColorKtx2, material.diffuseTransmissionColorSampler, srgb = true)
@@ -1124,6 +1145,9 @@ proc clearMaterialFromGpu(material: Material) =
   if data.thicknessId != 0: glDeleteTextures(1, data.thicknessId.addr)
   if data.diffuseTransmissionId != 0: glDeleteTextures(1, data.diffuseTransmissionId.addr)
   if data.anisotropyId != 0: glDeleteTextures(1, data.anisotropyId.addr)
+  if data.clearcoatId != 0: glDeleteTextures(1, data.clearcoatId.addr)
+  if data.clearcoatRoughnessId != 0: glDeleteTextures(1, data.clearcoatRoughnessId.addr)
+  if data.clearcoatNormalId != 0: glDeleteTextures(1, data.clearcoatNormalId.addr)
   if data.diffuseTransmissionColorId != 0: glDeleteTextures(1, data.diffuseTransmissionColorId.addr)
   if data.baseColorSrgbId != 0:
     glDeleteTextures(1, data.baseColorSrgbId.addr)
@@ -1512,6 +1536,9 @@ proc applyMaterial(
     ctx.bindTextureCached(15, GL_TEXTURE_2D, materialData.diffuseTransmissionId)
     ctx.bindTextureCached(16, GL_TEXTURE_2D, materialData.diffuseTransmissionColorId)
     ctx.bindTextureCached(17, GL_TEXTURE_2D, materialData.anisotropyId)
+    ctx.bindTextureCached(18, GL_TEXTURE_2D, materialData.clearcoatId)
+    ctx.bindTextureCached(19, GL_TEXTURE_2D, materialData.clearcoatRoughnessId)
+    ctx.bindTextureCached(20, GL_TEXTURE_2D, materialData.clearcoatNormalId)
   else:
     ctx.bindTextureCached(0, GL_TEXTURE_2D, materialData.baseColorId)
     ctx.bindTextureCached(4, GL_TEXTURE_2D, materialData.emissiveId)
@@ -1526,7 +1553,8 @@ proc applyMaterial(
         (3, material.occlusionSampler), (4, material.emissiveSampler),
         (13, material.transmissionSampler), (14, material.thicknessSampler),
         (15, material.diffuseTransmissionSampler), (16, material.diffuseTransmissionColorSampler),
-        (17, material.anisotropySampler)]:
+        (17, material.anisotropySampler), (18, material.clearcoatSampler),
+        (19, material.clearcoatRoughnessSampler), (20, material.clearcoatNormalSampler)]:
       if ctx.glState.boundTexture[unit] == 0: continue
       if sampler.magFilter != NearestMagFilter and sampler.minFilter in
           {NearestMipmapLinearMinFilter, LinearMipmapLinearMinFilter}:
@@ -1617,6 +1645,15 @@ proc applyMaterial(
     sin(material.anisotropyRotation), material.anisotropyStrength)
   glUniform1i(u.hasAnisotropyTexture, (materialData.anisotropyId != 0).GLint)
   setTextureTransformUniform(u.anisotropyTransform, material.anisotropyTransform)
+  glUniform1f(u.clearcoatFactor, material.clearcoatFactor)
+  glUniform1f(u.clearcoatRoughnessFactor, material.clearcoatRoughnessFactor)
+  glUniform1f(u.clearcoatNormalScale, material.clearcoatNormalScale)
+  glUniform1i(u.hasClearcoatTexture, (materialData.clearcoatId != 0).GLint)
+  glUniform1i(u.hasClearcoatRoughnessTexture, (materialData.clearcoatRoughnessId != 0).GLint)
+  glUniform1i(u.hasClearcoatNormalTexture, (materialData.clearcoatNormalId != 0).GLint)
+  setTextureTransformUniform(u.clearcoatTransform, material.clearcoatTransform)
+  setTextureTransformUniform(u.clearcoatRoughnessTransform, material.clearcoatRoughnessTransform)
+  setTextureTransformUniform(u.clearcoatNormalTransform, material.clearcoatNormalTransform)
   setTextureTransformUniform(
     u.metallicRoughnessTransform,
     material.metallicRoughnessTransform

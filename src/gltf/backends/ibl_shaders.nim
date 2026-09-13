@@ -24,6 +24,13 @@ var
   anisotropyTexCoord*: Uniform[int]
   anisotropyUvOffset*, anisotropyUvScale*: Uniform[Vec2]
   anisotropyUvRotation*: Uniform[float32]
+  clearcoatFactor*, clearcoatRoughnessFactor*, clearcoatNormalScale*: Uniform[float32]
+  clearcoatTexture*, clearcoatRoughnessTexture*, clearcoatNormalTexture*: Uniform[Sampler2d]
+  hasClearcoatTexture*, hasClearcoatRoughnessTexture*, hasClearcoatNormalTexture*: Uniform[bool]
+  clearcoatTexCoord*, clearcoatRoughnessTexCoord*, clearcoatNormalTexCoord*: Uniform[int]
+  clearcoatUvOffset*, clearcoatUvScale*, clearcoatRoughnessUvOffset*, clearcoatRoughnessUvScale*: Uniform[Vec2]
+  clearcoatNormalUvOffset*, clearcoatNormalUvScale*: Uniform[Vec2]
+  clearcoatUvRotation*, clearcoatRoughnessUvRotation*, clearcoatNormalUvRotation*: Uniform[float32]
   punctualLightCount*: Uniform[int32]
   punctualLightDirections*: Uniform[array[32, Vec3]]
   punctualLightColors*: Uniform[array[32, Vec3]]
@@ -199,6 +206,19 @@ func anisotropicBrdf(n, v, l, h, t, b: Vec3, alphaRoughness, strength: float32):
     let w2 = a2 / denominator
     result = visibility * a2 * w2 * w2 / ShaderPi
 
+func clearcoatBrdf(n, v, l, h: Vec3, roughness: float32): float32 =
+  let
+    nl = clamp(dot(n, l), 0.0'f, 1.0'f)
+    nv = clamp(dot(n, v), 0.0'f, 1.0'f)
+    nh = clamp(dot(n, h), 0.0'f, 1.0'f)
+    a2 = roughness * roughness * roughness * roughness
+    f = nh * nh * (a2 - 1.0'f) + 1.0'f
+    ggx = nl * sqrt(nv * nv * (1.0'f - a2) + a2) +
+      nv * sqrt(nl * nl * (1.0'f - a2) + a2)
+  result = 0.0'f
+  if f > 0.0'f and ggx > 0.0'f:
+    result = nl * 0.5'f / ggx * a2 / (ShaderPi * f * f)
+
 proc gltfIblFrag*(
   worldPos: Vec3, color: Vec4, normal: Vec3, uv: Vec2, uv1: Vec2,
   tangent: Vec3, bitangent: Vec3, vPosLightSpace: Vec4,
@@ -244,7 +264,7 @@ proc gltfIblFrag*(
   var ng: Vec3 = n
   var t: Vec3 = tangent
   var b: Vec3 = bitangent
-  if useNormalTexture or anisotropyEnabled:
+  if useNormalTexture or anisotropyEnabled or hasClearcoatNormalTexture:
     if not hasVertexTangent:
       let
         dx: Vec3 = dFdx(worldPos)
@@ -265,6 +285,25 @@ proc gltfIblFrag*(
     ng = -ng
     t = -t
     b = -b
+  var coatNormal: Vec3 = ng
+  if hasClearcoatNormalTexture:
+    let coatUv: Vec2 = transformUv(selectUv(clearcoatNormalTexCoord, uv, uv1),
+      clearcoatNormalUvOffset, clearcoatNormalUvScale, clearcoatNormalUvRotation)
+    let coatSample: Vec3 = normalize((texture(clearcoatNormalTexture, coatUv).rgb *
+      2.0'f - vec3(1.0'f)) * vec3(clearcoatNormalScale, clearcoatNormalScale, 1.0'f))
+    # Clearcoat uses the geometric tangent frame, independent of base normal mapping.
+    coatNormal = normalize(t) * coatSample.x + normalize(b) * coatSample.y + ng * coatSample.z
+  var coat = clearcoatFactor
+  var coatRoughness = clearcoatRoughnessFactor
+  if hasClearcoatTexture:
+    let coatUv: Vec2 = transformUv(selectUv(clearcoatTexCoord, uv, uv1),
+      clearcoatUvOffset, clearcoatUvScale, clearcoatUvRotation)
+    coat *= texture(clearcoatTexture, coatUv).r
+  if hasClearcoatRoughnessTexture:
+    let coatUv: Vec2 = transformUv(selectUv(clearcoatRoughnessTexCoord, uv, uv1),
+      clearcoatRoughnessUvOffset, clearcoatRoughnessUvScale, clearcoatRoughnessUvRotation)
+    coatRoughness *= texture(clearcoatRoughnessTexture, coatUv).g
+  coatRoughness = clamp(coatRoughness, 0.0'f, 1.0'f)
   var anisotropy = 0.0'f
   var anisotropicT: Vec3 = vec3(1.0'f, 0.0'f, 0.0'f)
   var anisotropicB: Vec3 = vec3(0.0'f, 1.0'f, 0.0'f)
@@ -291,6 +330,8 @@ proc gltfIblFrag*(
       environmentMapStrength * base.rgb
     f0 = (materialIor - 1.0'f) / (materialIor + 1.0'f)
     dielectricF0: Vec3 = min(vec3(f0 * f0) * specularColorFactor, vec3(1.0'f))
+    coatWeight = coat * (f0 * f0 + (1.0'f - f0 * f0) *
+      pow(1.0'f - clamp(dot(coatNormal, v), 0.0'f, 1.0'f), 5.0'f))
   var specularReflection: Vec3 = reflection
   if anisotropy > 0.0'f:
     # The reference's single-sample approximation keeps base roughness as LOD
@@ -343,6 +384,11 @@ proc gltfIblFrag*(
       sheenRoughnessFactor * (environmentMipCount - 1.0'f)).rgb * environmentMapStrength *
       sheenColorFactor * texture(charlieLut, vec2(nDotV, sheenRoughnessFactor)).b
     radiance = sheen + radiance * sheenScaling(nDotV)
+  if coat > 0.0'f:
+    let coatReflection: Vec3 = normalize(reflect(-v, coatNormal))
+    let coatRadiance: Vec3 = textureLod(environmentMap, environmentRotation * coatReflection,
+      coatRoughness * (environmentMipCount - 1.0'f)).rgb * environmentMapStrength
+    radiance = mix(radiance, coatRadiance, coatWeight)
   radiance *= ao
   # Authored lights and the optional key light share the same BRDF/BTDF.
   for lightIndex in 0 ..< 33:
@@ -407,8 +453,13 @@ proc gltfIblFrag*(
         direct = sheenColorFactor * sheenBrdf(nDotL, nDotV, nDotH, sheenRoughnessFactor) * exitAttenuation +
           direct * min(sheenScaling(nDotV), sheenScaling(nDotL))
         throughLight *= min(sheenScaling(nDotV), sheenScaling(nDotL))
-      radiance += direct * lightColor * nDotL
-      radiance += throughLight * lightColor
+      if coat > 0.0'f:
+        let coatDirect = clearcoatBrdf(coatNormal, v, safeNormalize(pointToLight - ray), h,
+          coatRoughness) * exitAttenuation
+        radiance += mix(direct * nDotL + throughLight, vec3(coatDirect), coatWeight) * lightColor
+      else:
+        radiance += direct * lightColor * nDotL
+        radiance += throughLight * lightColor
   var alpha = base.a
   if opaqueMaterial != 0:
     alpha = 1.0'f
@@ -416,7 +467,7 @@ proc gltfIblFrag*(
     if alpha < alphaCutoff:
       discardFragment()
     alpha = 1.0'f
-  fragColor = vec4(radiance + emissive, alpha) * tint
+  fragColor = vec4(radiance + emissive * (1.0'f - coatWeight), alpha) * tint
   toneMapFlag = uint32(2)
 
 proc hdrPostVert*(vertexPosition: Vec2, gl_Position: var Vec4, postUv: var Vec2) =

@@ -427,6 +427,20 @@ proc writeGLB*(
         anisotropy["anisotropyTexture"] = dataTextureInfo(mat.anisotropy,
           mat.anisotropyKtx2, mat.anisotropyName, mat.anisotropySampler, mat.anisotropyTransform)
       matNode["extensions"]["KHR_materials_anisotropy"] = anisotropy
+    if mat.hasClearcoat or mat.clearcoatFactor > 0:
+      if "extensions" notin matNode: matNode["extensions"] = newJObject()
+      let coat = %*{"clearcoatFactor": mat.clearcoatFactor,
+        "clearcoatRoughnessFactor": mat.clearcoatRoughnessFactor}
+      template writeCoatTexture(slot: untyped) =
+        if mat.slot != nil or mat.`slot Ktx2`.len > 0:
+          coat[astToStr(slot) & "Texture"] = dataTextureInfo(mat.slot,
+            mat.`slot Ktx2`, mat.`slot Name`, mat.`slot Sampler`, mat.`slot Transform`)
+      writeCoatTexture(clearcoat)
+      writeCoatTexture(clearcoatRoughness)
+      writeCoatTexture(clearcoatNormal)
+      if "clearcoatNormalTexture" in coat:
+        coat["clearcoatNormalTexture"]["scale"] = %mat.clearcoatNormalScale
+      matNode["extensions"]["KHR_materials_clearcoat"] = coat
     if mat.hasSpecular or mat.sheenColorFactor != vec3(0):
       if "extensions" notin matNode: matNode["extensions"] = newJObject()
       if mat.hasSpecular:

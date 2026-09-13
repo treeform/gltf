@@ -88,6 +88,9 @@ type
     hasAnisotropy*: bool
     anisotropyStrength*, anisotropyRotation*: float32
     anisotropyTexture*: MaterialTexture
+    hasClearcoat*: bool
+    clearcoatFactor*, clearcoatRoughnessFactor*: float32
+    clearcoatTexture*, clearcoatRoughnessTexture*, clearcoatNormalTexture*: MaterialTexture
 
   MeshInfo* = object
     name*: string

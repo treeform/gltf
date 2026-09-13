@@ -286,6 +286,13 @@ type
     anisotropyKtx2*, anisotropyName*: string
     anisotropyTransform*: TextureTransform
     anisotropySampler*: TextureSampler
+    hasClearcoat*: bool
+    clearcoatFactor*, clearcoatRoughnessFactor*, clearcoatNormalScale*: float32
+    clearcoat*, clearcoatRoughness*, clearcoatNormal*: Image
+    clearcoatKtx2*, clearcoatName*, clearcoatRoughnessKtx2*, clearcoatRoughnessName*: string
+    clearcoatNormalKtx2*, clearcoatNormalName*: string
+    clearcoatTransform*, clearcoatRoughnessTransform*, clearcoatNormalTransform*: TextureTransform
+    clearcoatSampler*, clearcoatRoughnessSampler*, clearcoatNormalSampler*: TextureSampler
     materialVersion*: uint64
     data*: MaterialData
 

@@ -90,6 +90,7 @@ The table below reflects the current code, not the full glTF 2.0 spec.
 | `KHR_materials_ior` | Yes | Partial | Yes | OpenGL IBL uses authored IOR for refraction, roughness and dielectric reflections, including explicit zero's infinite-IOR mode. |
 | `KHR_materials_emissive_strength` | Yes | Yes | Yes | Multiplies linear emissive radiance, including HDR values before OpenGL IBL tone mapping. Textureless emissive colors also survive export. |
 | `KHR_materials_anisotropy` | Yes | Partial | Yes | OpenGL IBL uses anisotropic GGX for punctual lights and bent-normal environment reflections; supports strength, rotation and linear RG-direction/B-strength textures with UV transforms. |
+| `KHR_materials_clearcoat` | Yes | Partial | Yes | OpenGL IBL layers clearcoat over reflection, transmission, sheen and emission; supports strength/R, roughness/G and independent normal textures with UV transforms. |
 | `KHR_node_visibility` | Yes | Yes | No | Static visibility and visibility animation are supported. |
 | `KHR_animation_pointer` | Partial | Partial | No | Node visibility and material `baseColorFactor` targets are supported. Color tracks support `STEP`, `LINEAR`, and `CUBICSPLINE`. |
 | `KHR_draco_mesh_compression` | No | No | No | Not supported yet. |

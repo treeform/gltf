@@ -27,6 +27,7 @@ type
     transmissionId*, thicknessId*: GLuint
     diffuseTransmissionId*, diffuseTransmissionColorId*: GLuint
     anisotropyId*: GLuint
+    clearcoatId*, clearcoatRoughnessId*, clearcoatNormalId*: GLuint
 
   GltfFileData* = ref object
     sceneVersion*: uint64
