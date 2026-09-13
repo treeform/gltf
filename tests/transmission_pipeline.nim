@@ -231,6 +231,62 @@ doAssert capture().pixel(32, 24).r < 3
 ctx.useShadows = true
 material.transmissionFactor = 1
 discard capture()
+
+# Diffuse transmission is back-side diffuse lighting, independent of base color.
+ctx.useShadows = false
+renderer.release(root)
+material.transmissionFactor = 0
+material.ior = 1
+material.thicknessFactor = 0
+material.diffuseTransmissionFactor = 1
+material.diffuseTransmissionColorFactor = vec3(1, 0.5, 0.25)
+material.baseColorFactor = color(0, 0, 1, 1)
+ctx.sunLightDirection = vec3(0, 0, 1)
+let diffuseBacklit = capture()
+let dtPixel = diffuseBacklit.pixel(32, 24)
+doAssert dtPixel.r > dtPixel.g and dtPixel.g > dtPixel.b and dtPixel.b > 20
+ctx.sunLightDirection = vec3(0, 0, -1)
+doAssert capture().pixel(32, 24).r < 3, "Full diffuse transmission removes front-side diffuse"
+ctx.sunLightDirection = vec3(0, 0, 1)
+
+# The mask is alpha, never red; UV1 and its transform apply independently.
+renderer.release(root)
+material.diffuseTransmission = newImage(2, 1)
+material.diffuseTransmission[0, 0] = rgbx(255, 0, 0, 0)
+material.diffuseTransmission[1, 0] = rgbx(0, 0, 0, 255)
+material.diffuseTransmissionSampler.magFilter = NearestMagFilter
+material.diffuseTransmissionSampler.minFilter = NearestMinFilter
+material.diffuseTransmissionTransform.texCoord = 1
+let diffuseMasked = capture()
+doAssert difference(diffuseMasked.pixel(20, 16), dtPixel) <= 2
+doAssert diffuseMasked.pixel(44, 16).r < 3
+material.diffuseTransmissionTransform.offset.x = 0.5
+let diffuseShifted = capture()
+doAssert diffuseShifted.pixel(20, 16).r < 3
+doAssert difference(diffuseShifted.pixel(44, 16), dtPixel) <= 2
+
+# sRGB RGB values must be decoded without multiplying by texture alpha.
+renderer.release(root)
+material.diffuseTransmission = nil
+material.diffuseTransmissionColorFactor = vec3(1)
+material.diffuseTransmissionColor = newImage(1, 1)
+material.diffuseTransmissionColor.fill(rgbx(128, 64, 192, 0))
+let coloredDiffuse = capture()
+let cdt = coloredDiffuse.pixel(32, 24)
+doAssert cdt.b > cdt.r and cdt.r > cdt.g and cdt.g > 3
+renderer.release(root)
+material.diffuseTransmissionColor = nil
+material.diffuseTransmissionColorFactor = vec3(0.215861, 0.051269, 0.527115)
+doAssert difference(capture().pixel(32, 24), cdt) <= 1, "Diffuse color map must use sRGB transfer"
+material.thicknessFactor = 1
+material.attenuationColor = vec3(0.25, 1, 1)
+material.attenuationDistance = 1
+let diffuseAbsorbed = capture().pixel(32, 24)
+doAssert diffuseAbsorbed.r < cdt.r - 15 and abs(diffuseAbsorbed.g.int - cdt.g.int) <= 2
+material.attenuationDistance = 0
+doAssert difference(capture().pixel(32, 24), cdt) <= 1
+doAssert capture() == capture(), "Diffuse transmission must be repeatable"
+echo "Diffuse transmission GPU: backlighting, energy balance, alpha mask, UV1/transform, sRGB color and absorption passed"
 ctx.destroy()
 renderer.release(root)
 renderer.shutdown()

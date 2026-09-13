@@ -729,7 +729,7 @@ if manifestPath.len > 0:
     doAssert id.len > 0 and id == sanitizeFileName(id) and id notin ids,
       "Invalid or duplicate reference id"
     ids.add(id)
-    if caseFilter.len == 0 or caseFilter in id:
+    if caseFilter.len == 0 or caseFilter.split(',').anyIt(it.len > 0 and it in id):
       referenceCases.add(item)
   if referenceCases.len == 0:
     quit("No reference cases match the selection.", 1)

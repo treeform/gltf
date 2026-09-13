@@ -311,7 +311,7 @@ proc writeGLB*(
     img == nil or placeholder
 
   proc dataTextureInfo(img: Image, ktx2Data, name: string, sampler: TextureSampler,
-      transform: TextureTransform): JsonNode =
+      transform: TextureTransform, semantic = tsData): JsonNode =
     var index: int
     if ktx2Data.len > 0:
       # Preserve native compressed maps without a decode/re-encode or dropping
@@ -333,7 +333,7 @@ proc writeGLB*(
       usesKhrTextureBasisu = true
       index = textures.len - 1
     else:
-      index = textureIndex(img, name, tsData, sampler)
+      index = textureIndex(img, name, semantic, sampler)
     result = %*{"index": index, "texCoord": transform.texCoord}
     if transform.offset != vec2(0) or transform.scale != vec2(1) or transform.rotation != 0:
       usesTextureTransform = true
@@ -405,6 +405,20 @@ proc writeGLB*(
         extensions["KHR_materials_volume"] = volume
       if mat.hasIor or (mat.ior > 0 and mat.ior != 1.5'f):
         extensions["KHR_materials_ior"] = %*{"ior": mat.ior}
+    if mat.hasDiffuseTransmission or mat.diffuseTransmissionFactor > 0:
+      if "extensions" notin matNode: matNode["extensions"] = newJObject()
+      let diffuse = %*{"diffuseTransmissionFactor": mat.diffuseTransmissionFactor,
+        "diffuseTransmissionColorFactor": [mat.diffuseTransmissionColorFactor.x,
+          mat.diffuseTransmissionColorFactor.y, mat.diffuseTransmissionColorFactor.z]}
+      if mat.diffuseTransmission != nil or mat.diffuseTransmissionKtx2.len > 0:
+        diffuse["diffuseTransmissionTexture"] = dataTextureInfo(mat.diffuseTransmission,
+          mat.diffuseTransmissionKtx2, mat.diffuseTransmissionName,
+          mat.diffuseTransmissionSampler, mat.diffuseTransmissionTransform)
+      if mat.diffuseTransmissionColor != nil or mat.diffuseTransmissionColorKtx2.len > 0:
+        diffuse["diffuseTransmissionColorTexture"] = dataTextureInfo(mat.diffuseTransmissionColor,
+          mat.diffuseTransmissionColorKtx2, mat.diffuseTransmissionColorName,
+          mat.diffuseTransmissionColorSampler, mat.diffuseTransmissionColorTransform, tsColor)
+      matNode["extensions"]["KHR_materials_diffuse_transmission"] = diffuse
     if mat.hasSpecular or mat.sheenColorFactor != vec3(0):
       if "extensions" notin matNode: matNode["extensions"] = newJObject()
       if mat.hasSpecular:

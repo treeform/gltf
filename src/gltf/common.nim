@@ -241,6 +241,14 @@ type
     alphaCutoff*: float32
     doubleSided*: bool
     transmissionFactor*: float32
+    hasDiffuseTransmission*: bool
+    diffuseTransmissionFactor*: float32
+    diffuseTransmissionColorFactor*: Vec3
+    diffuseTransmission*, diffuseTransmissionColor*: Image
+    diffuseTransmissionKtx2*, diffuseTransmissionName*: string
+    diffuseTransmissionColorKtx2*, diffuseTransmissionColorName*: string
+    diffuseTransmissionTransform*, diffuseTransmissionColorTransform*: TextureTransform
+    diffuseTransmissionSampler*, diffuseTransmissionColorSampler*: TextureSampler
     hasTransmission*: bool
     transmission*: Image
     transmissionKtx2*, transmissionName*: string

@@ -6,6 +6,7 @@ import { assetsDir, repoDir, defaultManifest, validateManifest, cacheDir, source
 
 const { values: args } = parseArgs({ options: {
   manifest: { type: 'string' }, out: { type: 'string' }, case: { type: 'string' }, baselines: { type: 'string' },
+  commit: { type: 'string' },
   'no-build': { type: 'boolean' }, strict: { type: 'boolean' }, legacy: { type: 'boolean' }
 } });
 const manifest = path.resolve(args.manifest || defaultManifest);
@@ -15,7 +16,7 @@ const baselines = path.resolve(args.baselines || path.join(path.dirname(manifest
 const referenceRun = JSON.parse(await readFile(path.join(path.dirname(baselines), 'run.json'), 'utf8'));
 if (JSON.stringify(referenceRun.sources) !== JSON.stringify(spec.sources)) throw new Error('The master images use different renderer sources. Recapture before comparing.');
 if (referenceRun.manifestSha256 !== sha256(await readFile(manifest))) throw new Error('The master images use a different manifest. Recapture before comparing.');
-for (const item of spec.cases.filter(c => !args.case || c.id.includes(args.case))) {
+for (const item of spec.cases.filter(c => !args.case || args.case.split(',').some(filter => filter && c.id.includes(filter)))) {
   const capture = referenceRun.captures.find(c => c.id === item.id && c.status === 'ok');
   if (!capture || capture.sha256 !== sha256(await readFile(path.join(baselines, `${item.id}.png`)))) throw new Error(`Missing or stale master: ${item.id}. Recapture the selected cases.`);
 }
@@ -51,6 +52,18 @@ await writeFile(path.join(outDir, 'nim-run.log'), (render.stdout || '') + (rende
 let metrics;
 try { metrics = JSON.parse(await readFile(path.join(outDir, 'metrics.json'), 'utf8')); }
 catch { console.error(render.stdout, render.stderr); process.exit(1); }
+if (args.commit) {
+  if (!/^[0-9a-f]{7,40}$/i.test(args.commit)) throw new Error('--commit must be a Git commit hash');
+  const commit = git(repoDir, 'rev-parse', `${args.commit}^{commit}`);
+  if (commit !== git(repoDir, 'rev-parse', 'HEAD') || git(repoDir, 'status', '--porcelain', '--untracked-files=no')) {
+    throw new Error('Commit-linked reports require a clean worktree at the specified commit');
+  }
+  const report = path.join(outDir, 'xray_report.html');
+  const html = await readFile(report, 'utf8');
+  const message = git(repoDir, 'show', '-s', '--format=%B', commit)
+    .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+  await writeFile(report, html.replace('<body>', `<body><p>Implementation commit: <a href="https://github.com/treeform/gltf/commit/${commit}">${commit.slice(0, 7)}</a></p><pre style="white-space:pre-wrap">${message}</pre>`));
+}
 console.table(metrics.map(m => ({ case: m.id, 'RGB MAE / 255': m.meanAbsoluteErrorRgb.toFixed(3),
   'different pixels': m.differentPixels, 'within ±2': m.pixels ? `${(100 * (m.pixels - m.pixelsOverTolerance2) / m.pixels).toFixed(2)}%` : 'n/a', status: m.status })));
 console.log(`Rendered and compared ${metrics.length} cases in ${((performance.now() - start) / 1000).toFixed(2)}s.`);

@@ -70,6 +70,9 @@ type
     metallicFactor: GLint
     roughnessFactor: GLint
     transmissionFactor: GLint
+    diffuseTransmissionFactor, diffuseTransmissionColorFactor: GLint
+    hasDiffuseTransmissionTexture, hasDiffuseTransmissionColorTexture: GLint
+    diffuseTransmissionTransform, diffuseTransmissionColorTransform: TextureTransformUniforms
     materialIor, thicknessFactor, attenuationColor, attenuationDistance: GLint
     volumeScale: GLint
     hasTransmissionTexture, hasThicknessTexture, transmissionBackground: GLint
@@ -168,7 +171,7 @@ type
     ## while a pass is active. Unknown values force a real GL call.
     programBound: bool
     activeUnit: int
-    boundTexture: array[15, GLuint]
+    boundTexture: array[17, GLuint]
     textureEpoch: uint64
     blend: int8
     depthMask: int8
@@ -310,6 +313,12 @@ proc loadPbrUniforms(shader: GLuint): PbrUniforms =
   result.metallicFactor = uniformLocation(shader, "metallicFactor")
   result.roughnessFactor = uniformLocation(shader, "roughnessFactor")
   result.transmissionFactor = uniformLocation(shader, "transmissionFactor")
+  result.diffuseTransmissionFactor = uniformLocation(shader, "diffuseTransmissionFactor")
+  result.diffuseTransmissionColorFactor = uniformLocation(shader, "diffuseTransmissionColorFactor")
+  result.hasDiffuseTransmissionTexture = uniformLocation(shader, "hasDiffuseTransmissionTexture")
+  result.hasDiffuseTransmissionColorTexture = uniformLocation(shader, "hasDiffuseTransmissionColorTexture")
+  result.diffuseTransmissionTransform = loadTextureTransformUniforms(shader, "diffuseTransmission")
+  result.diffuseTransmissionColorTransform = loadTextureTransformUniforms(shader, "diffuseTransmissionColor")
   result.materialIor = uniformLocation(shader, "materialIor")
   result.volumeScale = uniformLocation(shader, "volumeScale")
   result.thicknessFactor = uniformLocation(shader, "thicknessFactor")
@@ -795,7 +804,8 @@ proc attachIblEnvironment*(ctx: PbrContext, environment: IblEnvironment,
       ("normalTexture", 2), ("occlusionTexture", 3), ("emissiveTexture", 4),
       ("environmentMap", 5), ("diffuseEnvironment", 7), ("ggxLut", 8),
       ("charlieEnvironment", 9), ("charlieLut", 10), ("sheenEnergyLut", 11),
-      ("transmissionBuffer", 12), ("transmissionTexture", 13), ("thicknessTexture", 14)]:
+      ("transmissionBuffer", 12), ("transmissionTexture", 13), ("thicknessTexture", 14),
+      ("diffuseTransmissionTexture", 15), ("diffuseTransmissionColorTexture", 16)]:
     glUniform1i(uniformLocation(shader, name.cstring), unit.GLint)
   glUniform1f(uniformLocation(shader, "transmissionBufferLod"), log2(TransmissionSize.float32))
   ctx.passValues = PbrPassValues()
@@ -1085,6 +1095,12 @@ proc uploadMaterialToGpu(material: Material) =
   if data.thicknessId == 0:
     uploadTextureToGpu(data.thicknessId, material.thickness,
       material.thicknessKtx2, material.thicknessSampler)
+  if data.diffuseTransmissionId == 0:
+    uploadTextureToGpu(data.diffuseTransmissionId, material.diffuseTransmission,
+      material.diffuseTransmissionKtx2, material.diffuseTransmissionSampler)
+  if data.diffuseTransmissionColorId == 0:
+    uploadTextureToGpu(data.diffuseTransmissionColorId, material.diffuseTransmissionColor,
+      material.diffuseTransmissionColorKtx2, material.diffuseTransmissionColorSampler, srgb = true)
 
 proc clearMaterialFromGpu(material: Material) =
   if material == nil or material.data == nil:
@@ -1092,6 +1108,8 @@ proc clearMaterialFromGpu(material: Material) =
   let data = material.data
   if data.transmissionId != 0: glDeleteTextures(1, data.transmissionId.addr)
   if data.thicknessId != 0: glDeleteTextures(1, data.thicknessId.addr)
+  if data.diffuseTransmissionId != 0: glDeleteTextures(1, data.diffuseTransmissionId.addr)
+  if data.diffuseTransmissionColorId != 0: glDeleteTextures(1, data.diffuseTransmissionColorId.addr)
   if data.baseColorSrgbId != 0:
     glDeleteTextures(1, data.baseColorSrgbId.addr)
   if data.emissiveSrgbId != 0:
@@ -1472,6 +1490,8 @@ proc applyMaterial(
     ctx.bindTextureCached(4, GL_TEXTURE_2D, materialData.emissiveSrgbId)
     ctx.bindTextureCached(13, GL_TEXTURE_2D, materialData.transmissionId)
     ctx.bindTextureCached(14, GL_TEXTURE_2D, materialData.thicknessId)
+    ctx.bindTextureCached(15, GL_TEXTURE_2D, materialData.diffuseTransmissionId)
+    ctx.bindTextureCached(16, GL_TEXTURE_2D, materialData.diffuseTransmissionColorId)
   else:
     ctx.bindTextureCached(0, GL_TEXTURE_2D, materialData.baseColorId)
     ctx.bindTextureCached(4, GL_TEXTURE_2D, materialData.emissiveId)
@@ -1484,7 +1504,8 @@ proc applyMaterial(
     for (unit, sampler) in [(0, material.baseColorSampler),
         (1, material.metallicRoughnessSampler), (2, material.normalSampler),
         (3, material.occlusionSampler), (4, material.emissiveSampler),
-        (13, material.transmissionSampler), (14, material.thicknessSampler)]:
+        (13, material.transmissionSampler), (14, material.thicknessSampler),
+        (15, material.diffuseTransmissionSampler), (16, material.diffuseTransmissionColorSampler)]:
       if ctx.glState.boundTexture[unit] == 0: continue
       if sampler.magFilter != NearestMagFilter and sampler.minFilter in
           {NearestMipmapLinearMinFilter, LinearMipmapLinearMinFilter}:
@@ -1543,6 +1564,13 @@ proc applyMaterial(
   glUniform1f(u.metallicFactor, material.metallicFactor)
   glUniform1f(u.roughnessFactor, material.roughnessFactor)
   glUniform1f(u.transmissionFactor, material.transmissionFactor)
+  glUniform1f(u.diffuseTransmissionFactor, material.diffuseTransmissionFactor)
+  glUniform3f(u.diffuseTransmissionColorFactor, material.diffuseTransmissionColorFactor.x,
+    material.diffuseTransmissionColorFactor.y, material.diffuseTransmissionColorFactor.z)
+  glUniform1i(u.hasDiffuseTransmissionTexture, (materialData.diffuseTransmissionId != 0).GLint)
+  glUniform1i(u.hasDiffuseTransmissionColorTexture, (materialData.diffuseTransmissionColorId != 0).GLint)
+  setTextureTransformUniform(u.diffuseTransmissionTransform, material.diffuseTransmissionTransform)
+  setTextureTransformUniform(u.diffuseTransmissionColorTransform, material.diffuseTransmissionColorTransform)
   # The spec's explicit IOR=0 compatibility mode represents positive infinity.
   # At 1e8 the float32 Fresnel ratio rounds to exactly one without infinities.
   glUniform1f(u.materialIor, if material.hasIor and material.ior == 0: 1e8'f

@@ -31,6 +31,9 @@ npm run compare -- --no-build
 # Capture only one model's cases while working on it.
 npm run compare -- --case=SimpleMorph
 
+# Make a focused report for a committed fix, with a link to that commit.
+npm run compare -- --case=MandarinOrange,DiffuseTransmissionTeacup --commit=COMMIT_HASH --out=../../tests/tmp/parity-diffuse
+
 # Recreate the five reference references, checking each twice for repeatability.
 npm run capture -- --verify
 

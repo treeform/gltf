@@ -70,6 +70,10 @@ type
     alphaCutoff*: float32
     doubleSided*: bool
     transmissionFactor*: float32
+    hasDiffuseTransmission*: bool
+    diffuseTransmissionFactor*: float32
+    diffuseTransmissionColorFactor*: Vec3
+    diffuseTransmissionTexture*, diffuseTransmissionColorTexture*: MaterialTexture
     hasTransmission*, hasVolume*, hasIor*: bool
     transmissionTexture*, thicknessTexture*: MaterialTexture
     thicknessFactor*, attenuationDistance*, ior*: float32

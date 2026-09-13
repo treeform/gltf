@@ -8,6 +8,7 @@ export common
 const SupportedExtensions = [
   "KHR_texture_transform",
   "KHR_materials_transmission",
+  "KHR_materials_diffuse_transmission",
   "KHR_materials_volume",
   "KHR_materials_ior",
   "KHR_materials_unlit",
@@ -1319,6 +1320,11 @@ proc defaultRuntimeMaterial(): Material =
   result.alphaCutoff = -1.0
   result.doubleSided = false
   result.transmissionFactor = 0.0
+  result.diffuseTransmissionColorFactor = vec3(1)
+  result.diffuseTransmissionSampler = defaultTextureSampler()
+  result.diffuseTransmissionColorSampler = defaultTextureSampler()
+  result.diffuseTransmissionTransform = TextureTransform(scale: vec2(1))
+  result.diffuseTransmissionColorTransform = TextureTransform(scale: vec2(1))
   result.ior = 1.5
   result.attenuationColor = vec3(1)
   result.transmissionSampler = defaultTextureSampler()
@@ -1595,6 +1601,11 @@ proc loadPrimitive(
         scale: info.uvScale, rotation: info.rotation)
     loadDataTexture(transmission, material.transmissionTexture)
     loadDataTexture(thickness, material.thicknessTexture)
+    loadDataTexture(diffuseTransmission, material.diffuseTransmissionTexture)
+    loadDataTexture(diffuseTransmissionColor, material.diffuseTransmissionColorTexture)
+    result.material.hasDiffuseTransmission = material.hasDiffuseTransmission
+    result.material.diffuseTransmissionFactor = material.diffuseTransmissionFactor
+    result.material.diffuseTransmissionColorFactor = material.diffuseTransmissionColorFactor
     result.material.hasSpecular = material.hasSpecular
     result.material.specularFactor = material.specularFactor
     result.material.specularColorFactor = material.specularColorFactor
@@ -2121,6 +2132,8 @@ proc loadModelJsonInternal(
       material.emissiveTexture = defaultMaterialTexture()
       material.transmissionTexture = defaultMaterialTexture()
       material.thicknessTexture = defaultMaterialTexture()
+      material.diffuseTransmissionTexture = defaultMaterialTexture()
+      material.diffuseTransmissionColorTexture = defaultMaterialTexture()
       if "name" in entry:
         material.name = entry["name"].getStr()
 
@@ -2235,6 +2248,7 @@ proc loadModelJsonInternal(
         material.doubleSided = false
 
       material.transmissionFactor = 0
+      material.diffuseTransmissionColorFactor = vec3(1)
       material.ior = 1.5
       material.attenuationColor = vec3(1)
       material.specularFactor = 1
@@ -2260,6 +2274,20 @@ proc loadModelJsonInternal(
               let c = sheen["sheenColorFactor"]
               material.sheenColorFactor = vec3(c[0].getFloat(), c[1].getFloat(), c[2].getFloat())
         material.unlit = "KHR_materials_unlit" in extensions
+        if "KHR_materials_diffuse_transmission" in extensions:
+          let diffuse = extensions["KHR_materials_diffuse_transmission"]
+          material.hasDiffuseTransmission = true
+          material.diffuseTransmissionFactor = diffuse{"diffuseTransmissionFactor"}.getFloat().float32
+          if "diffuseTransmissionColorFactor" in diffuse:
+            let c = diffuse["diffuseTransmissionColorFactor"]
+            material.diffuseTransmissionColorFactor = vec3(c[0].getFloat(), c[1].getFloat(), c[2].getFloat())
+          template readDiffuseTexture(slot: untyped) =
+            if astToStr(slot) in diffuse:
+              let texture = diffuse[astToStr(slot)]
+              material.slot.index = texture["index"].getInt()
+              readTextureTransform(texture, material.slot)
+          readDiffuseTexture(diffuseTransmissionTexture)
+          readDiffuseTexture(diffuseTransmissionColorTexture)
         if "KHR_materials_transmission" in extensions:
           let transmission = extensions["KHR_materials_transmission"]
           material.hasTransmission = true

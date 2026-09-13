@@ -86,6 +86,7 @@ The table below reflects the current code, not the full glTF 2.0 spec.
 | `KHR_texture_transform` | Yes | Yes | Partial | Texture transforms and `texCoord` overrides are supported. Export preserves them on transmission and thickness maps. |
 | `KHR_materials_transmission` | Yes | Partial | Yes | OpenGL IBL renders a mipmapped scene background for refraction and rough glass; supports the factor and linear R-channel texture. Other lighting paths retain their approximation. |
 | `KHR_materials_volume` | Yes | Partial | Yes | OpenGL IBL supports thickness factor/G-channel texture, node scale, and color/distance absorption. |
+| `KHR_materials_diffuse_transmission` | Yes | Partial | Yes | OpenGL IBL supports opposite-hemisphere diffuse lighting, factor/alpha texture, sRGB color texture, UV transforms, and volume absorption. Volume scattering is a separate extension. |
 | `KHR_materials_ior` | Yes | Partial | Yes | OpenGL IBL uses authored IOR for refraction, roughness and dielectric reflections, including explicit zero's infinite-IOR mode. |
 | `KHR_node_visibility` | Yes | Yes | No | Static visibility and visibility animation are supported. |
 | `KHR_animation_pointer` | Partial | Partial | No | Node visibility and material `baseColorFactor` targets are supported. Color tracks support `STEP`, `LINEAR`, and `CUBICSPLINE`. |

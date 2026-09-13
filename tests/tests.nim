@@ -11,6 +11,7 @@ import
   test_vertex_colors,
   test_ibl_materials,
   test_transmission,
+  test_diffuse_transmission,
   test_unlit,
   test_texture_images
 

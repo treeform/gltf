@@ -33,6 +33,14 @@ var
   thicknessFactor*, materialIor*, attenuationDistance*: Uniform[float32]
   attenuationColor*: Uniform[Vec3]
   volumeScale*: Uniform[Vec3]
+  diffuseTransmissionFactor*: Uniform[float32]
+  diffuseTransmissionColorFactor*: Uniform[Vec3]
+  diffuseTransmissionTexture*, diffuseTransmissionColorTexture*: Uniform[Sampler2d]
+  hasDiffuseTransmissionTexture*, hasDiffuseTransmissionColorTexture*: Uniform[bool]
+  diffuseTransmissionTexCoord*, diffuseTransmissionColorTexCoord*: Uniform[int]
+  diffuseTransmissionUvOffset*, diffuseTransmissionUvScale*: Uniform[Vec2]
+  diffuseTransmissionColorUvOffset*, diffuseTransmissionColorUvScale*: Uniform[Vec2]
+  diffuseTransmissionUvRotation*, diffuseTransmissionColorUvRotation*: Uniform[float32]
 
 func pbrNeutral*(input: Vec3): Vec3 =
   ## Khronos PBR Neutral, operating on exposed linear radiance.
@@ -233,6 +241,23 @@ proc gltfIblFrag*(
     thickness *= texture(thicknessTexture, thickUv).g
   var ray = vec3(0.0'f)
   var diffuse = reflectedDiffuse
+  var diffuseTransmission = diffuseTransmissionFactor
+  var diffuseTransmissionColor: Vec3 = diffuseTransmissionColorFactor
+  if hasDiffuseTransmissionTexture:
+    let dtUv = transformUv(selectUv(diffuseTransmissionTexCoord, uv, uv1),
+      diffuseTransmissionUvOffset, diffuseTransmissionUvScale, diffuseTransmissionUvRotation)
+    diffuseTransmission *= texture(diffuseTransmissionTexture, dtUv).a
+  if hasDiffuseTransmissionColorTexture:
+    let dtColorUv = transformUv(selectUv(diffuseTransmissionColorTexCoord, uv, uv1),
+      diffuseTransmissionColorUvOffset, diffuseTransmissionColorUvScale, diffuseTransmissionColorUvRotation)
+    diffuseTransmissionColor *= texture(diffuseTransmissionColorTexture, dtColorUv).rgb
+  # The thin-surface BTDF receives diffuse light from the opposite hemisphere.
+  # Volume thickness uses the mean world-axis scale, as in the reference.
+  let diffuseThickness = thickness * (volumeScale.x + volumeScale.y + volumeScale.z) / 3.0'f
+  if diffuseTransmission > 0.0'f:
+    let backDiffuse: Vec3 = texture(diffuseEnvironment, environmentRotation * -n).rgb *
+      environmentMapStrength * diffuseTransmissionColor
+    diffuse = mix(diffuse, volumeAttenuation(backDiffuse, diffuseThickness), diffuseTransmission)
   if transmission > 0.0'f:
     ray = volumeRay(n, v, thickness)
     diffuse = mix(diffuse, transmittedBackground(worldPos, ray, roughness) * base.rgb, transmission)
@@ -270,17 +295,28 @@ proc gltfIblFrag*(
           nDotV * sqrt(nDotL * nDotL * (1.0'f - a2) + a2)
         visibility = if visibilityDenom > 0.0'f: 0.5'f / visibilityDenom else: 0.0'f
         schlick = pow(1.0'f - vDotH, 5.0'f)
-        dielectricFresnel: Vec3 = specularFactor * (dielectricF0 +
-          (vec3(1.0'f) - dielectricF0) * schlick)
         metalFresnel: Vec3 = base.rgb + (vec3(1.0'f) - base.rgb) * schlick
         specularBrdf: Vec3 = vec3(visibility * distribution)
-      var direct: Vec3 = mix(mix(base.rgb / ShaderPi, specularBrdf, dielectricFresnel),
+      var dielectricFresnel: Vec3 = specularFactor * (dielectricF0 +
+        (vec3(1.0'f) - dielectricF0) * schlick)
+      var backDiffuse: Vec3 = vec3(0.0'f)
+      if diffuseTransmission > 0.0'f and dot(n, l) < 0.0'f:
+        let mirrored: Vec3 = normalize(l + 2.0'f * n * dot(-l, n))
+        let diffuseVdotH = clamp(dot(v, normalize(mirrored + v)), 0.0'f, 1.0'f)
+        dielectricFresnel = specularFactor * (dielectricF0 +
+          (vec3(1.0'f) - dielectricF0) * pow(1.0'f - diffuseVdotH, 5.0'f))
+        backDiffuse = volumeAttenuation(diffuseTransmissionColor *
+          clamp(dot(-n, l), 0.0'f, 1.0'f) / ShaderPi, diffuseThickness)
+      var direct: Vec3 = mix(mix(base.rgb / ShaderPi * (1.0'f - diffuseTransmission),
+        specularBrdf, dielectricFresnel),
         metalFresnel * specularBrdf, metallic)
-      var throughLight = vec3(0.0'f)
+      var throughLight = backDiffuse * diffuseTransmission * (1.0'f - transmission) *
+        (vec3(1.0'f) - dielectricFresnel) * (1.0'f - metallic)
       if transmission > 0.0'f:
         let transmissionLight = volumeAttenuation(base.rgb *
           punctualTransmission(n, v, normalize(-lightDirection - ray), a), length(ray))
-        throughLight = (transmissionLight - base.rgb / ShaderPi * nDotL) * transmission *
+        throughLight += (transmissionLight - base.rgb / ShaderPi * nDotL *
+          (1.0'f - diffuseTransmission)) * transmission *
           (vec3(1.0'f) - dielectricFresnel) * (1.0'f - metallic)
       if sheenEnabled:
         direct = sheenColorFactor * sheenBrdf(nDotL, nDotV, nDotH, sheenRoughnessFactor) +
