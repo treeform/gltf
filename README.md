@@ -101,6 +101,7 @@ The table below reflects the current code, not the full glTF 2.0 spec.
 | `KHR_lights_punctual` | Yes | Partial | Yes | OpenGL IBL renders up to 32 directional/point/spot lights, with inverse-square/range/cone falloff and animated node transforms/visibility. Light-property animation remains unsupported. |
 | `KHR_materials_sheen` | Yes | Partial | Yes | OpenGL IBL layers Charlie sheen with energy compensation, sRGB color and linear alpha-roughness textures, including UV transforms and sampler settings. |
 | `KHR_materials_specular` | Yes | Partial | Yes | OpenGL IBL applies tinted dielectric reflections with linear alpha-strength and sRGB color textures, including UV transforms and sampler settings. |
+| `KHR_materials_pbrSpecularGlossiness` | Yes | Partial | Yes | OpenGL IBL supports the legacy diffuse/specular/glossiness workflow directly, with sRGB RGB/linear alpha textures, samplers and UV transforms. Preserves the core metallic/roughness fallback on export. |
 | `KHR_materials_unlit` | Yes | Yes | Yes | Base color, texture, vertex color, alpha modes and double-sided rendering; independent of lighting. The matched HDR path bypasses exposure and tone mapping. |
 | `EXT_texture_webp` | No | No | No | Not supported yet. |
 

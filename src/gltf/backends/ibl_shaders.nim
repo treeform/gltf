@@ -22,6 +22,15 @@ var
   sheenColorFactor*: Uniform[Vec3]
   sheenRoughnessFactor*: Uniform[float32]
   specularFactor*: Uniform[float32]
+  specularGlossinessMaterial*: Uniform[bool]
+  diffuseFactor*: Uniform[Vec4]
+  specularGlossinessFactor*: Uniform[Vec3]
+  glossinessFactor*: Uniform[float32]
+  diffuseTexture*, specularGlossinessTexture*: Uniform[Sampler2d]
+  hasDiffuseTexture*, hasSpecularGlossinessTexture*: Uniform[bool]
+  diffuseTexCoord*, specularGlossinessTexCoord*: Uniform[int]
+  diffuseUvOffset*, diffuseUvScale*, specularGlossinessUvOffset*, specularGlossinessUvScale*: Uniform[Vec2]
+  diffuseUvRotation*, specularGlossinessUvRotation*: Uniform[float32]
   specularColorFactor*: Uniform[Vec3]
   specularTexture*, specularColorTexture*: Uniform[Sampler2d]
   hasSpecularTexture*, hasSpecularColorTexture*: Uniform[bool]
@@ -327,12 +336,30 @@ proc gltfIblFrag*(
       occlusionUvOffset, occlusionUvScale, occlusionUvRotation)
     eUv: Vec2 = transformUv(selectUv(emissiveTexCoord, uv, uv1),
       emissiveUvOffset, emissiveUvScale, emissiveUvRotation)
-    base: Vec4 = texture(baseColorTexture, baseUv) * baseColorFactor * color
+    baseInput: Vec4 = texture(baseColorTexture, baseUv) * baseColorFactor * color
     mr: Vec4 = texture(metallicRoughnessTexture, mrUv)
-    roughness = clamp(mr.g * roughnessFactor, 0.0'f, 1.0'f)
-    metallic = clamp(mr.b * metallicFactor, 0.0'f, 1.0'f)
     ao = 1.0'f + occlusionStrength * (texture(occlusionTexture, aoUv).r - 1.0'f)
     emissive: Vec3 = texture(emissiveTexture, eUv).rgb * emissiveFactor
+  var base: Vec4 = baseInput
+  var roughness = clamp(mr.g * roughnessFactor, 0.0'f, 1.0'f)
+  var metallic = clamp(mr.b * metallicFactor, 0.0'f, 1.0'f)
+  var specGlossF0: Vec3 = vec3(0.0'f)
+  if specularGlossinessMaterial:
+    base = diffuseFactor * color
+    if hasDiffuseTexture:
+      let diffuseUv: Vec2 = transformUv(selectUv(diffuseTexCoord, uv, uv1),
+        diffuseUvOffset, diffuseUvScale, diffuseUvRotation)
+      base *= texture(diffuseTexture, diffuseUv)
+    var sg: Vec4 = vec4(1.0'f)
+    if hasSpecularGlossinessTexture:
+      let sgUv: Vec2 = transformUv(selectUv(specularGlossinessTexCoord, uv, uv1),
+        specularGlossinessUvOffset, specularGlossinessUvScale, specularGlossinessUvRotation)
+      sg = texture(specularGlossinessTexture, sgUv)
+    # SG supplies normal-incidence reflectance directly, and alpha is linear
+    # glossiness even though RGB uses the sRGB transfer function.
+    specGlossF0 = min(specularGlossinessFactor * sg.rgb, vec3(1.0'f))
+    roughness = clamp(1.0'f - glossinessFactor * sg.a, 0.0'f, 1.0'f)
+    metallic = 0.0'f
   var n: Vec3 = if length(normal) > 0.0'f: normalize(normal)
     else: normalize(cross(dFdx(worldPos), dFdy(worldPos)))
   var ng: Vec3 = n
@@ -415,6 +442,7 @@ proc gltfIblFrag*(
     let specularUv: Vec2 = transformUv(selectUv(specularColorTexCoord, uv, uv1),
       specularColorUvOffset, specularColorUvScale, specularColorUvRotation)
     specularTint *= texture(specularColorTexture, specularUv).rgb
+  if specularGlossinessMaterial: specularWeight = 1.0'f
   let
     v: Vec3 = normalize(cameraPosition - worldPos)
     nDotV = clamp(dot(n, v), 0.0'f, 1.0'f)
@@ -423,7 +451,8 @@ proc gltfIblFrag*(
     reflectedDiffuse: Vec3 = texture(diffuseEnvironment, environmentRotation * n).rgb *
       environmentMapStrength * base.rgb
     f0 = (materialIor - 1.0'f) / (materialIor + 1.0'f)
-    dielectricF0: Vec3 = min(vec3(f0 * f0) * specularTint, vec3(1.0'f))
+    dielectricF0: Vec3 = if specularGlossinessMaterial: specGlossF0
+      else: min(vec3(f0 * f0) * specularTint, vec3(1.0'f))
     coatWeight = coat * (f0 * f0 + (1.0'f - f0 * f0) *
       pow(1.0'f - clamp(dot(coatNormal, v), 0.0'f, 1.0'f), 5.0'f))
   var specularReflection: Vec3 = reflection

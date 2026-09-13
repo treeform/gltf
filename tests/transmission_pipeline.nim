@@ -586,6 +586,60 @@ material.sheenRoughnessFactor = 0.8'f * 128.0'f / 255.0'f
 doAssert difference(capture().pixel(32, 24), sheenRoughMap) <= 1,
   "Sheen roughness must use linear alpha, independent of RGB"
 echo "Sheen GPU: sRGB color, alpha roughness, zero color, UV1/offset and direct lighting passed"
+
+# SG supplies F0 directly; compare to the same reflectance in the modern path.
+renderer.release(root)
+material.sheenColorFactor = vec3(0)
+material.baseColorFactor = color(0.2, 0.3, 0.4, 1)
+material.metallicFactor = 0
+material.roughnessFactor = 0.6
+material.specularFactor = 1
+material.specularColorFactor = vec3(5, 7.5, 10) # F0 = 0.04 * color.
+ctx.cameraPosition = vec3(0, 0, 1000)
+let modernSpecular = capture()
+material.hasSpecularGlossiness = true
+material.diffuseFactor = color(0.2, 0.3, 0.4, 1)
+material.specularGlossinessFactor = vec3(0.2, 0.3, 0.4)
+material.glossinessFactor = 0.4
+material.baseColorFactor = color(1, 0, 0, 1) # The fallback must not override SG.
+material.metallicFactor = 1
+material.roughnessFactor = 0.1
+doAssert difference(capture().pixel(32, 24), modernSpecular.pixel(32, 24)) <= 1
+renderer.release(root)
+material.specularGlossiness = newImage(1, 1)
+material.specularGlossiness.fill(rgbx(128, 64, 192, 128))
+let sgMap = capture().pixel(32, 24)
+renderer.release(root)
+material.specularGlossiness = nil
+material.specularGlossinessFactor *= vec3(0.215861, 0.051269, 0.527115)
+material.glossinessFactor *= 128.0'f / 255.0'f
+doAssert difference(capture().pixel(32, 24), sgMap) <= 1,
+  "SG packed RGB must use sRGB transfer while glossiness alpha remains linear"
+renderer.release(root)
+material.diffuse = newImage(1, 1)
+material.diffuse.fill(rgbx(128, 64, 192, 0))
+let sgDiffuse = capture().pixel(32, 24)
+renderer.release(root)
+material.diffuse = nil
+material.diffuseFactor = color(0.2 * 0.215861, 0.3 * 0.051269, 0.4 * 0.527115, 1)
+doAssert difference(capture().pixel(32, 24), sgDiffuse) <= 1,
+  "Opaque SG diffuse must retain sRGB color even under zero texture alpha"
+renderer.release(root)
+material.diffuseFactor = color(1, 1, 1, 1)
+material.alphaMode = MaskAlphaMode
+material.alphaCutoff = 0.5
+material.diffuse = newImage(2, 1)
+material.diffuse[0, 0] = rgbx(255, 255, 255, 0)
+material.diffuse[1, 0] = rgbx(255, 255, 255, 255)
+material.diffuseSampler.magFilter = NearestMagFilter
+material.diffuseSampler.minFilter = NearestMinFilter
+material.diffuseTransform.texCoord = 1
+let sgMask = capture()
+doAssert sgMask.pixel(20, 16).r > 30 and sgMask.pixel(44, 16).r < 3
+material.diffuseTransform.offset.x = 0.5
+let sgShift = capture()
+doAssert sgShift.pixel(20, 16).r < 3 and sgShift.pixel(44, 16).r > 30
+echo "Specular/glossiness GPU: direct F0, fallback priority, sRGB RGB/linear alpha, diffuse coverage and UV1/offset passed"
 ctx.destroy()
 renderer.release(root)
 renderer.shutdown()

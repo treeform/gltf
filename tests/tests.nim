@@ -19,6 +19,7 @@ import
   test_clearcoat,
   test_iridescence,
   test_specular,
+  test_specular_glossiness,
   test_sheen,
   test_unlit,
   test_texture_images

@@ -454,6 +454,18 @@ proc writeGLB*(
       if "clearcoatNormalTexture" in coat:
         coat["clearcoatNormalTexture"]["scale"] = %mat.clearcoatNormalScale
       matNode["extensions"]["KHR_materials_clearcoat"] = coat
+    if mat.hasSpecularGlossiness:
+      if "extensions" notin matNode: matNode["extensions"] = newJObject()
+      let sg = %*{"glossinessFactor": mat.glossinessFactor,
+        "diffuseFactor": [mat.diffuseFactor.r, mat.diffuseFactor.g, mat.diffuseFactor.b, mat.diffuseFactor.a],
+        "specularFactor": [mat.specularGlossinessFactor.x, mat.specularGlossinessFactor.y, mat.specularGlossinessFactor.z]}
+      template writeSpecGlossTexture(slot: untyped) =
+        if mat.slot != nil or mat.`slot Ktx2`.len > 0:
+          sg[astToStr(slot) & "Texture"] = dataTextureInfo(mat.slot,
+            mat.`slot Ktx2`, mat.`slot Name`, mat.`slot Sampler`, mat.`slot Transform`, tsColor)
+      writeSpecGlossTexture(diffuse)
+      writeSpecGlossTexture(specularGlossiness)
+      matNode["extensions"]["KHR_materials_pbrSpecularGlossiness"] = sg
     if mat.hasSpecular or mat.hasSheen or mat.sheenColorFactor != vec3(0):
       if "extensions" notin matNode: matNode["extensions"] = newJObject()
       if mat.hasSpecular:

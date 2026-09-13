@@ -183,7 +183,9 @@ type
     SpecularTextureSlot,
     SpecularColorTextureSlot,
     SheenColorTextureSlot,
-    SheenRoughnessTextureSlot
+    SheenRoughnessTextureSlot,
+    DiffuseTextureSlot,
+    SpecularGlossinessTextureSlot
 
   AnimPath* = enum
     AnimTranslation, AnimRotation, AnimScale, AnimVisibility, AnimWeights,
@@ -300,6 +302,14 @@ type
     attenuationDistance*: float32 ## Zero means infinite (no absorption).
     hasIor*: bool
     ior*: float32 ## Default 1.5. Explicit zero with hasIor means infinite IOR.
+    hasSpecularGlossiness*: bool
+    diffuseFactor*: Color
+    specularGlossinessFactor*: Vec3
+    glossinessFactor*: float32
+    diffuse*, specularGlossiness*: Image
+    diffuseKtx2*, diffuseName*, specularGlossinessKtx2*, specularGlossinessName*: string
+    diffuseTransform*, specularGlossinessTransform*: TextureTransform
+    diffuseSampler*, specularGlossinessSampler*: TextureSampler
     hasSpecular*: bool
     specularFactor*: float32
     specularColorFactor*: Vec3
@@ -387,7 +397,9 @@ const MaterialTexturePaths*: array[MaterialTextureSlot, string] = [
   "extensions/KHR_materials_specular/specularTexture",
   "extensions/KHR_materials_specular/specularColorTexture",
   "extensions/KHR_materials_sheen/sheenColorTexture",
-  "extensions/KHR_materials_sheen/sheenRoughnessTexture"
+  "extensions/KHR_materials_sheen/sheenRoughnessTexture",
+  "extensions/KHR_materials_pbrSpecularGlossiness/diffuseTexture",
+  "extensions/KHR_materials_pbrSpecularGlossiness/specularGlossinessTexture"
 ]
 
 proc textureTransform*(material: Material, slot: MaterialTextureSlot): var TextureTransform =
@@ -412,6 +424,8 @@ proc textureTransform*(material: Material, slot: MaterialTextureSlot): var Textu
   of SpecularColorTextureSlot: return material.specularColorTransform
   of SheenColorTextureSlot: return material.sheenColorTransform
   of SheenRoughnessTextureSlot: return material.sheenRoughnessTransform
+  of DiffuseTextureSlot: return material.diffuseTransform
+  of SpecularGlossinessTextureSlot: return material.specularGlossinessTransform
 
 proc emissiveRadiance*(material: Material): Color =
   ## Preserve the core default for older code constructing Material directly.

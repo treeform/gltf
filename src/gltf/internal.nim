@@ -80,6 +80,11 @@ type
     transmissionTexture*, thicknessTexture*: MaterialTexture
     thicknessFactor*, attenuationDistance*, ior*: float32
     attenuationColor*: Vec3
+    hasSpecularGlossiness*: bool
+    diffuseFactor*: Color
+    specularGlossinessFactor*: Vec3
+    glossinessFactor*: float32
+    diffuseTexture*, specularGlossinessTexture*: MaterialTexture
     hasSpecular*: bool
     specularFactor*: float32
     specularColorFactor*: Vec3

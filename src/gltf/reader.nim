@@ -16,6 +16,7 @@ const SupportedExtensions = [
   "KHR_materials_iridescence",
   "KHR_materials_specular",
   "KHR_materials_sheen",
+  "KHR_materials_pbrSpecularGlossiness",
   "KHR_materials_volume",
   "KHR_materials_ior",
   "KHR_materials_unlit",
@@ -1306,6 +1307,13 @@ proc defaultRuntimeMaterial(): Material =
   result.sheenRoughnessSampler = defaultTextureSampler()
   result.sheenColorTransform = TextureTransform(scale: vec2(1))
   result.sheenRoughnessTransform = TextureTransform(scale: vec2(1))
+  result.diffuseFactor = color(1, 1, 1, 1)
+  result.specularGlossinessFactor = vec3(1)
+  result.glossinessFactor = 1
+  result.diffuseSampler = defaultTextureSampler()
+  result.specularGlossinessSampler = defaultTextureSampler()
+  result.diffuseTransform = TextureTransform(scale: vec2(1))
+  result.specularGlossinessTransform = TextureTransform(scale: vec2(1))
   result.specularFactor = 1
   result.specularColorFactor = vec3(1)
   result.specularSampler = defaultTextureSampler()
@@ -1617,6 +1625,12 @@ proc loadPrimitive(
     loadDataTexture(diffuseTransmission, material.diffuseTransmissionTexture)
     loadDataTexture(diffuseTransmissionColor, material.diffuseTransmissionColorTexture)
     loadDataTexture(anisotropy, material.anisotropyTexture)
+    loadDataTexture(diffuse, material.diffuseTexture)
+    loadDataTexture(specularGlossiness, material.specularGlossinessTexture)
+    result.material.hasSpecularGlossiness = material.hasSpecularGlossiness
+    result.material.diffuseFactor = material.diffuseFactor
+    result.material.specularGlossinessFactor = material.specularGlossinessFactor
+    result.material.glossinessFactor = material.glossinessFactor
     loadDataTexture(sheenColor, material.sheenColorTexture)
     loadDataTexture(sheenRoughness, material.sheenRoughnessTexture)
     result.material.hasSheen = material.hasSheen
@@ -2171,6 +2185,11 @@ proc loadModelJsonInternal(
       material.diffuseTransmissionTexture = defaultMaterialTexture()
       material.diffuseTransmissionColorTexture = defaultMaterialTexture()
       material.anisotropyTexture = defaultMaterialTexture()
+      material.diffuseTexture = defaultMaterialTexture()
+      material.specularGlossinessTexture = defaultMaterialTexture()
+      material.diffuseFactor = color(1, 1, 1, 1)
+      material.specularGlossinessFactor = vec3(1)
+      material.glossinessFactor = 1
       material.sheenColorTexture = defaultMaterialTexture()
       material.sheenRoughnessTexture = defaultMaterialTexture()
       material.specularTexture = defaultMaterialTexture()
@@ -2309,6 +2328,23 @@ proc loadModelJsonInternal(
         if "KHR_materials_emissive_strength" in extensions:
           material.hasEmissiveStrength = true
           material.emissiveStrength = extensions["KHR_materials_emissive_strength"]{"emissiveStrength"}.getFloat(1).float32
+        if "KHR_materials_pbrSpecularGlossiness" in extensions:
+          let sg = extensions["KHR_materials_pbrSpecularGlossiness"]
+          material.hasSpecularGlossiness = true
+          material.glossinessFactor = sg{"glossinessFactor"}.getFloat(1).float32
+          if "diffuseFactor" in sg:
+            let c = sg["diffuseFactor"]
+            material.diffuseFactor = color(c[0].getFloat(), c[1].getFloat(), c[2].getFloat(), c[3].getFloat())
+          if "specularFactor" in sg:
+            let c = sg["specularFactor"]
+            material.specularGlossinessFactor = vec3(c[0].getFloat(), c[1].getFloat(), c[2].getFloat())
+          template readSpecGlossTexture(slot: untyped) =
+            if astToStr(slot) in sg:
+              let texture = sg[astToStr(slot)]
+              material.slot.index = texture["index"].getInt()
+              readTextureTransform(texture, material.slot)
+          readSpecGlossTexture(diffuseTexture)
+          readSpecGlossTexture(specularGlossinessTexture)
         if "KHR_materials_specular" in extensions:
           let specular = extensions["KHR_materials_specular"]
           material.hasSpecular = true

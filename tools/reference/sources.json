@@ -1,7 +1,7 @@
 {
   "renderer": {
     "repository": "https://github.com/treeform/glTF-Sample-Renderer.git",
-    "revision": "e8832e99fd2c24b178ad29915c88b281f1939309",
+    "revision": "818318c0b09334998bea39766d88c2d58a76a2f6",
     "upstreamRevision": "863b981fb755359063e370ff7b6e956bda0716e2"
   },
   "assets": {

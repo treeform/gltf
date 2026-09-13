@@ -28,6 +28,7 @@ type
     diffuseTransmissionId*, diffuseTransmissionColorId*: GLuint
     anisotropyId*: GLuint
     specularId*, specularColorId*: GLuint
+    diffuseId*, specularGlossinessId*: GLuint
     sheenColorId*, sheenRoughnessId*: GLuint
     iridescenceId*, iridescenceThicknessId*: GLuint
     clearcoatId*, clearcoatRoughnessId*, clearcoatNormalId*: GLuint
