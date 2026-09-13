@@ -137,13 +137,22 @@ type
     baseMorphWeights*: seq[float32]
     skin*: Skin
     camera*: Camera
-    directionalLight*: DirectionalLight
+    punctualLight*: PunctualLight
     nodes*: seq[Node]
 
-  DirectionalLight* = ref object
-    ## KHR_lights_punctual directional light, emitted along local -Z.
+  PunctualLightKind* = enum
+    DirectionalLightKind, PointLightKind, SpotLightKind
+
+  PunctualLight* = ref object
+    ## KHR_lights_punctual; directional and spot lights emit along local -Z.
+    kind*: PunctualLightKind
+    name*: string
     color*: Color
     intensity*: float32
+    range*: float32 ## Zero means unlimited; independent of node scale.
+    innerConeAngle*, outerConeAngle*: float32
+
+  DirectionalLight* = PunctualLight
 
   Scene* = ref object
     name*: string
@@ -302,6 +311,15 @@ type
     dvAoBake,
     dvMetallic,
     dvSpecular
+
+proc directionalLight*(node: Node): DirectionalLight =
+  ## Compatibility with the original directional-only API.
+  if node.punctualLight != nil and node.punctualLight.kind == DirectionalLightKind:
+    node.punctualLight
+  else: nil
+
+proc `directionalLight=`*(node: Node, light: DirectionalLight) =
+  node.punctualLight = light
 
 proc legacyAlphaMode*(material: Material): AlphaMode =
   ## Keep the older renderers' transmission approximation at draw time,

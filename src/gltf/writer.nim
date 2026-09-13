@@ -752,7 +752,7 @@ proc writeGLB*(
     meshIds[key] = idx
     idx
 
-  var directionalLights: seq[JsonNode]
+  var punctualLights: seq[JsonNode]
 
   proc walk(n: Node): int =
     ## Walks the node tree and returns the node index.
@@ -769,14 +769,21 @@ proc writeGLB*(
         }
       }
 
-    if n.directionalLight != nil:
-      let light = n.directionalLight
+    if n.punctualLight != nil:
+      let light = n.punctualLight
       if "extensions" notin nodeObj: nodeObj["extensions"] = newJObject()
-      nodeObj["extensions"]["KHR_lights_punctual"] = %*{"light": directionalLights.len}
-      directionalLights.add(%*{
-        "type": "directional", "intensity": light.intensity,
+      nodeObj["extensions"]["KHR_lights_punctual"] = %*{"light": punctualLights.len}
+      let lightNode = %*{
+        "name": light.name,
+        "type": ["directional", "point", "spot"][light.kind.ord], "intensity": light.intensity,
         "color": [light.color.r, light.color.g, light.color.b]
-      })
+      }
+      if light.kind != DirectionalLightKind and light.range > 0:
+        lightNode["range"] = %light.range
+      if light.kind == SpotLightKind:
+        lightNode["spot"] = %*{"innerConeAngle": light.innerConeAngle,
+          "outerConeAngle": light.outerConeAngle}
+      punctualLights.add(lightNode)
 
     let meshIdx = addMeshForNode(n)
     if meshIdx >= 0:
@@ -941,9 +948,9 @@ proc writeGLB*(
     if material.hasKey("extensions"):
       for extension in material["extensions"].keys:
         if extension notin extensionsUsed: extensionsUsed.add(extension)
-  if directionalLights.len > 0:
+  if punctualLights.len > 0:
     extensionsUsed.add("KHR_lights_punctual")
-    jsonRoot["extensions"] = %*{"KHR_lights_punctual": {"lights": directionalLights}}
+    jsonRoot["extensions"] = %*{"KHR_lights_punctual": {"lights": punctualLights}}
   if usesNodeVisibility:
     extensionsUsed.add("KHR_node_visibility")
   if usesKhrTextureBasisu:

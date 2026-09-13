@@ -18,9 +18,11 @@ var
   sheenRoughnessFactor*: Uniform[float32]
   specularFactor*: Uniform[float32]
   specularColorFactor*: Uniform[Vec3]
-  directionalLightCount*: Uniform[int32]
-  directionalLightDirections*: Uniform[array[8, Vec3]]
-  directionalLightColors*: Uniform[array[8, Vec3]]
+  punctualLightCount*: Uniform[int32]
+  punctualLightDirections*: Uniform[array[32, Vec3]]
+  punctualLightColors*: Uniform[array[32, Vec3]]
+  punctualLightPositions*: Uniform[array[32, Vec3]]
+  punctualLightParameters*: Uniform[array[32, Vec4]] # kind, range, inner/outer cone cosine
   transmissionBuffer*: Uniform[Sampler2d]
   transmissionTexture*, thicknessTexture*: Uniform[Sampler2d]
   transmissionTexCoord*, thicknessTexCoord*: Uniform[int]
@@ -157,6 +159,22 @@ proc inverseNeutralForTransmission(input: Vec3): Vec3 =
   if exposure > 0.0'f: value = value / exposure
   result = value
 
+func punctualAttenuation(pointToLight, direction: Vec3, parameters: Vec4): float32 =
+  result = 1.0'f
+  if parameters.x > 0.0'f:
+    let distance = length(pointToLight)
+    result = 1.0'f / max(distance * distance, 0.000000000001'f)
+    if parameters.y > 0.0'f:
+      result *= clamp(1.0'f - pow(distance / parameters.y, 4.0'f), 0.0'f, 1.0'f)
+  if parameters.x > 1.0'f:
+    let cosine = dot(direction, -safeNormalize(pointToLight))
+    var angular = 0.0'f
+    if cosine > parameters.w:
+      angular = 1.0'f
+      if cosine < parameters.z:
+        angular = (cosine - parameters.w) / (parameters.z - parameters.w)
+    result *= angular * angular
+
 proc gltfIblFrag*(
   worldPos: Vec3, color: Vec4, normal: Vec3, uv: Vec2, uv1: Vec2,
   tangent: Vec3, bitangent: Vec3, vPosLightSpace: Vec4,
@@ -272,17 +290,24 @@ proc gltfIblFrag*(
       sheenColorFactor * texture(charlieLut, vec2(nDotV, sheenRoughnessFactor)).b
     radiance = sheen + radiance * sheenScaling(nDotV)
   radiance *= ao
-  # A directional key light uses the same GGX distribution/visibility as glTF.
-  for lightIndex in 0 ..< 9:
+  # Authored lights and the optional key light share the same BRDF/BTDF.
+  for lightIndex in 0 ..< 33:
     var lightDirection: Vec3 = sunLightDirection
     var lightColor: Vec3 = sunLightColor.rgb * sunLightColor.a
+    var pointToLight: Vec3 = -lightDirection
+    var lightParameters: Vec4 = vec4(0.0'f)
     if lightIndex > 0:
-      if lightIndex > directionalLightCount: break
-      lightDirection = directionalLightDirections[lightIndex - 1]
-      lightColor = directionalLightColors[lightIndex - 1]
+      if lightIndex > punctualLightCount: break
+      lightDirection = punctualLightDirections[lightIndex - 1]
+      lightColor = punctualLightColors[lightIndex - 1]
+      lightParameters = punctualLightParameters[lightIndex - 1]
+      pointToLight = -lightDirection
+      if lightParameters.x > 0.0'f:
+        pointToLight = punctualLightPositions[lightIndex - 1] - worldPos
     if max(lightColor.r, max(lightColor.g, lightColor.b)) > 0.0'f:
       let
-        l: Vec3 = normalize(-lightDirection)
+        lightAttenuation = punctualAttenuation(pointToLight, lightDirection, lightParameters)
+        l: Vec3 = safeNormalize(pointToLight)
         h: Vec3 = normalize(v + l)
         nDotL = clamp(dot(n, l), 0.0'f, 1.0'f)
         nDotH = clamp(dot(n, h), 0.0'f, 1.0'f)
@@ -296,7 +321,10 @@ proc gltfIblFrag*(
         visibility = if visibilityDenom > 0.0'f: 0.5'f / visibilityDenom else: 0.0'f
         schlick = pow(1.0'f - vDotH, 5.0'f)
         metalFresnel: Vec3 = base.rgb + (vec3(1.0'f) - base.rgb) * schlick
-        specularBrdf: Vec3 = vec3(visibility * distribution)
+        # In the reference, refraction shifts the point used for the analytic
+        # specular light intensity; the diffuse/BTDF intensity is from entry.
+        exitAttenuation = punctualAttenuation(pointToLight - ray, lightDirection, lightParameters)
+        specularBrdf: Vec3 = vec3(visibility * distribution * exitAttenuation)
       var dielectricFresnel: Vec3 = specularFactor * (dielectricF0 +
         (vec3(1.0'f) - dielectricF0) * schlick)
       var backDiffuse: Vec3 = vec3(0.0'f)
@@ -307,19 +335,19 @@ proc gltfIblFrag*(
           (vec3(1.0'f) - dielectricF0) * pow(1.0'f - diffuseVdotH, 5.0'f))
         backDiffuse = volumeAttenuation(diffuseTransmissionColor *
           clamp(dot(-n, l), 0.0'f, 1.0'f) / ShaderPi, diffuseThickness)
-      var direct: Vec3 = mix(mix(base.rgb / ShaderPi * (1.0'f - diffuseTransmission),
+      var direct: Vec3 = mix(mix(base.rgb / ShaderPi * (1.0'f - diffuseTransmission) * lightAttenuation,
         specularBrdf, dielectricFresnel),
         metalFresnel * specularBrdf, metallic)
       var throughLight = backDiffuse * diffuseTransmission * (1.0'f - transmission) *
-        (vec3(1.0'f) - dielectricFresnel) * (1.0'f - metallic)
+        (vec3(1.0'f) - dielectricFresnel) * (1.0'f - metallic) * lightAttenuation
       if transmission > 0.0'f:
         let transmissionLight = volumeAttenuation(base.rgb *
-          punctualTransmission(n, v, normalize(-lightDirection - ray), a), length(ray))
+          punctualTransmission(n, v, safeNormalize(pointToLight - ray), a), length(ray))
         throughLight += (transmissionLight - base.rgb / ShaderPi * nDotL *
           (1.0'f - diffuseTransmission)) * transmission *
-          (vec3(1.0'f) - dielectricFresnel) * (1.0'f - metallic)
+          (vec3(1.0'f) - dielectricFresnel) * (1.0'f - metallic) * lightAttenuation
       if sheenEnabled:
-        direct = sheenColorFactor * sheenBrdf(nDotL, nDotV, nDotH, sheenRoughnessFactor) +
+        direct = sheenColorFactor * sheenBrdf(nDotL, nDotV, nDotH, sheenRoughnessFactor) * exitAttenuation +
           direct * min(sheenScaling(nDotV), sheenScaling(nDotL))
         throughLight *= min(sheenScaling(nDotV), sheenScaling(nDotL))
       radiance += direct * lightColor * nDotL

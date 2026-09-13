@@ -9,6 +9,7 @@ const SupportedExtensions = [
   "KHR_texture_transform",
   "KHR_materials_transmission",
   "KHR_materials_diffuse_transmission",
+  "KHR_lights_punctual",
   "KHR_materials_volume",
   "KHR_materials_ior",
   "KHR_materials_unlit",
@@ -2488,12 +2489,19 @@ proc loadModelJsonInternal(
         assertRaise lights != nil and index >= 0 and index < lights.len,
           "Invalid punctual light index"
         let light = lights[index]
-        if light["type"].getStr() == "directional":
-          node.directionalLight = DirectionalLight(color: color(1, 1, 1, 1),
-            intensity: light{"intensity"}.getFloat(1).float32)
-          if "color" in light:
-            let c = light["color"]
-            node.directionalLight.color = color(c[0].getFloat(), c[1].getFloat(), c[2].getFloat(), 1)
+        let kind = case light["type"].getStr()
+          of "directional": DirectionalLightKind
+          of "point": PointLightKind
+          of "spot": SpotLightKind
+          else: raise newException(GltfError, "Invalid punctual light type")
+        node.punctualLight = PunctualLight(kind: kind, name: light{"name"}.getStr(),
+          color: color(1, 1, 1, 1), intensity: light{"intensity"}.getFloat(1).float32,
+          range: light{"range"}.getFloat().float32,
+          innerConeAngle: light{"spot", "innerConeAngle"}.getFloat().float32,
+          outerConeAngle: light{"spot", "outerConeAngle"}.getFloat(0.7853981633974483).float32)
+        if "color" in light:
+          let c = light["color"]
+          node.punctualLight.color = color(c[0].getFloat(), c[1].getFloat(), c[2].getFloat(), 1)
       if "KHR_node_visibility" in extensions:
         let visibility = extensions["KHR_node_visibility"]
         if "visible" in visibility:

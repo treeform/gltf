@@ -62,7 +62,8 @@ type
     hasVertexTangent: GLint
     sheenEnabled, sheenColorFactor, sheenRoughnessFactor: GLint
     specularFactor, specularColorFactor: GLint
-    directionalLightCount, directionalLightDirections, directionalLightColors: GLint
+    punctualLightCount, punctualLightDirections, punctualLightColors: GLint
+    punctualLightPositions, punctualLightParameters: GLint
     baseColorTexture: GLint
     baseColorFactor: GLint
     baseColorTransform: TextureTransformUniforms
@@ -202,8 +203,9 @@ type
     environmentMapStrength*: float32
     environmentMap*: EnvironmentMap
     iblEnvironment*: IblEnvironment
-    directionalLightCount: int32
-    directionalLightDirections, directionalLightColors: array[8, Vec3]
+    punctualLightCount: int32
+    punctualLightDirections, punctualLightColors, punctualLightPositions: array[32, Vec3]
+    punctualLightParameters: array[32, Vec4]
     environmentRotation*: float32 ## IBL rotation about Y, in degrees.
     exposure*: float32 ## Linear exposure multiplier before PBR Neutral.
     hdrTarget: HdrTarget
@@ -301,9 +303,11 @@ proc loadPbrUniforms(shader: GLuint): PbrUniforms =
   result.sheenRoughnessFactor = uniformLocation(shader, "sheenRoughnessFactor")
   result.specularFactor = uniformLocation(shader, "specularFactor")
   result.specularColorFactor = uniformLocation(shader, "specularColorFactor")
-  result.directionalLightCount = uniformLocation(shader, "directionalLightCount")
-  result.directionalLightDirections = uniformLocation(shader, "directionalLightDirections")
-  result.directionalLightColors = uniformLocation(shader, "directionalLightColors")
+  result.punctualLightCount = uniformLocation(shader, "punctualLightCount")
+  result.punctualLightDirections = uniformLocation(shader, "punctualLightDirections")
+  result.punctualLightColors = uniformLocation(shader, "punctualLightColors")
+  result.punctualLightPositions = uniformLocation(shader, "punctualLightPositions")
+  result.punctualLightParameters = uniformLocation(shader, "punctualLightParameters")
   result.baseColorTexture = uniformLocation(shader, "baseColorTexture")
   result.baseColorFactor = uniformLocation(shader, "baseColorFactor")
   result.baseColorTransform =
@@ -1452,12 +1456,16 @@ proc applyPassUniforms(
       rotation = mat3(vec3(c, 0.0'f, -s), vec3(0.0'f, 1.0'f, 0.0'f), vec3(s, 0.0'f, c))
     glUniformMatrix3fv(u.environmentRotation, 1, GL_FALSE,
       cast[ptr float32](rotation.unsafeAddr))
-    glUniform1i(u.directionalLightCount, ctx.directionalLightCount)
-    if ctx.directionalLightCount > 0:
-      glUniform3fv(u.directionalLightDirections, ctx.directionalLightCount,
-        cast[ptr float32](ctx.directionalLightDirections[0].addr))
-      glUniform3fv(u.directionalLightColors, ctx.directionalLightCount,
-        cast[ptr float32](ctx.directionalLightColors[0].addr))
+    glUniform1i(u.punctualLightCount, ctx.punctualLightCount)
+    if ctx.punctualLightCount > 0:
+      glUniform3fv(u.punctualLightDirections, ctx.punctualLightCount,
+        cast[ptr float32](ctx.punctualLightDirections[0].addr))
+      glUniform3fv(u.punctualLightColors, ctx.punctualLightCount,
+        cast[ptr float32](ctx.punctualLightColors[0].addr))
+      glUniform3fv(u.punctualLightPositions, ctx.punctualLightCount,
+        cast[ptr float32](ctx.punctualLightPositions[0].addr))
+      glUniform4fv(u.punctualLightParameters, ctx.punctualLightCount,
+        cast[ptr float32](ctx.punctualLightParameters[0].addr))
   ctx.syncPassValue(useShadow, useShadow):
     glUniform1i(u.useShadow, useShadow.GLint)
   ctx.passValues.valid = true
@@ -1849,22 +1857,29 @@ proc renderPbrNode(
         root=rootNode
       )
 
-proc updateDirectionalLights(ctx: PbrContext, root: Node) =
+proc updatePunctualLights(ctx: PbrContext, root: Node) =
   ## Authored lights use the same animated world transforms as the meshes.
-  ctx.directionalLightCount = 0
+  ctx.punctualLightCount = 0
   if ctx.iblEnvironment.specular == 0: return
   proc visit(node: Node) =
     if node == nil or not node.visible: return
-    if node.directionalLight != nil:
-      let i = ctx.directionalLightCount.int
-      if i >= ctx.directionalLightDirections.len:
-        raise newException(ValueError, "IBL supports at most 8 authored directional lights")
-      let direction = (node.mat * vec4(0, 0, -1, 0)).xyz
-      if direction.lengthSq > 0:
-        ctx.directionalLightDirections[i] = normalize(direction)
-        let light = node.directionalLight
-        ctx.directionalLightColors[i] = vec3(light.color.r, light.color.g, light.color.b) * light.intensity
-        inc ctx.directionalLightCount
+    if node.punctualLight != nil:
+      let i = ctx.punctualLightCount.int
+      if i >= ctx.punctualLightDirections.len:
+        raise newException(ValueError, "IBL supports at most 32 authored punctual lights")
+      let light = node.punctualLight
+      var rotation = mat4()
+      for axis in 0 ..< 3:
+        let column = node.mat[axis].xyz
+        if column.lengthSq > 0:
+          let unit = normalize(column)
+          for row in 0 ..< 3: rotation[axis, row] = unit[row]
+      ctx.punctualLightDirections[i] = quatRotate(normalize(quat(rotation)), vec3(0, 0, -1))
+      ctx.punctualLightPositions[i] = node.mat[3].xyz
+      ctx.punctualLightColors[i] = vec3(light.color.r, light.color.g, light.color.b) * light.intensity
+      ctx.punctualLightParameters[i] = vec4(light.kind.ord.float32, light.range,
+        cos(light.innerConeAngle), cos(light.outerConeAngle))
+      inc ctx.punctualLightCount
     for child in node.nodes: visit(child)
   visit(root)
 
@@ -1891,7 +1906,7 @@ proc sortByDepth(ctx: PbrContext, entries: var seq[BlendEntry]) =
   for i, item in sorted: entries[i] = item.entry
 
 proc replay(ctx: PbrContext, entry: BlendEntry) =
-  ctx.updateDirectionalLights(entry.root)
+  ctx.updatePunctualLights(entry.root)
   ctx.deferred.setLen(0)
   renderPbrPrimitive(entry.primitive, entry.transform, ctx.view, ctx.proj,
     entry.tint, ctx.ambientLightColor, ctx.sunLightDirection, ctx.sunLightColor,
@@ -2014,7 +2029,7 @@ proc drawPbr(
   var completed = false
   try:
     node.updateTransforms(ctx.transform, ctx.useTrs)
-    ctx.updateDirectionalLights(node)
+    ctx.updatePunctualLights(node)
 
     renderPbrNode(
       node,
@@ -2232,7 +2247,7 @@ proc drawPbrWithShadow(
 
     let (lightView, lightProj, lightSpace, _) =
       getShadowMatrices(node, ctx.transform, ctx.sunLightDirection)
-    ctx.updateDirectionalLights(node)
+    ctx.updatePunctualLights(node)
 
     # Save viewport and framebuffer.
     var

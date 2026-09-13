@@ -12,6 +12,7 @@ import
   test_ibl_materials,
   test_transmission,
   test_diffuse_transmission,
+  test_punctual_lights,
   test_unlit,
   test_texture_images
 

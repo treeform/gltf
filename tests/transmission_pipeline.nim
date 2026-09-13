@@ -287,6 +287,45 @@ material.attenuationDistance = 0
 doAssert difference(capture().pixel(32, 24), cdt) <= 1
 doAssert capture() == capture(), "Diffuse transmission must be repeatable"
 echo "Diffuse transmission GPU: backlighting, energy balance, alpha mask, UV1/transform, sRGB color and absorption passed"
+
+# Punctual lights: inverse-square distance, finite range and spot cones.
+ctx.sunLightColor = color(0, 0, 0, 0)
+material.diffuseTransmissionFactor = 0
+material.baseColorFactor = color(1, 1, 1, 1)
+material.thicknessFactor = 0
+let lamp = Node(name: "Test light", visible: true, scale: vec3(1), rot: quat(),
+  pos: vec3(0, 0, 1), punctualLight: PunctualLight(kind: PointLightKind,
+    color: color(1, 1, 1, 1), intensity: 1, outerConeAngle: 0.7853982))
+root.nodes.add(lamp)
+let pointNear = capture().pixel(32, 24)
+lamp.pos.z = 3
+lamp.punctualLight.intensity = 4
+doAssert difference(capture().pixel(32, 24), pointNear) <= 1,
+  "Doubling distance and quadrupling intensity must preserve irradiance"
+lamp.punctualLight.range = 3.5
+doAssert capture().pixel(32, 24).r < 3, "Outside range must be unlit"
+lamp.punctualLight.range = 0
+lamp.punctualLight.kind = SpotLightKind
+lamp.punctualLight.innerConeAngle = 0.1
+lamp.punctualLight.outerConeAngle = 0.2
+doAssert difference(capture().pixel(32, 24), pointNear) <= 1
+lamp.rot = quatRotateY(0.4'f)
+doAssert capture().pixel(32, 24).r < 3, "Outside the spot cone must be unlit"
+lamp.rot = quatRotateY(0.15'f)
+let coneEdge = capture().pixel(32, 24)
+doAssert coneEdge.r > 3 and coneEdge.r < pointNear.r - 5
+lamp.rot = quat()
+let lightParent = Node(visible: true, scale: vec3(2, 3, 4), rot: quat(), nodes: @[lamp])
+root.nodes[^1] = lightParent
+lamp.pos.z = 0.75
+doAssert difference(capture().pixel(32, 24), pointNear) <= 1,
+  "Inherited scale moves a light but must not scale its intensity or cone"
+lightParent.visible = false
+doAssert capture().pixel(32, 24).r < 3, "Hidden ancestors must hide lights"
+lightParent.visible = true
+lamp.visible = false
+doAssert capture().pixel(32, 24).r < 3
+echo "Punctual light GPU: inverse square, range, cones, rotation, hierarchy, scale and visibility passed"
 ctx.destroy()
 renderer.release(root)
 renderer.shutdown()
