@@ -280,6 +280,12 @@ type
     specularColorFactor*: Vec3
     sheenColorFactor*: Vec3
     sheenRoughnessFactor*: float32
+    hasAnisotropy*: bool
+    anisotropyStrength*, anisotropyRotation*: float32
+    anisotropy*: Image
+    anisotropyKtx2*, anisotropyName*: string
+    anisotropyTransform*: TextureTransform
+    anisotropySampler*: TextureSampler
     materialVersion*: uint64
     data*: MaterialData
 

@@ -18,6 +18,12 @@ var
   sheenRoughnessFactor*: Uniform[float32]
   specularFactor*: Uniform[float32]
   specularColorFactor*: Uniform[Vec3]
+  anisotropyEnabled*, hasAnisotropyTexture*: Uniform[bool]
+  anisotropyParameters*: Uniform[Vec3] # cos(rotation), sin(rotation), strength
+  anisotropyTexture*: Uniform[Sampler2d]
+  anisotropyTexCoord*: Uniform[int]
+  anisotropyUvOffset*, anisotropyUvScale*: Uniform[Vec2]
+  anisotropyUvRotation*: Uniform[float32]
   punctualLightCount*: Uniform[int32]
   punctualLightDirections*: Uniform[array[32, Vec3]]
   punctualLightColors*: Uniform[array[32, Vec3]]
@@ -175,6 +181,24 @@ func punctualAttenuation(pointToLight, direction: Vec3, parameters: Vec4): float
         angular = (cosine - parameters.w) / (parameters.z - parameters.w)
     result *= angular * angular
 
+func anisotropicBrdf(n, v, l, h, t, b: Vec3, alphaRoughness, strength: float32): float32 =
+  let
+    at = mix(alphaRoughness, 1.0'f, strength * strength)
+    ab = clamp(alphaRoughness, 0.001'f, 1.0'f)
+    nl = clamp(dot(n, l), 0.0'f, 1.0'f)
+    nh = clamp(dot(n, h), 0.001'f, 1.0'f)
+    nv = dot(n, v)
+    vv = nl * length(vec3(at * dot(t, v), ab * dot(b, v), nv))
+    vl = nv * length(vec3(at * dot(t, l), ab * dot(b, l), nl))
+    visibility = if vv + vl > 0.0'f: clamp(0.5'f / (vv + vl), 0.0'f, 1.0'f) else: 1.0'f
+    a2 = at * ab
+    f: Vec3 = vec3(ab * dot(t, h), at * dot(b, h), a2 * nh)
+    denominator = dot(f, f)
+  result = 0.0'f
+  if denominator > 0.0'f:
+    let w2 = a2 / denominator
+    result = visibility * a2 * w2 * w2 / ShaderPi
+
 proc gltfIblFrag*(
   worldPos: Vec3, color: Vec4, normal: Vec3, uv: Vec2, uv1: Vec2,
   tangent: Vec3, bitangent: Vec3, vPosLightSpace: Vec4,
@@ -217,9 +241,10 @@ proc gltfIblFrag*(
     emissive: Vec3 = texture(emissiveTexture, eUv).rgb * emissiveFactor
   var n: Vec3 = if length(normal) > 0.0'f: normalize(normal)
     else: normalize(cross(dFdx(worldPos), dFdy(worldPos)))
-  if useNormalTexture:
-    var t: Vec3 = tangent
-    var b: Vec3 = bitangent
+  var ng: Vec3 = n
+  var t: Vec3 = tangent
+  var b: Vec3 = bitangent
+  if useNormalTexture or anisotropyEnabled:
     if not hasVertexTangent:
       let
         dx: Vec3 = dFdx(worldPos)
@@ -231,11 +256,32 @@ proc gltfIblFrag*(
         t = (uvDy.y * dx - uvDx.y * dy) / determinant
         t = normalize(t - n * dot(n, t))
         b = cross(n, t)
+  if useNormalTexture:
     let normalSample: Vec3 = texture(normalTexture, nUv).rgb * 2.0'f - vec3(1.0'f)
     n = normalize(normalize(t) * normalSample.x * normalScale +
       normalize(b) * normalSample.y * normalScale + n * normalSample.z)
   if not gl_FrontFacing:
     n = -n
+    ng = -ng
+    t = -t
+    b = -b
+  var anisotropy = 0.0'f
+  var anisotropicT: Vec3 = vec3(1.0'f, 0.0'f, 0.0'f)
+  var anisotropicB: Vec3 = vec3(0.0'f, 1.0'f, 0.0'f)
+  if anisotropyEnabled:
+    var direction: Vec2 = vec2(1.0'f, 0.0'f)
+    anisotropy = anisotropyParameters.z
+    if hasAnisotropyTexture:
+      let aUv: Vec2 = transformUv(selectUv(anisotropyTexCoord, uv, uv1),
+        anisotropyUvOffset, anisotropyUvScale, anisotropyUvRotation)
+      let sampleValue: Vec3 = texture(anisotropyTexture, aUv).rgb
+      direction = sampleValue.rg * 2.0'f - vec2(1.0'f)
+      anisotropy *= sampleValue.b
+    direction = normalize(vec2(anisotropyParameters.x * direction.x - anisotropyParameters.y * direction.y,
+      anisotropyParameters.y * direction.x + anisotropyParameters.x * direction.y))
+    anisotropicT = normalize(t) * direction.x + normalize(b) * direction.y
+    anisotropicB = cross(ng, anisotropicT)
+    anisotropy = clamp(anisotropy, 0.0'f, 1.0'f)
   let
     v: Vec3 = normalize(cameraPosition - worldPos)
     nDotV = clamp(dot(n, v), 0.0'f, 1.0'f)
@@ -243,10 +289,18 @@ proc gltfIblFrag*(
     reflection: Vec3 = normalize(reflect(-v, n))
     reflectedDiffuse: Vec3 = texture(diffuseEnvironment, environmentRotation * n).rgb *
       environmentMapStrength * base.rgb
-    specular: Vec3 = textureLod(environmentMap, environmentRotation * reflection,
-      roughness * (environmentMipCount - 1.0'f)).rgb * environmentMapStrength
     f0 = (materialIor - 1.0'f) / (materialIor + 1.0'f)
     dielectricF0: Vec3 = min(vec3(f0 * f0) * specularColorFactor, vec3(1.0'f))
+  var specularReflection: Vec3 = reflection
+  if anisotropy > 0.0'f:
+    # The reference's single-sample approximation keeps base roughness as LOD
+    # and bends the reflection normal toward the anisotropic bitangent plane.
+    let anisotropicNormal: Vec3 = cross(cross(anisotropicB, v), anisotropicB)
+    let bend = 1.0'f - anisotropy * (1.0'f - roughness)
+    let bentNormal: Vec3 = normalize(mix(anisotropicNormal, n, bend * bend * bend * bend))
+    specularReflection = normalize(reflect(-v, bentNormal))
+  let specular: Vec3 = textureLod(environmentMap, environmentRotation * specularReflection,
+    roughness * (environmentMipCount - 1.0'f)).rgb * environmentMapStrength
   var transmission = transmissionFactor
   if hasTransmissionTexture:
     let transUv = transformUv(selectUv(transmissionTexCoord, uv, uv1),
@@ -324,7 +378,10 @@ proc gltfIblFrag*(
         # In the reference, refraction shifts the point used for the analytic
         # specular light intensity; the diffuse/BTDF intensity is from entry.
         exitAttenuation = punctualAttenuation(pointToLight - ray, lightDirection, lightParameters)
-        specularBrdf: Vec3 = vec3(visibility * distribution * exitAttenuation)
+      var specularBrdf: Vec3 = vec3(visibility * distribution * exitAttenuation)
+      if anisotropyEnabled:
+        specularBrdf = vec3(anisotropicBrdf(n, v, l, h, anisotropicT, anisotropicB,
+          roughness * roughness, anisotropy) * exitAttenuation)
       var dielectricFresnel: Vec3 = specularFactor * (dielectricF0 +
         (vec3(1.0'f) - dielectricF0) * schlick)
       var backDiffuse: Vec3 = vec3(0.0'f)

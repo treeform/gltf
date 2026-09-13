@@ -338,6 +338,42 @@ material.emissiveStrength = 1
 material.emissiveFactor = color(0.04, 0.04, 0.04, 1)
 doAssert difference(capture().pixel(32, 24), rgba(31, 31, 31, 255)) <= 1
 echo "Emissive strength GPU: HDR multiplier, neutral tone map, display transfer and zero strength passed"
+
+# The anisotropic lobe follows tangent-space rotation and linear RGB data.
+renderer.release(root)
+material.emissiveFactor = color(0, 0, 0, 1)
+material.metallicFactor = 1
+material.roughnessFactor = 0.4
+for i in 0 ..< glassPrimitive.points.len: glassPrimitive.tangents.add(vec4(1, 0, 0, 1))
+ctx.sunLightColor = color(1, 1, 1, 1)
+ctx.sunLightDirection = normalize(vec3(-0.5, 0, -1))
+let isotropic = capture()
+material.hasAnisotropy = true
+doAssert difference(capture().pixel(32, 24), isotropic.pixel(32, 24)) <= 1
+material.anisotropyStrength = 0.9
+let anisotropic = capture()
+material.anisotropyRotation = 1.57079632679'f
+let rotatedAnisotropy = capture()
+doAssert difference(anisotropic.pixel(32, 24), rotatedAnisotropy.pixel(32, 24)) > 15
+renderer.release(root)
+material.anisotropyRotation = 0
+material.anisotropy = newImage(2, 1)
+material.anisotropy[0, 0] = rgbx(255, 128, 0, 0)
+material.anisotropy[1, 0] = rgbx(255, 128, 255, 0)
+material.anisotropySampler.magFilter = NearestMagFilter
+material.anisotropySampler.minFilter = NearestMinFilter
+material.anisotropyTransform.texCoord = 1
+let anisotropyMasked = capture()
+doAssert difference(anisotropyMasked.pixel(20, 16), anisotropic.pixel(20, 16)) <= 2
+doAssert difference(anisotropyMasked.pixel(44, 16), isotropic.pixel(44, 16)) <= 2
+material.anisotropyTransform.offset.x = 0.5
+let anisotropyShifted = capture()
+doAssert difference(anisotropyShifted.pixel(20, 16), isotropic.pixel(20, 16)) <= 2
+renderer.release(root)
+material.anisotropy = newImage(1, 1)
+material.anisotropy.fill(rgbx(128, 255, 255, 0))
+doAssert difference(capture().pixel(32, 24), rotatedAnisotropy.pixel(32, 24)) <= 2
+echo "Anisotropy GPU: zero strength, rotated lobe, RG direction/B strength, linear data, UV1 and transforms passed"
 ctx.destroy()
 renderer.release(root)
 renderer.shutdown()

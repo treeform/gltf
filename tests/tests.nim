@@ -14,6 +14,7 @@ import
   test_diffuse_transmission,
   test_punctual_lights,
   test_emissive_strength,
+  test_anisotropy,
   test_unlit,
   test_texture_images
 

@@ -11,6 +11,7 @@ const SupportedExtensions = [
   "KHR_materials_diffuse_transmission",
   "KHR_lights_punctual",
   "KHR_materials_emissive_strength",
+  "KHR_materials_anisotropy",
   "KHR_materials_volume",
   "KHR_materials_ior",
   "KHR_materials_unlit",
@@ -1328,6 +1329,8 @@ proc defaultRuntimeMaterial(): Material =
   result.diffuseTransmissionColorSampler = defaultTextureSampler()
   result.diffuseTransmissionTransform = TextureTransform(scale: vec2(1))
   result.diffuseTransmissionColorTransform = TextureTransform(scale: vec2(1))
+  result.anisotropySampler = defaultTextureSampler()
+  result.anisotropyTransform = TextureTransform(scale: vec2(1))
   result.ior = 1.5
   result.attenuationColor = vec3(1)
   result.transmissionSampler = defaultTextureSampler()
@@ -1608,6 +1611,10 @@ proc loadPrimitive(
     loadDataTexture(thickness, material.thicknessTexture)
     loadDataTexture(diffuseTransmission, material.diffuseTransmissionTexture)
     loadDataTexture(diffuseTransmissionColor, material.diffuseTransmissionColorTexture)
+    loadDataTexture(anisotropy, material.anisotropyTexture)
+    result.material.hasAnisotropy = material.hasAnisotropy
+    result.material.anisotropyStrength = material.anisotropyStrength
+    result.material.anisotropyRotation = material.anisotropyRotation
     result.material.hasDiffuseTransmission = material.hasDiffuseTransmission
     result.material.diffuseTransmissionFactor = material.diffuseTransmissionFactor
     result.material.diffuseTransmissionColorFactor = material.diffuseTransmissionColorFactor
@@ -2139,6 +2146,7 @@ proc loadModelJsonInternal(
       material.thicknessTexture = defaultMaterialTexture()
       material.diffuseTransmissionTexture = defaultMaterialTexture()
       material.diffuseTransmissionColorTexture = defaultMaterialTexture()
+      material.anisotropyTexture = defaultMaterialTexture()
       if "name" in entry:
         material.name = entry["name"].getStr()
 
@@ -2283,6 +2291,15 @@ proc loadModelJsonInternal(
               let c = sheen["sheenColorFactor"]
               material.sheenColorFactor = vec3(c[0].getFloat(), c[1].getFloat(), c[2].getFloat())
         material.unlit = "KHR_materials_unlit" in extensions
+        if "KHR_materials_anisotropy" in extensions:
+          let anisotropy = extensions["KHR_materials_anisotropy"]
+          material.hasAnisotropy = true
+          material.anisotropyStrength = anisotropy{"anisotropyStrength"}.getFloat().float32
+          material.anisotropyRotation = anisotropy{"anisotropyRotation"}.getFloat().float32
+          if "anisotropyTexture" in anisotropy:
+            let texture = anisotropy["anisotropyTexture"]
+            material.anisotropyTexture.index = texture["index"].getInt()
+            readTextureTransform(texture, material.anisotropyTexture)
         if "KHR_materials_diffuse_transmission" in extensions:
           let diffuse = extensions["KHR_materials_diffuse_transmission"]
           material.hasDiffuseTransmission = true

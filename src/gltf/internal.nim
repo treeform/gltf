@@ -85,6 +85,9 @@ type
     specularColorFactor*: Vec3
     sheenColorFactor*: Vec3
     sheenRoughnessFactor*: float32
+    hasAnisotropy*: bool
+    anisotropyStrength*, anisotropyRotation*: float32
+    anisotropyTexture*: MaterialTexture
 
   MeshInfo* = object
     name*: string

@@ -26,6 +26,7 @@ type
     emissiveSrgbId*: GLuint
     transmissionId*, thicknessId*: GLuint
     diffuseTransmissionId*, diffuseTransmissionColorId*: GLuint
+    anisotropyId*: GLuint
 
   GltfFileData* = ref object
     sceneVersion*: uint64

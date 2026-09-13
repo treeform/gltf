@@ -419,6 +419,14 @@ proc writeGLB*(
           mat.diffuseTransmissionColorKtx2, mat.diffuseTransmissionColorName,
           mat.diffuseTransmissionColorSampler, mat.diffuseTransmissionColorTransform, tsColor)
       matNode["extensions"]["KHR_materials_diffuse_transmission"] = diffuse
+    if mat.hasAnisotropy or mat.anisotropyStrength > 0:
+      if "extensions" notin matNode: matNode["extensions"] = newJObject()
+      let anisotropy = %*{"anisotropyStrength": mat.anisotropyStrength,
+        "anisotropyRotation": mat.anisotropyRotation}
+      if mat.anisotropy != nil or mat.anisotropyKtx2.len > 0:
+        anisotropy["anisotropyTexture"] = dataTextureInfo(mat.anisotropy,
+          mat.anisotropyKtx2, mat.anisotropyName, mat.anisotropySampler, mat.anisotropyTransform)
+      matNode["extensions"]["KHR_materials_anisotropy"] = anisotropy
     if mat.hasSpecular or mat.sheenColorFactor != vec3(0):
       if "extensions" notin matNode: matNode["extensions"] = newJObject()
       if mat.hasSpecular:
