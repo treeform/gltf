@@ -31,6 +31,14 @@ var
   clearcoatUvOffset*, clearcoatUvScale*, clearcoatRoughnessUvOffset*, clearcoatRoughnessUvScale*: Uniform[Vec2]
   clearcoatNormalUvOffset*, clearcoatNormalUvScale*: Uniform[Vec2]
   clearcoatUvRotation*, clearcoatRoughnessUvRotation*, clearcoatNormalUvRotation*: Uniform[float32]
+  iridescenceFactor*, iridescenceIor*: Uniform[float32]
+  iridescenceThicknessRange*: Uniform[Vec2]
+  iridescenceTexture*, iridescenceThicknessTexture*: Uniform[Sampler2d]
+  hasIridescenceTexture*, hasIridescenceThicknessTexture*: Uniform[bool]
+  iridescenceTexCoord*, iridescenceThicknessTexCoord*: Uniform[int]
+  iridescenceUvOffset*, iridescenceUvScale*: Uniform[Vec2]
+  iridescenceThicknessUvOffset*, iridescenceThicknessUvScale*: Uniform[Vec2]
+  iridescenceUvRotation*, iridescenceThicknessUvRotation*: Uniform[float32]
   punctualLightCount*: Uniform[int32]
   punctualLightDirections*: Uniform[array[32, Vec3]]
   punctualLightColors*: Uniform[array[32, Vec3]]
@@ -219,6 +227,62 @@ func clearcoatBrdf(n, v, l, h: Vec3, roughness: float32): float32 =
   if f > 0.0'f and ggx > 0.0'f:
     result = nl * 0.5'f / ggx * a2 / (ShaderPi * f * f)
 
+func filmSensitivity(pathDifference: float32, shift: Vec3): Vec3 =
+  # Belcour/Barla Fourier fit of XYZ sensitivity, as used by Khronos.
+  let
+    phase = 2.0'f * ShaderPi * pathDifference * 1.0e-9'f
+    amplitude = vec3(5.4856e-13'f, 4.4201e-13'f, 5.2481e-13'f)
+    position = vec3(1.6810e6'f, 1.7953e6'f, 2.2084e6'f)
+    variance = vec3(4.3278e9'f, 9.3046e9'f, 6.6121e9'f)
+  var xyz: Vec3 = amplitude * sqrt(2.0'f * ShaderPi * variance) *
+    cos(position * phase + shift) * exp(-phase * phase * variance)
+  xyz.x += 9.7470e-14'f * sqrt(2.0'f * ShaderPi * 4.5282e9'f) *
+    cos(2.2399e6'f * phase + shift.x) * exp(-4.5282e9'f * phase * phase)
+  xyz /= 1.0685e-7'f
+  # XYZ to linear Rec.709. These are rows of the transform.
+  result = vec3(dot(vec3(3.2404542'f, -1.5371385'f, -0.4985314'f), xyz),
+    dot(vec3(-0.9692660'f, 1.8760108'f, 0.0415560'f), xyz),
+    dot(vec3(0.0556434'f, -0.2040259'f, 1.0572252'f), xyz))
+
+func filmFresnel(ior, cosine, thickness: float32, baseF0: Vec3): Vec3 =
+  # Air / thin dielectric film / base material. Fade the first interface out
+  # as film thickness approaches zero; clamp F0 before converting it to IOR.
+  let
+    eta = mix(1.0'f, ior, smoothstep(0.0'f, 0.03'f, thickness))
+    cosine2Squared = 1.0'f - (1.0'f - cosine * cosine) / (eta * eta)
+  if cosine2Squared < 0.0'f: return vec3(1.0'f)
+  let
+    cosine2 = sqrt(cosine2Squared)
+    r0 = (eta - 1.0'f) / (eta + 1.0'f)
+    r12 = r0 * r0 + (1.0'f - r0 * r0) * pow(1.0'f - cosine, 5.0'f)
+    t121 = 1.0'f - r12
+    sqrtF0: Vec3 = sqrt(clamp(baseF0, vec3(0.0'f), vec3(0.9999'f)))
+    baseIor: Vec3 = (vec3(1.0'f) + sqrtF0) / (vec3(1.0'f) - sqrtF0)
+    ratio: Vec3 = (baseIor - vec3(eta)) / (baseIor + vec3(eta))
+    r1: Vec3 = ratio * ratio
+    r23: Vec3 = r1 + (vec3(1.0'f) - r1) * pow(1.0'f - cosine2, 5.0'f)
+    pathDifference = 2.0'f * eta * thickness * cosine2
+    phi21 = if eta < 1.0'f: 0.0'f else: ShaderPi
+  var phaseShift = vec3(phi21)
+  if baseIor.x < eta: phaseShift.x += ShaderPi
+  if baseIor.y < eta: phaseShift.y += ShaderPi
+  if baseIor.z < eta: phaseShift.z += ShaderPi
+  let
+    r123: Vec3 = clamp(r12 * r23, vec3(0.00001'f), vec3(0.9999'f))
+    amplitude: Vec3 = sqrt(r123)
+    rs: Vec3 = t121 * t121 * r23 / (vec3(1.0'f) - r123)
+  result = vec3(r12) + rs
+  var coefficient: Vec3 = rs - vec3(t121)
+  for order in 1 .. 2:
+    coefficient *= amplitude
+    result += coefficient * 2.0'f * filmSensitivity(order.float32 * pathDifference,
+      order.float32 * phaseShift)
+  result = max(result, vec3(0.0'f))
+
+func filmMix(diffuse, specular, fresnel: Vec3): Vec3 =
+  # Use the largest reflected component to avoid inverse colors in the base.
+  (1.0'f - max(fresnel.r, max(fresnel.g, fresnel.b))) * diffuse + fresnel * specular
+
 proc gltfIblFrag*(
   worldPos: Vec3, color: Vec4, normal: Vec3, uv: Vec2, uv1: Vec2,
   tangent: Vec3, bitangent: Vec3, vPosLightSpace: Vec4,
@@ -374,10 +438,29 @@ proc gltfIblFrag*(
   if transmission > 0.0'f:
     ray = volumeRay(n, v, thickness)
     diffuse = mix(diffuse, transmittedBackground(worldPos, ray, roughness) * base.rgb, transmission)
-  let
+  var iridescence = iridescenceFactor
+  var filmThickness = iridescenceThicknessRange.y
+  if hasIridescenceTexture:
+    let filmUv: Vec2 = transformUv(selectUv(iridescenceTexCoord, uv, uv1),
+      iridescenceUvOffset, iridescenceUvScale, iridescenceUvRotation)
+    iridescence *= texture(iridescenceTexture, filmUv).r
+  if hasIridescenceThicknessTexture:
+    let filmUv: Vec2 = transformUv(selectUv(iridescenceThicknessTexCoord, uv, uv1),
+      iridescenceThicknessUvOffset, iridescenceThicknessUvScale, iridescenceThicknessUvRotation)
+    filmThickness = mix(iridescenceThicknessRange.x, iridescenceThicknessRange.y,
+      texture(iridescenceThicknessTexture, filmUv).g)
+  if filmThickness == 0.0'f: iridescence = 0.0'f
+  var filmDielectric: Vec3 = vec3(0.0'f)
+  var filmMetal: Vec3 = vec3(0.0'f)
+  var
     dielectric: Vec3 = mix(diffuse, specular,
       iblFresnel(nDotV, roughness, dielectricF0, brdf, specularFactor))
     metal: Vec3 = specular * iblFresnel(nDotV, roughness, base.rgb, brdf, 1.0'f)
+  if iridescence > 0.0'f:
+    filmDielectric = filmFresnel(iridescenceIor, nDotV, filmThickness, dielectricF0)
+    filmMetal = filmFresnel(iridescenceIor, nDotV, filmThickness, base.rgb)
+    dielectric = mix(dielectric, filmMix(diffuse, specular, filmDielectric), iridescence)
+    metal = mix(metal, specular * filmMetal, iridescence)
   var radiance: Vec3 = mix(dielectric, metal, metallic)
   if sheenEnabled:
     let sheen: Vec3 = textureLod(charlieEnvironment, environmentRotation * reflection,
@@ -449,6 +532,17 @@ proc gltfIblFrag*(
         throughLight += (transmissionLight - base.rgb / ShaderPi * nDotL *
           (1.0'f - diffuseTransmission)) * transmission *
           (vec3(1.0'f) - dielectricFresnel) * (1.0'f - metallic) * lightAttenuation
+      if iridescence > 0.0'f:
+        var incidentDiffuse: Vec3 = (base.rgb / ShaderPi * nDotL * (1.0'f - diffuseTransmission) +
+          backDiffuse * diffuseTransmission) * lightAttenuation
+        if transmission > 0.0'f:
+          let transmitted: Vec3 = volumeAttenuation(base.rgb *
+            punctualTransmission(n, v, safeNormalize(pointToLight - ray), a), length(ray))
+          incidentDiffuse = mix(incidentDiffuse, transmitted * lightAttenuation, transmission)
+        let filmDirect: Vec3 = mix(filmMix(incidentDiffuse, specularBrdf * nDotL, filmDielectric),
+          specularBrdf * nDotL * filmMetal, metallic)
+        direct *= 1.0'f - iridescence
+        throughLight = throughLight * (1.0'f - iridescence) + filmDirect * iridescence
       if sheenEnabled:
         direct = sheenColorFactor * sheenBrdf(nDotL, nDotV, nDotH, sheenRoughnessFactor) * exitAttenuation +
           direct * min(sheenScaling(nDotV), sheenScaling(nDotL))

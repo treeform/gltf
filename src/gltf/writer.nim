@@ -427,6 +427,19 @@ proc writeGLB*(
         anisotropy["anisotropyTexture"] = dataTextureInfo(mat.anisotropy,
           mat.anisotropyKtx2, mat.anisotropyName, mat.anisotropySampler, mat.anisotropyTransform)
       matNode["extensions"]["KHR_materials_anisotropy"] = anisotropy
+    if mat.hasIridescence or mat.iridescenceFactor > 0:
+      if "extensions" notin matNode: matNode["extensions"] = newJObject()
+      let film = %*{"iridescenceFactor": mat.iridescenceFactor,
+        "iridescenceIor": mat.iridescenceIor,
+        "iridescenceThicknessMinimum": mat.iridescenceThicknessMinimum,
+        "iridescenceThicknessMaximum": mat.iridescenceThicknessMaximum}
+      template writeFilmTexture(slot: untyped) =
+        if mat.slot != nil or mat.`slot Ktx2`.len > 0:
+          film[astToStr(slot) & "Texture"] = dataTextureInfo(mat.slot,
+            mat.`slot Ktx2`, mat.`slot Name`, mat.`slot Sampler`, mat.`slot Transform`)
+      writeFilmTexture(iridescence)
+      writeFilmTexture(iridescenceThickness)
+      matNode["extensions"]["KHR_materials_iridescence"] = film
     if mat.hasClearcoat or mat.clearcoatFactor > 0:
       if "extensions" notin matNode: matNode["extensions"] = newJObject()
       let coat = %*{"clearcoatFactor": mat.clearcoatFactor,

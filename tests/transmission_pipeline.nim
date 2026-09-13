@@ -433,6 +433,63 @@ material.clearcoatFactor = 0
 let uncoatedEmission = capture().pixel(32, 24)
 doAssert coatedEmission.r < uncoatedEmission.r - 1, "Clearcoat must attenuate emission"
 echo "Clearcoat GPU: independent normals, normal scale, R/G maps, UV1, transforms and emission layering passed"
+
+# Thin-film interference must affect reflection without changing coverage.
+renderer.release(root)
+material.normal = nil
+material.hasNormalTexture = false
+material.emissiveFactor = color(0, 0, 0, 1)
+material.baseColorFactor = color(1, 1, 1, 1)
+material.specularFactor = 1
+material.iridescenceIor = 1.3
+material.iridescenceThicknessMinimum = 100
+material.iridescenceThicknessMaximum = 400
+material.roughnessFactor = 0.4
+material.baseColorFactor = color(0, 0, 0, 1) # Isolate the colored specular reflection.
+ctx.sunLightDirection = vec3(0, 0, -1)
+ctx.sunLightColor = color(1, 1, 1, 1)
+let noFilm = capture()
+material.hasIridescence = true
+doAssert capture() == noFilm, "Zero film strength must be neutral"
+material.iridescenceFactor = 1
+material.iridescenceThicknessMaximum = 0
+doAssert capture() == noFilm, "Zero thickness must be neutral"
+material.iridescenceThicknessMaximum = 400
+let film400 = capture()
+let filmPixel = film400.pixel(32, 24)
+doAssert difference(filmPixel, noFilm.pixel(32, 24)) > 8
+doAssert max(filmPixel.r, max(filmPixel.g, filmPixel.b)).int -
+  min(filmPixel.r, min(filmPixel.g, filmPixel.b)).int > 8, "White light must acquire interference colors"
+material.iridescenceThicknessMaximum = 200
+let film200 = capture()
+doAssert difference(film200.pixel(32, 24), filmPixel) > 8, "Film thickness must change hue"
+renderer.release(root)
+material.iridescenceThicknessMaximum = 400
+material.iridescence = newImage(2, 1)
+material.iridescence[0, 0] = rgbx(0, 255, 255, 255)
+material.iridescence[1, 0] = rgbx(255, 0, 0, 0)
+material.iridescenceSampler.magFilter = NearestMagFilter
+material.iridescenceSampler.minFilter = NearestMinFilter
+material.iridescenceTransform.texCoord = 1
+let filmMask = capture()
+doAssert difference(filmMask.pixel(20, 16), film400.pixel(20, 16)) <= 1
+doAssert difference(filmMask.pixel(44, 16), noFilm.pixel(44, 16)) <= 1
+material.iridescenceTransform.offset.x = 0.5
+doAssert difference(capture().pixel(20, 16), noFilm.pixel(20, 16)) <= 1
+renderer.release(root)
+material.iridescence = nil
+material.iridescenceThickness = newImage(1, 1)
+material.iridescenceThickness.fill(rgbx(255, 128, 0, 0))
+material.iridescenceThicknessMinimum = 600
+material.iridescenceThicknessMaximum = 200
+let filmMap = capture().pixel(32, 24)
+renderer.release(root)
+material.iridescenceThickness = nil
+material.iridescenceThicknessMaximum = 600'f + (200'f - 600'f) * 128'f / 255'f
+doAssert difference(capture().pixel(32, 24), filmMap) <= 1,
+  "Thickness must use linear G, support reversed ranges, and ignore alpha"
+doAssert capture() == capture(), "Film must be repeatable"
+echo "Iridescence GPU: zero strength/thickness, interference hue, R/G maps, UV1 and reversed thickness range passed"
 ctx.destroy()
 renderer.release(root)
 renderer.shutdown()

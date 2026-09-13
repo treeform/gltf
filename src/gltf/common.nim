@@ -286,6 +286,13 @@ type
     anisotropyKtx2*, anisotropyName*: string
     anisotropyTransform*: TextureTransform
     anisotropySampler*: TextureSampler
+    hasIridescence*: bool
+    iridescenceFactor*, iridescenceIor*: float32
+    iridescenceThicknessMinimum*, iridescenceThicknessMaximum*: float32
+    iridescence*, iridescenceThickness*: Image
+    iridescenceKtx2*, iridescenceName*, iridescenceThicknessKtx2*, iridescenceThicknessName*: string
+    iridescenceTransform*, iridescenceThicknessTransform*: TextureTransform
+    iridescenceSampler*, iridescenceThicknessSampler*: TextureSampler
     hasClearcoat*: bool
     clearcoatFactor*, clearcoatRoughnessFactor*, clearcoatNormalScale*: float32
     clearcoat*, clearcoatRoughness*, clearcoatNormal*: Image

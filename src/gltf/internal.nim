@@ -88,6 +88,10 @@ type
     hasAnisotropy*: bool
     anisotropyStrength*, anisotropyRotation*: float32
     anisotropyTexture*: MaterialTexture
+    hasIridescence*: bool
+    iridescenceFactor*, iridescenceIor*: float32
+    iridescenceThicknessMinimum*, iridescenceThicknessMaximum*: float32
+    iridescenceTexture*, iridescenceThicknessTexture*: MaterialTexture
     hasClearcoat*: bool
     clearcoatFactor*, clearcoatRoughnessFactor*: float32
     clearcoatTexture*, clearcoatRoughnessTexture*, clearcoatNormalTexture*: MaterialTexture

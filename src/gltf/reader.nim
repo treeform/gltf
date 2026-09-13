@@ -13,6 +13,7 @@ const SupportedExtensions = [
   "KHR_materials_emissive_strength",
   "KHR_materials_anisotropy",
   "KHR_materials_clearcoat",
+  "KHR_materials_iridescence",
   "KHR_materials_volume",
   "KHR_materials_ior",
   "KHR_materials_unlit",
@@ -1332,6 +1333,13 @@ proc defaultRuntimeMaterial(): Material =
   result.diffuseTransmissionColorTransform = TextureTransform(scale: vec2(1))
   result.anisotropySampler = defaultTextureSampler()
   result.anisotropyTransform = TextureTransform(scale: vec2(1))
+  result.iridescenceIor = 1.3
+  result.iridescenceThicknessMinimum = 100
+  result.iridescenceThicknessMaximum = 400
+  result.iridescenceSampler = defaultTextureSampler()
+  result.iridescenceThicknessSampler = defaultTextureSampler()
+  result.iridescenceTransform = TextureTransform(scale: vec2(1))
+  result.iridescenceThicknessTransform = TextureTransform(scale: vec2(1))
   result.clearcoatNormalScale = 1
   result.clearcoatSampler = defaultTextureSampler()
   result.clearcoatRoughnessSampler = defaultTextureSampler()
@@ -1620,6 +1628,13 @@ proc loadPrimitive(
     loadDataTexture(diffuseTransmission, material.diffuseTransmissionTexture)
     loadDataTexture(diffuseTransmissionColor, material.diffuseTransmissionColorTexture)
     loadDataTexture(anisotropy, material.anisotropyTexture)
+    loadDataTexture(iridescence, material.iridescenceTexture)
+    loadDataTexture(iridescenceThickness, material.iridescenceThicknessTexture)
+    result.material.hasIridescence = material.hasIridescence
+    result.material.iridescenceFactor = material.iridescenceFactor
+    result.material.iridescenceIor = material.iridescenceIor
+    result.material.iridescenceThicknessMinimum = material.iridescenceThicknessMinimum
+    result.material.iridescenceThicknessMaximum = material.iridescenceThicknessMaximum
     loadDataTexture(clearcoat, material.clearcoatTexture)
     loadDataTexture(clearcoatRoughness, material.clearcoatRoughnessTexture)
     loadDataTexture(clearcoatNormal, material.clearcoatNormalTexture)
@@ -2162,6 +2177,11 @@ proc loadModelJsonInternal(
       material.diffuseTransmissionTexture = defaultMaterialTexture()
       material.diffuseTransmissionColorTexture = defaultMaterialTexture()
       material.anisotropyTexture = defaultMaterialTexture()
+      material.iridescenceTexture = defaultMaterialTexture()
+      material.iridescenceThicknessTexture = defaultMaterialTexture()
+      material.iridescenceIor = 1.3
+      material.iridescenceThicknessMinimum = 100
+      material.iridescenceThicknessMaximum = 400
       material.clearcoatTexture = defaultMaterialTexture()
       material.clearcoatRoughnessTexture = defaultMaterialTexture()
       material.clearcoatNormalTexture = defaultMaterialTexture()
@@ -2310,6 +2330,20 @@ proc loadModelJsonInternal(
               let c = sheen["sheenColorFactor"]
               material.sheenColorFactor = vec3(c[0].getFloat(), c[1].getFloat(), c[2].getFloat())
         material.unlit = "KHR_materials_unlit" in extensions
+        if "KHR_materials_iridescence" in extensions:
+          let film = extensions["KHR_materials_iridescence"]
+          material.hasIridescence = true
+          material.iridescenceFactor = film{"iridescenceFactor"}.getFloat().float32
+          material.iridescenceIor = film{"iridescenceIor"}.getFloat(1.3).float32
+          material.iridescenceThicknessMinimum = film{"iridescenceThicknessMinimum"}.getFloat(100).float32
+          material.iridescenceThicknessMaximum = film{"iridescenceThicknessMaximum"}.getFloat(400).float32
+          template readFilmTexture(slot: untyped) =
+            if astToStr(slot) in film:
+              let texture = film[astToStr(slot)]
+              material.slot.index = texture["index"].getInt()
+              readTextureTransform(texture, material.slot)
+          readFilmTexture(iridescenceTexture)
+          readFilmTexture(iridescenceThicknessTexture)
         if "KHR_materials_clearcoat" in extensions:
           let coat = extensions["KHR_materials_clearcoat"]
           material.hasClearcoat = true

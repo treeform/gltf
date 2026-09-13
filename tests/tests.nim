@@ -16,6 +16,7 @@ import
   test_emissive_strength,
   test_anisotropy,
   test_clearcoat,
+  test_iridescence,
   test_unlit,
   test_texture_images
 
