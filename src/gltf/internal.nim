@@ -65,6 +65,8 @@ type
     occlusionTexture*: MaterialTexture
     emissiveTexture*: MaterialTexture
     emissiveFactor*: Color
+    hasEmissiveStrength*: bool
+    emissiveStrength*: float32
     alphaMode*: string
     unlit*: bool
     alphaCutoff*: float32

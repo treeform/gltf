@@ -453,11 +453,13 @@ proc writeGLB*(
       let name = if mat.emissiveName.len > 0: mat.emissiveName else: "emissive"
       let texIdx = textureIndex(mat.emissive, name, tsColor)
       matNode["emissiveTexture"] = %*{"index": texIdx}
-      matNode["emissiveFactor"] = %*[
-        mat.emissiveFactor.r,
-        mat.emissiveFactor.g,
-        mat.emissiveFactor.b
-      ]
+    # An emissive material does not need a texture.
+    matNode["emissiveFactor"] = %*[
+      mat.emissiveFactor.r, mat.emissiveFactor.g, mat.emissiveFactor.b]
+    if mat.hasEmissiveStrength or (mat.emissiveStrength > 0 and mat.emissiveStrength != 1):
+      if "extensions" notin matNode: matNode["extensions"] = newJObject()
+      matNode["extensions"]["KHR_materials_emissive_strength"] = %*{
+        "emissiveStrength": mat.emissiveStrength}
 
     case mat.alphaMode
     of OpaqueAlphaMode:

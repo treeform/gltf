@@ -243,6 +243,8 @@ type
     emissiveTransform*: TextureTransform
     emissiveSampler*: TextureSampler
     emissiveFactor*: Color
+    hasEmissiveStrength*: bool
+    emissiveStrength*: float32
     emissivePlaceholder*: bool
 
     alphaMode*: AlphaMode
@@ -311,6 +313,13 @@ type
     dvAoBake,
     dvMetallic,
     dvSpecular
+
+proc emissiveRadiance*(material: Material): Color =
+  ## Preserve the core default for older code constructing Material directly.
+  let strength = if material.hasEmissiveStrength or material.emissiveStrength > 0:
+    material.emissiveStrength else: 1.0'f
+  color(material.emissiveFactor.r * strength, material.emissiveFactor.g * strength,
+    material.emissiveFactor.b * strength, material.emissiveFactor.a)
 
 proc directionalLight*(node: Node): DirectionalLight =
   ## Compatibility with the original directional-only API.

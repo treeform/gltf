@@ -1586,9 +1586,9 @@ proc shadyPixelConstants(
     writer.putFloat(material.transmissionFactor)
     writer.putFloat(material.occlusionStrength)
     writer.putVec3(vec3(
-      material.emissiveFactor.r,
-      material.emissiveFactor.g,
-      material.emissiveFactor.b
+      material.emissiveRadiance.r,
+      material.emissiveRadiance.g,
+      material.emissiveRadiance.b
     ))
     writer.putFloat(material.normalScale)
     writer.putBool(

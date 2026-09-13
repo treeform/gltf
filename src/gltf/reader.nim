@@ -10,6 +10,7 @@ const SupportedExtensions = [
   "KHR_materials_transmission",
   "KHR_materials_diffuse_transmission",
   "KHR_lights_punctual",
+  "KHR_materials_emissive_strength",
   "KHR_materials_volume",
   "KHR_materials_ior",
   "KHR_materials_unlit",
@@ -1310,6 +1311,7 @@ proc defaultRuntimeMaterial(): Material =
   result.emissive.fill(rgbx(255, 255, 255, 255))
   result.emissivePlaceholder = true
   result.emissiveFactor = color(0, 0, 0, 1)
+  result.emissiveStrength = 1
   result.emissiveTransform = TextureTransform(
     texCoord: 0,
     offset: vec2(0, 0),
@@ -1582,6 +1584,8 @@ proc loadPrimitive(
       rotation: material.emissiveTexture.rotation
     )
     result.material.emissiveFactor = material.emissiveFactor
+    result.material.hasEmissiveStrength = material.hasEmissiveStrength
+    result.material.emissiveStrength = material.emissiveStrength
     result.material.transmissionFactor = material.transmissionFactor
     result.material.hasTransmission = material.hasTransmission
     result.material.hasVolume = material.hasVolume
@@ -2249,6 +2253,7 @@ proc loadModelJsonInternal(
         material.doubleSided = false
 
       material.transmissionFactor = 0
+      material.emissiveStrength = 1
       material.diffuseTransmissionColorFactor = vec3(1)
       material.ior = 1.5
       material.attenuationColor = vec3(1)
@@ -2256,6 +2261,9 @@ proc loadModelJsonInternal(
       material.specularColorFactor = vec3(1)
       if "extensions" in entry:
         let extensions = entry["extensions"]
+        if "KHR_materials_emissive_strength" in extensions:
+          material.hasEmissiveStrength = true
+          material.emissiveStrength = extensions["KHR_materials_emissive_strength"]{"emissiveStrength"}.getFloat(1).float32
         # Constant-factor shading is supported by the OpenGL IBL path. Keep
         # these extensions out of the fully-supported list until their texture
         # inputs are implemented, so required textured assets are not misreported.

@@ -326,6 +326,18 @@ lightParent.visible = true
 lamp.visible = false
 doAssert capture().pixel(32, 24).r < 3
 echo "Punctual light GPU: inverse square, range, cones, rotation, hierarchy, scale and visibility passed"
+
+# Emission is multiplied in linear HDR before the PBR Neutral/display passes.
+material.hasEmissiveStrength = true
+material.emissiveFactor = color(1, 0.05, 0.0125, 1)
+material.emissiveStrength = 4
+doAssert difference(capture().pixel(32, 24), rgba(253, 155, 149, 255)) <= 1
+material.emissiveStrength = 0
+doAssert capture().pixel(32, 24).r < 3
+material.emissiveStrength = 1
+material.emissiveFactor = color(0.04, 0.04, 0.04, 1)
+doAssert difference(capture().pixel(32, 24), rgba(31, 31, 31, 255)) <= 1
+echo "Emissive strength GPU: HDR multiplier, neutral tone map, display transfer and zero strength passed"
 ctx.destroy()
 renderer.release(root)
 renderer.shutdown()

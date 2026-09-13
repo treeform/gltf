@@ -1436,9 +1436,9 @@ proc shadyPixelConstants(
     result.putFloat(39, material.transmissionFactor)
     result.putFloat(40, material.occlusionStrength)
     result.putVec3(41, vec3(
-      material.emissiveFactor.r,
-      material.emissiveFactor.g,
-      material.emissiveFactor.b
+      material.emissiveRadiance.r,
+      material.emissiveRadiance.g,
+      material.emissiveRadiance.b
     ))
     result.putFloat(44, material.normalScale)
     result[45] = (

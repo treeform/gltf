@@ -1609,9 +1609,9 @@ proc applyMaterial(
   setTextureTransformUniform(u.occlusionTransform, material.occlusionTransform)
   glUniform3f(
     u.emissiveFactor,
-    material.emissiveFactor.r,
-    material.emissiveFactor.g,
-    material.emissiveFactor.b
+    material.emissiveRadiance.r,
+    material.emissiveRadiance.g,
+    material.emissiveRadiance.b
   )
   setTextureTransformUniform(u.emissiveTransform, material.emissiveTransform)
   ctx.lastMaterial = material
