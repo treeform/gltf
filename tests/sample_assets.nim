@@ -480,6 +480,65 @@ proc writeSummary(path: string, results: seq[AssetResult]) =
       lines.add(&"{extension}\t{count}")
   writeFile(path, lines.join("\n") & "\n")
 
+proc writeOverviewCard(
+  path: string, results: seq[AssetResult]
+): tuple[size, columns: int, indices: seq[int]] =
+  ## Tile one rest-pose image per file above its matching X-ray.
+  const tileSize = 64
+  var
+    groups = initOrderedTable[string, seq[int]]()
+    worstScores = initTable[string, float32]()
+  for i, item in results:
+    if item.status notin ["ok", "diff_error"] or item.pixels == 0 or
+        item.score < 0 or not fileExists(item.screenshotPath) or
+        not fileExists(item.xrayPath):
+      continue
+    groups.mgetOrPut(item.modelPath, @[]).add(i)
+    worstScores[item.modelPath] =
+      max(worstScores.getOrDefault(item.modelPath, -1'f), item.score)
+  let modelOrder = toSeq(groups.keys).sorted(proc(a, b: string): int =
+    result = cmp(worstScores[b], worstScores[a])
+    if result == 0:
+      result = cmp(a, b)
+  )
+  for modelPath in modelOrder:
+    let captures = groups[modelPath]
+    # Prefer the first valid rest pose; use the first compared capture when a
+    # file has no rest pose. The detailed report still contains every frame.
+    var selected = captures[0]
+    for index in captures:
+      if results[index].caseId.endsWith("__rest"):
+        selected = index
+        break
+    result.indices.add(selected)
+  if result.indices.len == 0:
+    if fileExists(path):
+      removeFile(path)
+    return
+  # An even column count makes both halves an exact number of 64px rows.
+  result.columns = ceil(sqrt(result.indices.len.float64 * 2)).int
+  if result.columns mod 2 != 0:
+    inc result.columns
+  result.size = result.columns * tileSize
+  let
+    card = newImage(result.size, result.size)
+    blackTile = newImage(tileSize, tileSize)
+  card.fill(rgbx(24, 30, 40, 255))
+  blackTile.fill(rgbx(0, 0, 0, 255))
+  for slot, index in result.indices:
+    let
+      item = results[index]
+      x = (slot mod result.columns) * tileSize
+      y = (slot div result.columns) * tileSize
+      renderPosition = translate(vec2(x.float32, y.float32))
+      xrayPosition = translate(vec2(x.float32, (y + result.size div 2).float32))
+    card.draw(readImage(item.screenshotPath).resize(tileSize, tileSize), renderPosition)
+    # An exact match may have a transparent X-ray; show it as black like other
+    # zero-error pixels instead of exposing the unused-slot background.
+    card.draw(blackTile, xrayPosition)
+    card.draw(readImage(item.xrayPath).resize(tileSize, tileSize), xrayPosition)
+  card.writeFile(path)
+
 proc writeReport(path: string, results: seq[AssetResult]) =
   ## Writes an HTML xray report with master/generated/xray images side by side.
   let reportDir = path.parentDir()
@@ -505,7 +564,31 @@ proc writeReport(path: string, results: seq[AssetResult]) =
   for modelPath in modelOrder:
     # Keep manifest order within each model, including rest and looping poses.
     orderedResults.add(groups[modelPath])
-  for result in orderedResults:
+  let card = writeOverviewCard(reportDir / "overview_card.png", orderedResults)
+  var cardHtml: string
+  if card.size > 0:
+    var links: seq[string]
+    let tilePercent = 100.0 / card.columns.float64
+    for slot, index in card.indices:
+      let
+        item = orderedResults[index]
+        fileLabel = relativePath(item.modelPath,
+          getCurrentDir().parentDir()).replace('\\', '/')
+        label = xmltree.escape(&"{fileLabel} · {item.captureLabel} · Pixie {item.score:0.3f}%")
+        x = (slot mod card.columns).float64 * tilePercent
+        y = (slot div card.columns).float64 * tilePercent
+      for half in 0 .. 1:
+        let top = y + half.float64 * 50
+        links.add(&"""<a class="overview-tile" href="#capture-{index}" title="{label}" aria-label="{label}" style="left:{x:0.6f}%;top:{top:0.6f}%;width:{tilePercent:0.6f}%;height:{tilePercent:0.6f}%"></a>""")
+    cardHtml = &"""<figure class="overview">
+<div class="overview-image" style="width:{card.size}px">
+<img src="overview_card.png" width="{card.size}" height="{card.size}" alt="Overview card: one capture per model, generated renders in the top half, matching X-rays in the bottom half; worst files first">
+{links.join("\n")}
+</div>
+<figcaption><b>{card.indices.len} compared models</b> · one capture per model, preferring the first rest pose · 64×64 thumbnails · top: generated renders · bottom: matching X-rays.<br>Files run from worst to best by their worst capture score, left to right and then down. All animation frames remain in the detailed report. Click a tile for its comparison. <a href="overview_card.png">Open the full-size PNG</a>.</figcaption>
+</figure>
+"""
+  for index, result in orderedResults:
     if result.modelPath != currentModel:
       if currentModel.len > 0:
         entries.add("</section>")
@@ -561,7 +644,7 @@ proc writeReport(path: string, results: seq[AssetResult]) =
         if result.pixels > 0:
           100.0 * (result.pixels - result.pixelsOverTolerance).float64 / result.pixels.float64
         else: 0.0
-    entries.add(&"""<div style="background:{bg};border:1px solid #ccc;padding:16px;break-inside:avoid">
+    entries.add(&"""<div id="capture-{index}" class="capture" style="background:{bg};border:1px solid #ccc;padding:16px;break-inside:avoid">
 <b>{xmltree.escape(result.captureLabel)}</b>
 <div class="tiles">
 {baseline}
@@ -577,9 +660,10 @@ proc writeReport(path: string, results: seq[AssetResult]) =
     entries.add("</section>")
   let html = """<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Xray Report</title>
-<style>body{font-family:monospace;margin:16px}.model-group{border:2px solid #aab4c2;margin:24px 0}.model-heading{position:sticky;top:0;z-index:1;background:#eef1f6;padding:12px 16px;border-bottom:1px solid #aab4c2}.model-heading h2{margin:0 0 6px;font-size:18px;overflow-wrap:anywhere}.model-heading p{margin:0}.tiles{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.tile{width:256px}.tile-label{margin-bottom:6px}img{display:block;max-width:256px;background:repeating-conic-gradient(#eee 0% 25%,#fff 0% 50%) 0 0/16px 16px}.statistics{box-sizing:border-box;width:256px;height:256px;padding:12px;background:#ffffffb3;border:1px solid #ccc;font-size:13px;line-height:1.35}.statistics p{margin:0 0 12px}.statistics p:last-child{margin-bottom:0}</style>
+<style>body{font-family:monospace;margin:16px}.model-group{border:2px solid #aab4c2;margin:24px 0}.model-heading{position:sticky;top:0;z-index:1;background:#eef1f6;padding:12px 16px;border-bottom:1px solid #aab4c2}.model-heading h2{margin:0 0 6px;font-size:18px;overflow-wrap:anywhere}.model-heading p{margin:0}.tiles{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.tile{width:256px}.tile-label{margin-bottom:6px}img{display:block;max-width:256px;background:repeating-conic-gradient(#eee 0% 25%,#fff 0% 50%) 0 0/16px 16px}.statistics{box-sizing:border-box;width:256px;height:256px;padding:12px;background:#ffffffb3;border:1px solid #ccc;font-size:13px;line-height:1.35}.statistics p{margin:0 0 12px}.statistics p:last-child{margin-bottom:0}.overview{margin:0 0 24px}.overview-image{position:relative;max-width:min(100%,calc(100vh - 160px))}.overview img{width:100%;height:auto;max-width:none;background:#181e28}.overview-tile{position:absolute;display:block;box-sizing:border-box}.overview-tile:hover,.overview-tile:focus-visible{box-shadow:inset 0 0 0 2px #ffb347;z-index:2}.overview figcaption{margin-top:10px;line-height:1.5}.capture{scroll-margin-top:100px}</style>
 </head><body>
 <h1>Xray Report</h1>
+""" & cardHtml & """
 <p>Grouped by source file: missing, skipped and failed comparisons first, then each file's worst Pixie score. All frames, poses and views stay together in manifest order.</p>
 <p>Same model, camera, scene, animation clip and absolute time. Images are compared without alignment or resizing.</p>
 <p>Pixel counts use RGB bytes over the entire image, including the background. Within ±2 means every RGB channel differs by at most 2 on the 0–255 scale. Xray: green = generated darker; blue = generated brighter; red = alpha difference.</p>

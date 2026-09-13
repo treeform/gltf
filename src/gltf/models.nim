@@ -27,6 +27,7 @@ proc shallowCopy*(node: Node): Node =
   result.mesh = node.mesh
   result.skin = node.skin
   result.camera = node.camera
+  result.directionalLight = node.directionalLight
   result.nodes = node.nodes
 
 proc defaultTextureSampler*(): TextureSampler =

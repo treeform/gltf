@@ -1,9 +1,9 @@
 {
-  "startedAt": "2026-09-13T17:32:28.723Z",
+  "startedAt": "2026-09-13T18:22:59.937Z",
   "sources": {
     "renderer": {
       "repository": "https://github.com/treeform/glTF-Sample-Renderer.git",
-      "revision": "01e68e767460117925e89a003467b3a38cd46f8e",
+      "revision": "e8832e99fd2c24b178ad29915c88b281f1939309",
       "upstreamRevision": "863b981fb755359063e370ff7b6e956bda0716e2"
     },
     "assets": {
@@ -19,7 +19,7 @@
       "url": "https://www.gstatic.com/draco/versioned/decoders/1.5.7/draco_decoder_gltf.js"
     }
   },
-  "manifestSha256": "ff9c851f6450338ed150018ac261025ffa1095e970eeab428b2030bb7e15e3ae",
+  "manifestSha256": "96118e8bc283f2c5f0e16970b21204e9219b8a109cf8905c181c36d58727172e",
   "browser": "Chrome/152.0.7977.75",
   "gpu": {
     "vendor": "Google Inc. (NVIDIA)",
@@ -2548,8 +2548,8 @@
       "id": "VirtualCity__rest",
       "status": "ok",
       "timeSeconds": 0,
-      "sha256": "cafa40951b1dbbaf22ae52934a029ee043388b00c787f0dbf5844f6e0452992a",
-      "bytes": 7124,
+      "sha256": "19b75da97f29e8bb9114e378c14507b61aa7961081c09703080fe71b0da0b594",
+      "bytes": 383123,
       "warnings": []
     },
     {
@@ -2557,8 +2557,8 @@
       "status": "ok",
       "timeSeconds": 0,
       "animation": "Animation 0",
-      "sha256": "cafa40951b1dbbaf22ae52934a029ee043388b00c787f0dbf5844f6e0452992a",
-      "bytes": 7124,
+      "sha256": "19b75da97f29e8bb9114e378c14507b61aa7961081c09703080fe71b0da0b594",
+      "bytes": 383123,
       "warnings": []
     },
     {
@@ -2566,8 +2566,8 @@
       "status": "ok",
       "timeSeconds": 11.1,
       "animation": "Animation 0",
-      "sha256": "cafa40951b1dbbaf22ae52934a029ee043388b00c787f0dbf5844f6e0452992a",
-      "bytes": 7124,
+      "sha256": "8c8dbcdcad0086c86612af7a8f6ce66805aa500e858897c39ca2999c89a03059",
+      "bytes": 383101,
       "warnings": []
     },
     {
@@ -2575,8 +2575,8 @@
       "status": "ok",
       "timeSeconds": 21.9,
       "animation": "Animation 0",
-      "sha256": "cafa40951b1dbbaf22ae52934a029ee043388b00c787f0dbf5844f6e0452992a",
-      "bytes": 7124,
+      "sha256": "0bd37750c69588ef372bdc00cd5b6797fc3fee96d4075b61a44fbe0c0e109715",
+      "bytes": 383107,
       "warnings": []
     },
     {
@@ -2584,8 +2584,8 @@
       "status": "ok",
       "timeSeconds": 41.1,
       "animation": "Animation 0",
-      "sha256": "cafa40951b1dbbaf22ae52934a029ee043388b00c787f0dbf5844f6e0452992a",
-      "bytes": 7124,
+      "sha256": "8c8dbcdcad0086c86612af7a8f6ce66805aa500e858897c39ca2999c89a03059",
+      "bytes": 383101,
       "warnings": []
     },
     {
@@ -2605,5 +2605,5 @@
       "warnings": []
     }
   ],
-  "finishedAt": "2026-09-13T17:34:26.248Z"
+  "finishedAt": "2026-09-13T18:29:19.106Z"
 }

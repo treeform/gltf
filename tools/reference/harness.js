@@ -57,14 +57,24 @@ async function exportEnvironment() {
   const framebuffer = gl.createFramebuffer();
   const previous = gl.getParameter(gl.FRAMEBUFFER_BINDING);
   const textures = [];
+  // The energy LUT is a PNG, uploaded by the renderer on first sheen draw.
+  // Export its linear bytes with the same unflipped upload convention.
+  const energyImage = environment.images[environment.textures[environment.sheenELUT.index].source[0]].image;
+  const energyTexture = gl.createTexture();
   try {
+    gl.bindTexture(gl.TEXTURE_2D, energyTexture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, energyImage);
     gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
     for (const [name, info, size, levels, faces] of [
       ['diffuse', environment.diffuseEnvMap, 256, 1, 6],
       ['specular', environment.specularEnvMap, 256, environment.mipCount, 6],
-      ['ggx-lut', environment.lut, 1024, 1, 1]
+      ['ggx-lut', environment.lut, 1024, 1, 1],
+      ['charlie', environment.sheenEnvMap, 256, environment.mipCount, 6],
+      ['charlie-lut', environment.sheenLUT, 1024, 1, 1],
+      ['sheen-energy-lut', null, energyImage.width, 1, 1]
     ]) {
-      const texture = environment.images[environment.textures[info.index].source[0]].image;
+      const texture = info ? environment.images[environment.textures[info.index].source[0]].image : energyTexture;
       for (let level = 0; level < levels; level++) {
         const width = size >> level;
         for (let face = 0; face < faces; face++) {
@@ -72,7 +82,13 @@ async function exportEnvironment() {
           gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, target, texture, level);
           if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) throw new Error(`Cannot read ${name}/${level}/${face}`);
           const pixels = new Float32Array(width * width * 4);
-          gl.readPixels(0, 0, width, width, gl.RGBA, gl.FLOAT, pixels);
+          if (info) {
+            gl.readPixels(0, 0, width, width, gl.RGBA, gl.FLOAT, pixels);
+          } else {
+            const rgba = new Uint8Array(pixels.length);
+            gl.readPixels(0, 0, width, width, gl.RGBA, gl.UNSIGNED_BYTE, rgba);
+            for (let i = 0; i < rgba.length; i++) pixels[i] = rgba[i] / 255;
+          }
           const error = gl.getError();
           if (error) throw new Error(`Environment readback GL error ${error}`);
           const bytes = new Uint8Array(pixels.buffer);
@@ -90,6 +106,7 @@ async function exportEnvironment() {
   } finally {
     gl.bindFramebuffer(gl.FRAMEBUFFER, previous);
     gl.deleteFramebuffer(framebuffer);
+    gl.deleteTexture(energyTexture);
   }
 }
 

@@ -5,6 +5,7 @@ import std/[json, os, math, strutils], opengl, vmath, chroma,
 type
   IblEnvironment* = object
     diffuse*, specular*, lut*: GLuint
+    charlie*, charlieLut*, sheenEnergyLut*: GLuint
     mipCount*: int
     intensityScale*: float32
   HdrTarget* = object
@@ -25,7 +26,8 @@ proc maxIblAnisotropy*(): float32 =
       return
 
 proc destroy*(environment: var IblEnvironment) =
-  for id in [environment.diffuse, environment.specular, environment.lut]:
+  for id in [environment.diffuse, environment.specular, environment.lut,
+      environment.charlie, environment.charlieLut, environment.sheenEnergyLut]:
     var texture = id
     if texture != 0: glDeleteTextures(1, texture.addr)
   environment = IblEnvironment()
@@ -47,10 +49,21 @@ proc loadIblEnvironment*(directory: string): IblEnvironment =
   glGenTextures(1, result.diffuse.addr)
   glGenTextures(1, result.specular.addr)
   glGenTextures(1, result.lut.addr)
+  var hasSheen = false
+  for item in manifest["textures"]:
+    if item["name"].getStr() == "charlie": hasSheen = true
+  if hasSheen:
+    glGenTextures(1, result.charlie.addr)
+    glGenTextures(1, result.charlieLut.addr)
+    glGenTextures(1, result.sheenEnergyLut.addr)
   try:
     for (id, target, levels) in [(result.diffuse, GL_TEXTURE_CUBE_MAP, 1),
         (result.specular, GL_TEXTURE_CUBE_MAP, result.mipCount),
-        (result.lut, GL_TEXTURE_2D, 1)]:
+        (result.lut, GL_TEXTURE_2D, 1),
+        (result.charlie, GL_TEXTURE_CUBE_MAP, result.mipCount),
+        (result.charlieLut, GL_TEXTURE_2D, 1),
+        (result.sheenEnergyLut, GL_TEXTURE_2D, 1)]:
+      if id == 0: continue
       glBindTexture(target, id)
       glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR.GLint)
       glTexParameteri(target, GL_TEXTURE_MIN_FILTER,
@@ -69,9 +82,10 @@ proc loadIblEnvironment*(directory: string): IblEnvironment =
         width = item["width"].getInt()
         file = item["file"].getStr()
         key = name & ":" & $level & ":" & $face
-        isCube = name != "ggx-lut"
-        maxLevels = if name == "specular": result.mipCount else: 1
-      if name notin ["diffuse", "specular", "ggx-lut"] or
+        isCube = name in ["diffuse", "specular", "charlie"]
+        maxLevels = if name in ["specular", "charlie"]: result.mipCount else: 1
+      if name notin ["diffuse", "specular", "ggx-lut", "charlie", "charlie-lut", "sheen-energy-lut"] or
+          (not hasSheen and name in ["charlie-lut", "sheen-energy-lut"]) or
           file != extractFilename(file) or ":" in file or file in [".", ".."] or
           width < 1 or width > 4096 or level < 0 or level >= maxLevels or
           face < 0 or face >= (if isCube: 6 else: 1) or key in seen:
@@ -82,12 +96,17 @@ proc loadIblEnvironment*(directory: string): IblEnvironment =
         raise newException(ValueError, "Incorrect IBL texture byte count: " & file)
       let target = if isCube: GL_TEXTURE_CUBE_MAP else: GL_TEXTURE_2D
       let id = if name == "diffuse": result.diffuse
-        elif name == "specular": result.specular else: result.lut
+        elif name == "specular": result.specular
+        elif name == "charlie": result.charlie
+        elif name == "charlie-lut": result.charlieLut
+        elif name == "sheen-energy-lut": result.sheenEnergyLut
+        else: result.lut
       glBindTexture(target, id)
       glTexImage2D(if isCube: GLenum(GL_TEXTURE_CUBE_MAP_POSITIVE_X.int + face) else: target,
         level.GLint, GL_RGBA32F.GLint, width.GLsizei, width.GLsizei, 0,
         GL_RGBA, cGL_FLOAT, bytes[0].unsafeAddr)
-    if seen.len != 6 + 6 * result.mipCount + 1:
+    if seen.len != 6 + 6 * result.mipCount + 1 +
+        (if hasSheen: 6 * result.mipCount + 2 else: 0):
       raise newException(ValueError, "Incomplete IBL environment")
     let error = glGetError()
     if error != GL_NO_ERROR:

@@ -7,6 +7,10 @@ import
   test_mesh_quantization,
   test_tangents,
   test_morphs,
+  test_material_animation,
+  test_vertex_colors,
+  test_ibl_materials,
+  test_transmission,
   test_unlit,
   test_texture_images
 

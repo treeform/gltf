@@ -24,6 +24,7 @@ type
     occlusionId*: GLuint
     emissiveId*: GLuint
     emissiveSrgbId*: GLuint
+    transmissionId*, thicknessId*: GLuint
 
   GltfFileData* = ref object
     sceneVersion*: uint64

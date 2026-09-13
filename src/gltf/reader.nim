@@ -8,6 +8,8 @@ export common
 const SupportedExtensions = [
   "KHR_texture_transform",
   "KHR_materials_transmission",
+  "KHR_materials_volume",
+  "KHR_materials_ior",
   "KHR_materials_unlit",
   "KHR_node_visibility",
   "KHR_animation_pointer",
@@ -1317,6 +1319,12 @@ proc defaultRuntimeMaterial(): Material =
   result.alphaCutoff = -1.0
   result.doubleSided = false
   result.transmissionFactor = 0.0
+  result.ior = 1.5
+  result.attenuationColor = vec3(1)
+  result.transmissionSampler = defaultTextureSampler()
+  result.thicknessSampler = defaultTextureSampler()
+  result.transmissionTransform = TextureTransform(scale: vec2(1))
+  result.thicknessTransform = TextureTransform(scale: vec2(1))
 
 proc validateMeshAttribute(accessor: Accessor, semantic: string) =
   ## Checks core and KHR_mesh_quantization vertex attribute layouts.
@@ -1395,6 +1403,17 @@ proc splitCubicVec3(channel: var AnimationChannel) =
     channel.inTangentsVec3[i] = triplets[i * 3]
     channel.valuesVec3[i] = triplets[i * 3 + 1]
     channel.outTangentsVec3[i] = triplets[i * 3 + 2]
+
+proc splitCubicVec4(channel: var AnimationChannel) =
+  ## Splits vec4 cubic spline triplets without quaternion normalization.
+  let triplets = channel.valuesVec4
+  channel.valuesVec4.setLen(channel.times.len)
+  channel.inTangentsVec4.setLen(channel.times.len)
+  channel.outTangentsVec4.setLen(channel.times.len)
+  for i in 0 ..< channel.times.len:
+    channel.inTangentsVec4[i] = triplets[i * 3]
+    channel.valuesVec4[i] = triplets[i * 3 + 1]
+    channel.outTangentsVec4[i] = triplets[i * 3 + 2]
 
 proc splitCubicQuat(channel: var AnimationChannel) =
   ## Splits quaternion cubic spline triplets into tangents and values.
@@ -1557,13 +1576,34 @@ proc loadPrimitive(
     )
     result.material.emissiveFactor = material.emissiveFactor
     result.material.transmissionFactor = material.transmissionFactor
+    result.material.hasTransmission = material.hasTransmission
+    result.material.hasVolume = material.hasVolume
+    result.material.thicknessFactor = material.thicknessFactor
+    result.material.attenuationColor = material.attenuationColor
+    result.material.attenuationDistance = material.attenuationDistance
+    result.material.ior = material.ior
+    result.material.hasIor = material.hasIor
+    template loadDataTexture(slot, info: untyped) =
+      if info.index >= 0:
+        let imageIndex = textures[info.index].source
+        result.material.slot = images[imageIndex]
+        result.material.`slot Ktx2` = imageKtx2Data[imageIndex]
+        result.material.`slot Name` = imageNames[imageIndex]
+        result.material.`slot Sampler` = getTextureSampler(info.index)
+      result.material.`slot Transform` = TextureTransform(
+        texCoord: info.texCoord, offset: info.offset,
+        scale: info.uvScale, rotation: info.rotation)
+    loadDataTexture(transmission, material.transmissionTexture)
+    loadDataTexture(thickness, material.thicknessTexture)
+    result.material.hasSpecular = material.hasSpecular
+    result.material.specularFactor = material.specularFactor
+    result.material.specularColorFactor = material.specularColorFactor
+    result.material.sheenColorFactor = material.sheenColorFactor
+    result.material.sheenRoughnessFactor = material.sheenRoughnessFactor
 
     case material.alphaMode
     of "OPAQUE":
-      if result.material.transmissionFactor > 0:
-        result.material.alphaMode = BlendAlphaMode
-      else:
-        result.material.alphaMode = OpaqueAlphaMode
+      result.material.alphaMode = OpaqueAlphaMode
       result.material.alphaCutoff = -1.0
     of "MASK":
       result.material.alphaMode = MaskAlphaMode
@@ -1678,6 +1718,18 @@ proc loadPrimitive(
               buffer.readUint8(start + i * stride + 2),
               buffer.readUint8(start + i * stride + 3)
             )
+      elif accessor.componentType == UnsignedShortComponent:
+        result.colors.setLen(accessor.count)
+        let stride = if bufferView.byteStride == 0: 8 else: bufferView.byteStride
+        for i in 0 ..< accessor.count:
+          let base = start + i * stride
+          # Normalize 16-bit components into the runtime's straight RGBA bytes.
+          result.colors[i] = rgbx(
+            (buffer.readUint16(base) div 257).uint8,
+            (buffer.readUint16(base + 2) div 257).uint8,
+            (buffer.readUint16(base + 4) div 257).uint8,
+            (buffer.readUint16(base + 6) div 257).uint8
+          )
       else:
         raise newException(
           GltfError,
@@ -2067,6 +2119,8 @@ proc loadModelJsonInternal(
       material.normalTexture = defaultMaterialTexture()
       material.occlusionTexture = defaultMaterialTexture()
       material.emissiveTexture = defaultMaterialTexture()
+      material.transmissionTexture = defaultMaterialTexture()
+      material.thicknessTexture = defaultMaterialTexture()
       if "name" in entry:
         material.name = entry["name"].getStr()
 
@@ -2181,14 +2235,56 @@ proc loadModelJsonInternal(
         material.doubleSided = false
 
       material.transmissionFactor = 0
+      material.ior = 1.5
+      material.attenuationColor = vec3(1)
+      material.specularFactor = 1
+      material.specularColorFactor = vec3(1)
       if "extensions" in entry:
         let extensions = entry["extensions"]
+        # Constant-factor shading is supported by the OpenGL IBL path. Keep
+        # these extensions out of the fully-supported list until their texture
+        # inputs are implemented, so required textured assets are not misreported.
+        if "KHR_materials_specular" in extensions:
+          let specular = extensions["KHR_materials_specular"]
+          if "specularTexture" notin specular and "specularColorTexture" notin specular:
+            material.hasSpecular = true
+            material.specularFactor = specular{"specularFactor"}.getFloat(1).float32
+            if "specularColorFactor" in specular:
+              let c = specular["specularColorFactor"]
+              material.specularColorFactor = vec3(c[0].getFloat(), c[1].getFloat(), c[2].getFloat())
+        if "KHR_materials_sheen" in extensions:
+          let sheen = extensions["KHR_materials_sheen"]
+          if "sheenColorTexture" notin sheen and "sheenRoughnessTexture" notin sheen:
+            material.sheenRoughnessFactor = sheen{"sheenRoughnessFactor"}.getFloat().float32
+            if "sheenColorFactor" in sheen:
+              let c = sheen["sheenColorFactor"]
+              material.sheenColorFactor = vec3(c[0].getFloat(), c[1].getFloat(), c[2].getFloat())
         material.unlit = "KHR_materials_unlit" in extensions
         if "KHR_materials_transmission" in extensions:
           let transmission = extensions["KHR_materials_transmission"]
+          material.hasTransmission = true
           if "transmissionFactor" in transmission:
             material.transmissionFactor =
               transmission["transmissionFactor"].getFloat().float32
+          if "transmissionTexture" in transmission:
+            let texture = transmission["transmissionTexture"]
+            material.transmissionTexture.index = texture["index"].getInt()
+            readTextureTransform(texture, material.transmissionTexture)
+        if "KHR_materials_volume" in extensions:
+          let volume = extensions["KHR_materials_volume"]
+          material.hasVolume = true
+          material.thicknessFactor = volume{"thicknessFactor"}.getFloat().float32
+          material.attenuationDistance = volume{"attenuationDistance"}.getFloat().float32
+          if "attenuationColor" in volume:
+            let c = volume["attenuationColor"]
+            material.attenuationColor = vec3(c[0].getFloat(), c[1].getFloat(), c[2].getFloat())
+          if "thicknessTexture" in volume:
+            let texture = volume["thicknessTexture"]
+            material.thicknessTexture.index = texture["index"].getInt()
+            readTextureTransform(texture, material.thicknessTexture)
+        if "KHR_materials_ior" in extensions:
+          material.hasIor = true
+          material.ior = extensions["KHR_materials_ior"]{"ior"}.getFloat(1.5).float32
 
       materials.add(material)
 
@@ -2357,6 +2453,19 @@ proc loadModelJsonInternal(
     node.visible = true
     if "extensions" in entry:
       let extensions = entry["extensions"]
+      if "KHR_lights_punctual" in extensions:
+        let
+          index = extensions["KHR_lights_punctual"]["light"].getInt()
+          lights = jsonRoot{"extensions", "KHR_lights_punctual", "lights"}
+        assertRaise lights != nil and index >= 0 and index < lights.len,
+          "Invalid punctual light index"
+        let light = lights[index]
+        if light["type"].getStr() == "directional":
+          node.directionalLight = DirectionalLight(color: color(1, 1, 1, 1),
+            intensity: light{"intensity"}.getFloat(1).float32)
+          if "color" in light:
+            let c = light["color"]
+            node.directionalLight.color = color(c[0].getFloat(), c[1].getFloat(), c[2].getFloat(), 1)
       if "KHR_node_visibility" in extensions:
         let visibility = extensions["KHR_node_visibility"]
         if "visible" in visibility:
@@ -2520,6 +2629,7 @@ proc loadModelJsonInternal(
     skins.add(skin)
 
   var clips: seq[AnimationClip]
+  var materialChannels: seq[tuple[channel: AnimationChannel, materialIdx: int]]
   if "animations" in jsonRoot:
     for animEntry in jsonRoot["animations"]:
       var clip = AnimationClip()
@@ -2558,6 +2668,7 @@ proc loadModelJsonInternal(
           let target = ch["target"]
           var
             nodeIdx = -1
+            materialIdx = -1
             path: AnimPath
             isPath = true
 
@@ -2576,6 +2687,17 @@ proc loadModelJsonInternal(
               try:
                 nodeIdx = parseInt(remainder)
                 path = AnimVisibility
+              except ValueError:
+                isPath = false
+            elif pointer.startsWith("/materials/") and
+                 pointer.endsWith("/pbrMetallicRoughness/baseColorFactor"):
+              let suffix = "/pbrMetallicRoughness/baseColorFactor"
+              let remainder = pointer.substr(
+                "/materials/".len, pointer.len - suffix.len - 1
+              )
+              try:
+                materialIdx = parseInt(remainder)
+                path = AnimBaseColorFactor
               except ValueError:
                 isPath = false
             else:
@@ -2597,11 +2719,13 @@ proc loadModelJsonInternal(
             else:
               isPath = false
 
-          if nodeIdx < 0 or nodeIdx >= nodes.len:
-            continue
-
           if not isPath:
             echo "[gltf] skipping unsupported animation target"
+            continue
+          if path == AnimBaseColorFactor:
+            if materialIdx < 0 or materialIdx >= materials.len:
+              continue
+          elif nodeIdx < 0 or nodeIdx >= nodes.len:
             continue
 
           let times =
@@ -2616,12 +2740,20 @@ proc loadModelJsonInternal(
             continue
 
           var channel = AnimationChannel()
-          channel.target = nodes[nodeIdx]
+          if path == AnimBaseColorFactor:
+            channel.baseColorFactor =
+              materials[materialIdx].pbrMetallicRoughness.baseColorFactor
+          else:
+            channel.target = nodes[nodeIdx]
           channel.path = path
           channel.interpolation = parseInterpolation(sampler.interpolation)
           channel.times = times
 
           case path
+          of AnimBaseColorFactor:
+            channel.valuesVec4 = readAccessorVec4(
+              sampler.output, accessors, bufferViews, buffers
+            )
           of AnimTranslation, AnimScale:
             channel.valuesVec3 =
               readAccessorVec3(
@@ -2669,6 +2801,11 @@ proc loadModelJsonInternal(
             continue
           if channel.interpolation == aiCubicSpline:
             case path
+            of AnimBaseColorFactor:
+              if channel.valuesVec4.len != channel.times.len * 3:
+                echo "[gltf] animation sampler length mismatch"
+                continue
+              splitCubicVec4(channel)
             of AnimTranslation, AnimScale:
               if channel.valuesVec3.len != channel.times.len * 3:
                 echo "[gltf] animation sampler length mismatch"
@@ -2697,6 +2834,7 @@ proc loadModelJsonInternal(
                 channel.valuesWeights[i] = triplets[i * 3 + 1]
                 channel.outTangentsWeights[i] = triplets[i * 3 + 2]
           elif channel.times.len != channel.valuesVec3.len and
+             channel.times.len != channel.valuesVec4.len and
              channel.times.len != channel.valuesQuat.len and
              channel.times.len != channel.valuesFloat.len and
              channel.times.len != channel.valuesWeights.len:
@@ -2706,6 +2844,8 @@ proc loadModelJsonInternal(
           if channel.times.len > 0:
             clip.duration = max(clip.duration, channel.times[^1])
           clip.channels.add(channel)
+          if path == AnimBaseColorFactor:
+            materialChannels.add((channel, materialIdx))
 
       if clip.channels.len > 0:
         clips.add(clip)
@@ -2724,6 +2864,8 @@ proc loadModelJsonInternal(
       roots.add(n.getInt())
     scenes.add(scene)
     sceneRoots.add(roots)
+
+  var runtimeMaterials = newSeq[seq[Material]](materials.len)
 
   proc processNode(nodeId: int): Node =
     var n = nodes[nodeId]
@@ -2749,6 +2891,9 @@ proc loadModelJsonInternal(
           samplers,
           materials
         ))
+        let materialIdx = primitiveDefs[primitiveIndex].material
+        if materialIdx >= 0:
+          runtimeMaterials[materialIdx].add(runtimeMesh.primitives[^1].material)
       n.mesh = runtimeMesh
       n.morphWeights = meshInfo.weights
       n.baseMorphWeights = meshInfo.weights
@@ -2807,6 +2952,9 @@ proc loadModelJsonInternal(
   for i, scene in scenes:
     for nodeId in sceneRoots[i]:
       scene.nodes.add(processNode(nodeId))
+  # Primitives and mesh instances own separate runtime material copies.
+  for (channel, materialIdx) in materialChannels:
+    channel.materialTargets = runtimeMaterials[materialIdx]
   if scenes.len > 0:
     let selectedScene = max(0, min(sceneId, scenes.high))
     for sceneNode in scenes[selectedScene].nodes:

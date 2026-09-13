@@ -137,7 +137,13 @@ type
     baseMorphWeights*: seq[float32]
     skin*: Skin
     camera*: Camera
+    directionalLight*: DirectionalLight
     nodes*: seq[Node]
+
+  DirectionalLight* = ref object
+    ## KHR_lights_punctual directional light, emitted along local -Z.
+    color*: Color
+    intensity*: float32
 
   Scene* = ref object
     name*: string
@@ -150,19 +156,25 @@ type
     skeleton*: Node
 
   AnimPath* = enum
-    AnimTranslation, AnimRotation, AnimScale, AnimVisibility, AnimWeights
+    AnimTranslation, AnimRotation, AnimScale, AnimVisibility, AnimWeights,
+    AnimBaseColorFactor
 
   AnimInterpolation* = enum
     aiStep, aiLinear, aiCubicSpline
 
   AnimationChannel* = ref object
     target*: Node
+    materialTargets*: seq[Material] # Runtime copies of the same glTF material.
+    baseColorFactor*: Color # Authored value restored when the clip is inactive.
     path*: AnimPath
     interpolation*: AnimInterpolation
     times*: seq[float32]
     valuesVec3*: seq[Vec3]
     inTangentsVec3*: seq[Vec3]
     outTangentsVec3*: seq[Vec3]
+    valuesVec4*: seq[Vec4]
+    inTangentsVec4*: seq[Vec4]
+    outTangentsVec4*: seq[Vec4]
     valuesQuat*: seq[Quat]
     inTangentsQuat*: seq[Quat]
     outTangentsQuat*: seq[Quat]
@@ -229,6 +241,26 @@ type
     alphaCutoff*: float32
     doubleSided*: bool
     transmissionFactor*: float32
+    hasTransmission*: bool
+    transmission*: Image
+    transmissionKtx2*, transmissionName*: string
+    transmissionTransform*: TextureTransform
+    transmissionSampler*: TextureSampler
+    hasVolume*: bool
+    thicknessFactor*: float32
+    thickness*: Image
+    thicknessKtx2*, thicknessName*: string
+    thicknessTransform*: TextureTransform
+    thicknessSampler*: TextureSampler
+    attenuationColor*: Vec3
+    attenuationDistance*: float32 ## Zero means infinite (no absorption).
+    hasIor*: bool
+    ior*: float32 ## Default 1.5. Explicit zero with hasIor means infinite IOR.
+    hasSpecular*: bool
+    specularFactor*: float32
+    specularColorFactor*: Vec3
+    sheenColorFactor*: Vec3
+    sheenRoughnessFactor*: float32
     materialVersion*: uint64
     data*: MaterialData
 
@@ -262,3 +294,11 @@ type
     dvAoBake,
     dvMetallic,
     dvSpecular
+
+proc legacyAlphaMode*(material: Material): AlphaMode =
+  ## Keep the older renderers' transmission approximation at draw time,
+  ## without changing the material's authored coverage or its exported value.
+  if material == nil: OpaqueAlphaMode
+  elif material.alphaMode == OpaqueAlphaMode and material.transmissionFactor > 0:
+    BlendAlphaMode
+  else: material.alphaMode

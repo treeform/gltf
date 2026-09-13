@@ -903,7 +903,7 @@ proc shadyFragmentConstants(
   writer.putFloat(fogDensity)
   writer.putFloat(fogStrength)
   writer.putInt((material != nil and material.unlit).ord)
-  writer.putInt((material != nil and material.alphaMode == OpaqueAlphaMode).ord)
+  writer.putInt((material != nil and material.legacyAlphaMode == OpaqueAlphaMode).ord)
   writer.finish()
 
 when defined(macosx):
@@ -935,7 +935,7 @@ when defined(macosx):
       return
     let isBlend =
       primitive.material != nil and
-      primitive.material.alphaMode == BlendAlphaMode
+      primitive.material.legacyAlphaMode == BlendAlphaMode
     if deferBlend and isBlend:
       blended.add(
         BlendEntry(

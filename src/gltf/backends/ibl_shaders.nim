@@ -10,6 +10,29 @@ var
   toneFlags*: Uniform[USampler2d]
   exposure*: Uniform[float32]
   hasVertexTangent*: Uniform[bool]
+  charlieEnvironment*: Uniform[SamplerCube]
+  charlieLut*: Uniform[Sampler2d]
+  sheenEnergyLut*: Uniform[Sampler2d]
+  sheenEnabled*: Uniform[bool]
+  sheenColorFactor*: Uniform[Vec3]
+  sheenRoughnessFactor*: Uniform[float32]
+  specularFactor*: Uniform[float32]
+  specularColorFactor*: Uniform[Vec3]
+  directionalLightCount*: Uniform[int32]
+  directionalLightDirections*: Uniform[array[8, Vec3]]
+  directionalLightColors*: Uniform[array[8, Vec3]]
+  transmissionBuffer*: Uniform[Sampler2d]
+  transmissionTexture*, thicknessTexture*: Uniform[Sampler2d]
+  transmissionTexCoord*, thicknessTexCoord*: Uniform[int]
+  transmissionUvOffset*, transmissionUvScale*: Uniform[Vec2]
+  thicknessUvOffset*, thicknessUvScale*: Uniform[Vec2]
+  transmissionUvRotation*, thicknessUvRotation*: Uniform[float32]
+  hasTransmissionTexture*, hasThicknessTexture*: Uniform[bool]
+  transmissionBackground*: Uniform[bool]
+  transmissionBufferLod*: Uniform[float32]
+  thicknessFactor*, materialIor*, attenuationDistance*: Uniform[float32]
+  attenuationColor*: Uniform[Vec3]
+  volumeScale*: Uniform[Vec3]
 
 func pbrNeutral*(input: Vec3): Vec3 =
   ## Khronos PBR Neutral, operating on exposed linear radiance.
@@ -24,17 +47,107 @@ func pbrNeutral*(input: Vec3): Vec3 =
   let desaturation = 1.0'f - 1.0'f / (0.15'f * (peak - newPeak) + 1.0'f)
   result = mix(value, vec3(newPeak), desaturation)
 
-func iblFresnel(nDotV, roughness: float32, f0: Vec3, brdf: Vec2): Vec3 =
+func iblFresnel(nDotV, roughness: float32, f0: Vec3, brdf: Vec2,
+    weight: float32): Vec3 =
   let
     fr: Vec3 = vec3(max(1.0'f - roughness, f0.r),
       max(1.0'f - roughness, f0.g), max(1.0'f - roughness, f0.b)) - f0
     ks: Vec3 = f0 + fr * pow(1.0'f - nDotV, 5.0'f)
-    singleScatter: Vec3 = ks * brdf.x + vec3(brdf.y)
+    singleScatter: Vec3 = weight * (ks * brdf.x + vec3(brdf.y))
     missingEnergy = 1.0'f - brdf.x - brdf.y
-    average: Vec3 = f0 + (vec3(1.0'f) - f0) / 21.0'f
+    average: Vec3 = weight * (f0 + (vec3(1.0'f) - f0) / 21.0'f)
     multipleScatter: Vec3 = missingEnergy * singleScatter * average /
       (vec3(1.0'f) - average * missingEnergy)
   result = singleScatter + multipleScatter
+
+func sheenLambdaHelper(x, alpha: float32): float32 =
+  let
+    s = (1.0'f - alpha) * (1.0'f - alpha)
+    a = mix(21.5473'f, 25.3245'f, s)
+    b = mix(3.82987'f, 3.32435'f, s)
+    c = mix(0.19823'f, 0.16801'f, s)
+    d = mix(-1.97760'f, -1.27393'f, s)
+    e = mix(-4.32054'f, -4.85967'f, s)
+  result = a / (1.0'f + b * pow(x, c)) + d * x + e
+
+func sheenLambda(cosTheta, alpha: float32): float32 =
+  if abs(cosTheta) < 0.5'f:
+    return exp(sheenLambdaHelper(cosTheta, alpha))
+  result = exp(2.0'f * sheenLambdaHelper(0.5'f, alpha) -
+    sheenLambdaHelper(1.0'f - cosTheta, alpha))
+
+func sheenBrdf(nDotL, nDotV, nDotH, roughness: float32): float32 =
+  # Estevez/Kulla Charlie distribution and the reference's fitted visibility.
+  let
+    r = max(roughness, 0.000001'f)
+    alpha = r * r
+    invR = 1.0'f / alpha
+    distribution = (2.0'f + invR) * pow(1.0'f - nDotH * nDotH, invR * 0.5'f) /
+      (2.0'f * ShaderPi)
+    visibility = clamp(1.0'f / ((1.0'f + sheenLambda(nDotV, alpha) +
+      sheenLambda(nDotL, alpha)) * (4.0'f * nDotV * nDotL)), 0.0'f, 1.0'f)
+  result = distribution * visibility
+
+proc sheenScaling(nDot: float32): float32 =
+  result = 1.0'f - max(sheenColorFactor.r, max(sheenColorFactor.g, sheenColorFactor.b)) *
+    texture(sheenEnergyLut, vec2(nDot, sheenRoughnessFactor)).r
+
+proc textureLod(buffer: Uniform[Sampler2d], pos: Vec2, lod: float32): Vec4 =
+  ## Shady recognizes the GLSL builtin; its current CPU API only declares Cube.
+  ## These IBL shaders execute on the GPU, not the CPU sampler fallback.
+  vec4(0.0'f)
+
+func iorRoughness(roughness, ior: float32): float32 =
+  roughness * clamp(ior * 2.0'f - 2.0'f, 0.0'f, 1.0'f)
+
+proc volumeRay(n, v: Vec3, thickness: float32): Vec3 =
+  # GLSL refract(-v, n, 1/ior), expressed here for Shady's CPU and GPU paths.
+  let eta = 1.0'f / materialIor
+  let d = dot(n, -v)
+  let k = 1.0'f - eta * eta * (1.0'f - d * d)
+  var direction = vec3(0.0'f)
+  if k >= 0.0'f:
+    direction = eta * -v - (eta * d + sqrt(k)) * n
+  result = safeNormalize(direction) * thickness * volumeScale
+
+proc volumeAttenuation(radiance: Vec3, distance: float32): Vec3 =
+  result = radiance
+  if attenuationDistance > 0.0'f:
+    let power = distance / attenuationDistance
+    result = result * vec3(pow(attenuationColor.r, power), pow(attenuationColor.g, power),
+      pow(attenuationColor.b, power))
+
+proc transmittedBackground(worldPos, ray: Vec3, roughness: float32): Vec3 =
+  let clip = proj * view * vec4(worldPos + ray, 1.0'f)
+  let sampleUv = (clip.xy / clip.w) * 0.5'f + vec2(0.5'f)
+  let level = transmissionBufferLod * iorRoughness(roughness, materialIor)
+  result = volumeAttenuation(textureLod(transmissionBuffer, sampleUv, level).rgb, length(ray))
+
+proc punctualTransmission(n, v, l: Vec3, alphaRoughness: float32): float32 =
+  let mirrored: Vec3 = normalize(l + 2.0'f * n * dot(-l, n))
+  let h: Vec3 = safeNormalize(mirrored + v)
+  let nl = clamp(dot(n, mirrored), 0.0'f, 1.0'f)
+  let nv = clamp(dot(n, v), 0.0'f, 1.0'f)
+  let nh = clamp(dot(n, h), 0.0'f, 1.0'f)
+  let a = iorRoughness(alphaRoughness, materialIor)
+  let a2 = a * a
+  let denom = nh * nh * (a2 - 1.0'f) + 1.0'f
+  let visibilityDenom = nl * sqrt(nv * nv * (1.0'f - a2) + a2) +
+    nv * sqrt(nl * nl * (1.0'f - a2) + a2)
+  result = 0.0'f
+  if denom > 0.0'f and visibilityDenom > 0.0'f:
+    result = a2 / (ShaderPi * denom * denom) * 0.5'f / visibilityDenom
+
+proc inverseNeutralForTransmission(input: Vec3): Vec3 =
+  # Match the reference's approximate inverse for unlit objects in the snapshot.
+  var value: Vec3 = input
+  let peak = max(value.r, max(value.g, value.b))
+  if peak >= 0.76'f:
+    value = value * ((peak / (1.0'f - peak + 0.76'f)) / peak)
+  let x = min(value.r, min(value.g, value.b))
+  value = value + vec3(if x < 0.08'f: x - 6.25'f * x * x else: 0.04'f)
+  if exposure > 0.0'f: value = value / exposure
+  result = value
 
 proc gltfIblFrag*(
   worldPos: Vec3, color: Vec4, normal: Vec3, uv: Vec2, uv1: Vec2,
@@ -54,6 +167,9 @@ proc gltfIblFrag*(
     fragColor = base * tint
     # Khronos applies display transfer but no exposure or tone map to unlit.
     toneMapFlag = uint32(1)
+    if transmissionBackground:
+      fragColor = vec4(inverseNeutralForTransmission(fragColor.rgb), fragColor.a)
+      toneMapFlag = uint32(2)
     return
   let
     baseUv: Vec2 = transformUv(selectUv(baseColorTexCoord, uv, uv1),
@@ -99,34 +215,79 @@ proc gltfIblFrag*(
     nDotV = clamp(dot(n, v), 0.0'f, 1.0'f)
     brdf: Vec2 = texture(ggxLut, vec2(nDotV, roughness)).rg
     reflection: Vec3 = normalize(reflect(-v, n))
-    diffuse: Vec3 = texture(diffuseEnvironment, environmentRotation * n).rgb *
+    reflectedDiffuse: Vec3 = texture(diffuseEnvironment, environmentRotation * n).rgb *
       environmentMapStrength * base.rgb
     specular: Vec3 = textureLod(environmentMap, environmentRotation * reflection,
       roughness * (environmentMipCount - 1.0'f)).rgb * environmentMapStrength
+    f0 = (materialIor - 1.0'f) / (materialIor + 1.0'f)
+    dielectricF0: Vec3 = min(vec3(f0 * f0) * specularColorFactor, vec3(1.0'f))
+  var transmission = transmissionFactor
+  if hasTransmissionTexture:
+    let transUv = transformUv(selectUv(transmissionTexCoord, uv, uv1),
+      transmissionUvOffset, transmissionUvScale, transmissionUvRotation)
+    transmission *= texture(transmissionTexture, transUv).r
+  var thickness = thicknessFactor
+  if hasThicknessTexture:
+    let thickUv = transformUv(selectUv(thicknessTexCoord, uv, uv1),
+      thicknessUvOffset, thicknessUvScale, thicknessUvRotation)
+    thickness *= texture(thicknessTexture, thickUv).g
+  var ray = vec3(0.0'f)
+  var diffuse = reflectedDiffuse
+  if transmission > 0.0'f:
+    ray = volumeRay(n, v, thickness)
+    diffuse = mix(diffuse, transmittedBackground(worldPos, ray, roughness) * base.rgb, transmission)
+  let
     dielectric: Vec3 = mix(diffuse, specular,
-      iblFresnel(nDotV, roughness, vec3(0.04'f), brdf))
-    metal: Vec3 = specular * iblFresnel(nDotV, roughness, base.rgb, brdf)
-  var radiance: Vec3 = mix(dielectric, metal, metallic) * ao
+      iblFresnel(nDotV, roughness, dielectricF0, brdf, specularFactor))
+    metal: Vec3 = specular * iblFresnel(nDotV, roughness, base.rgb, brdf, 1.0'f)
+  var radiance: Vec3 = mix(dielectric, metal, metallic)
+  if sheenEnabled:
+    let sheen: Vec3 = textureLod(charlieEnvironment, environmentRotation * reflection,
+      sheenRoughnessFactor * (environmentMipCount - 1.0'f)).rgb * environmentMapStrength *
+      sheenColorFactor * texture(charlieLut, vec2(nDotV, sheenRoughnessFactor)).b
+    radiance = sheen + radiance * sheenScaling(nDotV)
+  radiance *= ao
   # A directional key light uses the same GGX distribution/visibility as glTF.
-  if sunLightColor.a > 0.0'f:
-    let
-      l: Vec3 = normalize(-sunLightDirection)
-      h: Vec3 = normalize(v + l)
-      nDotL = clamp(dot(n, l), 0.0'f, 1.0'f)
-      nDotH = clamp(dot(n, h), 0.0'f, 1.0'f)
-      vDotH = clamp(dot(v, h), 0.0'f, 1.0'f)
-      a = max(roughness * roughness, 0.0001'f)
-      a2 = a * a
-      distributionDenom = nDotH * nDotH * (a2 - 1.0'f) + 1.0'f
-      distribution = a2 / (ShaderPi * distributionDenom * distributionDenom)
-      visibilityDenom = nDotL * sqrt(nDotV * nDotV * (1.0'f - a2) + a2) +
-        nDotV * sqrt(nDotL * nDotL * (1.0'f - a2) + a2)
-      visibility = if visibilityDenom > 0.0'f: 0.5'f / visibilityDenom else: 0.0'f
-      f0: Vec3 = mix(vec3(0.04'f), base.rgb, metallic)
-      fresnel: Vec3 = f0 + (vec3(1.0'f) - f0) * pow(1.0'f - vDotH, 5.0'f)
-      direct: Vec3 = (vec3(1.0'f) - fresnel) * base.rgb * (1.0'f - metallic) / ShaderPi +
-        fresnel * visibility * distribution
-    radiance += direct * sunLightColor.rgb * sunLightColor.a * nDotL
+  for lightIndex in 0 ..< 9:
+    var lightDirection: Vec3 = sunLightDirection
+    var lightColor: Vec3 = sunLightColor.rgb * sunLightColor.a
+    if lightIndex > 0:
+      if lightIndex > directionalLightCount: break
+      lightDirection = directionalLightDirections[lightIndex - 1]
+      lightColor = directionalLightColors[lightIndex - 1]
+    if max(lightColor.r, max(lightColor.g, lightColor.b)) > 0.0'f:
+      let
+        l: Vec3 = normalize(-lightDirection)
+        h: Vec3 = normalize(v + l)
+        nDotL = clamp(dot(n, l), 0.0'f, 1.0'f)
+        nDotH = clamp(dot(n, h), 0.0'f, 1.0'f)
+        vDotH = clamp(dot(v, h), 0.0'f, 1.0'f)
+        a = max(roughness * roughness, 0.0001'f)
+        a2 = a * a
+        distributionDenom = nDotH * nDotH * (a2 - 1.0'f) + 1.0'f
+        distribution = a2 / (ShaderPi * distributionDenom * distributionDenom)
+        visibilityDenom = nDotL * sqrt(nDotV * nDotV * (1.0'f - a2) + a2) +
+          nDotV * sqrt(nDotL * nDotL * (1.0'f - a2) + a2)
+        visibility = if visibilityDenom > 0.0'f: 0.5'f / visibilityDenom else: 0.0'f
+        schlick = pow(1.0'f - vDotH, 5.0'f)
+        dielectricFresnel: Vec3 = specularFactor * (dielectricF0 +
+          (vec3(1.0'f) - dielectricF0) * schlick)
+        metalFresnel: Vec3 = base.rgb + (vec3(1.0'f) - base.rgb) * schlick
+        specularBrdf: Vec3 = vec3(visibility * distribution)
+      var direct: Vec3 = mix(mix(base.rgb / ShaderPi, specularBrdf, dielectricFresnel),
+        metalFresnel * specularBrdf, metallic)
+      var throughLight = vec3(0.0'f)
+      if transmission > 0.0'f:
+        let transmissionLight = volumeAttenuation(base.rgb *
+          punctualTransmission(n, v, normalize(-lightDirection - ray), a), length(ray))
+        throughLight = (transmissionLight - base.rgb / ShaderPi * nDotL) * transmission *
+          (vec3(1.0'f) - dielectricFresnel) * (1.0'f - metallic)
+      if sheenEnabled:
+        direct = sheenColorFactor * sheenBrdf(nDotL, nDotV, nDotH, sheenRoughnessFactor) +
+          direct * min(sheenScaling(nDotV), sheenScaling(nDotL))
+        throughLight *= min(sheenScaling(nDotV), sheenScaling(nDotL))
+      radiance += direct * lightColor * nDotL
+      radiance += throughLight * lightColor
   var alpha = base.a
   if opaqueMaterial != 0:
     alpha = 1.0'f

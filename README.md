@@ -66,8 +66,8 @@ The table below reflects the current code, not the full glTF 2.0 spec.
 | Normals | Yes | Yes | Yes | `NORMAL` is supported. |
 | Tangents | Yes | Yes | No | Preserves authored tangents; generates missing ones with MikkTSpace, including mirrored seams and morph attributes. |
 | UV set 0 | Yes | Yes | Yes | `TEXCOORD_0` is supported. |
-| UV set 1 | Yes | Yes | No | `TEXCOORD_1` is loaded and used by texture inputs with `texCoord: 1`. |
-| Vertex colors | Yes | Yes | Yes | `COLOR_0` is supported. |
+| UV set 1 | Yes | Yes | Yes | `TEXCOORD_1` is loaded, exported, and used by texture inputs with `texCoord: 1`. |
+| Vertex colors | Yes | Yes | Yes | `COLOR_0` supports RGB/RGBA floats and normalized unsigned 8-bit/16-bit components. Runtime colors use 8-bit RGBA. |
 | Indices | Yes | Yes | Yes | Reads `uint8`, `uint16`, and `uint32`. Writes `uint8`, `uint16`, and `uint32`. |
 | PBR base color | Yes | Yes | Yes | Reads texture and factor. Writes texture and factor. |
 | Metallic and roughness factors | Yes | Yes | Yes | Scalar factors are read and written. |
@@ -83,15 +83,19 @@ The table below reflects the current code, not the full glTF 2.0 spec.
 | Skins | Yes | Yes | No | `JOINTS_0` and `WEIGHTS_0` are supported with GPU skinning. |
 | Morph targets | Yes | Yes | No | Position, normal, and tangent targets are applied at runtime. |
 | Cameras | Yes | Yes | No | Perspective and orthographic cameras are loaded from glTF. |
-| `KHR_texture_transform` | Yes | Yes | No | Texture transforms and `texCoord` overrides are supported. |
-| `KHR_materials_transmission` | Partial | Partial | No | Transmission factors are read and rendered, but broader extension coverage is incomplete. |
+| `KHR_texture_transform` | Yes | Yes | Partial | Texture transforms and `texCoord` overrides are supported. Export preserves them on transmission and thickness maps. |
+| `KHR_materials_transmission` | Yes | Partial | Yes | OpenGL IBL renders a mipmapped scene background for refraction and rough glass; supports the factor and linear R-channel texture. Other lighting paths retain their approximation. |
+| `KHR_materials_volume` | Yes | Partial | Yes | OpenGL IBL supports thickness factor/G-channel texture, node scale, and color/distance absorption. |
+| `KHR_materials_ior` | Yes | Partial | Yes | OpenGL IBL uses authored IOR for refraction, roughness and dielectric reflections, including explicit zero's infinite-IOR mode. |
 | `KHR_node_visibility` | Yes | Yes | No | Static visibility and visibility animation are supported. |
-| `KHR_animation_pointer` | Partial | Partial | No | Only the visibility target path is supported. |
+| `KHR_animation_pointer` | Partial | Partial | No | Node visibility and material `baseColorFactor` targets are supported. Color tracks support `STEP`, `LINEAR`, and `CUBICSPLINE`. |
 | `KHR_draco_mesh_compression` | No | No | No | Not supported yet. |
 | `KHR_mesh_quantization` | Yes | Yes | No | Integer mesh attributes are decoded with their declared normalization and stride. |
 | `EXT_meshopt_compression` | Yes | Yes | No | Compressed buffer views are decoded in pure Nim, including standard attribute filters. |
 | `KHR_texture_basisu` | Yes | Yes | Partial | KTX2 textures; see [KHR_texture_basisu and KTX2](#khr_texture_basisu-and-ktx2). The embedded KTX2 module can read and write supported KTX2 payloads directly, while glTF export paths that generate new encoded sidecars still use [KTX-Software](#writing-ktx2-with-ktx-software). |
-| `KHR_lights_punctual` | No | No | No | Not supported yet. |
+| `KHR_lights_punctual` | Partial | Partial | Partial | Directional lights load and export; the OpenGL IBL path renders up to 8 authored lights, including node transforms/visibility. Point/spot lights and required-extension declarations remain unsupported. |
+| `KHR_materials_sheen` | Partial | Partial | Partial | Constant color/roughness factors load and export. OpenGL IBL uses Charlie environment filtering, direct sheen and energy compensation. Texture inputs and required-extension declarations remain unsupported. |
+| `KHR_materials_specular` | Partial | Partial | Partial | Constant strength/color factors load and export; OpenGL IBL applies tinted dielectric reflections. Texture inputs and required-extension declarations remain unsupported. |
 | `KHR_materials_unlit` | Yes | Yes | Yes | Base color, texture, vertex color, alpha modes and double-sided rendering; independent of lighting. The matched HDR path bypasses exposure and tone mapping. |
 | `EXT_texture_webp` | No | No | No | Not supported yet. |
 

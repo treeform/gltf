@@ -1,7 +1,7 @@
 import
   std/[json, os, strutils, tables, uri],
   flatty/binny, pixie, vmath,
-  common, internal, ktx2, texture_images
+  common, internal, ktx2, texture_images, models
 
 export common
 
@@ -217,6 +217,7 @@ proc writeGLB*(
     nodesJson: seq[JsonNode]
     usesNodeVisibility = false
     usesKhrTextureBasisu = false
+    usesTextureTransform = false
     outputDir = path.parentDir()
     usedImageFileNames = initTable[string, int]()
 
@@ -229,19 +230,28 @@ proc writeGLB*(
 
   var materialIds = initTable[pointer, int]()
   var imageIds = initTable[(pointer, TextureSemantic), int]()
-  var textureIds = initTable[(pointer, TextureSemantic), int]()
+  var textureIds = initTable[(pointer, TextureSemantic, int), int]()
 
-  proc textureIndex(img: Image, imageName: string, semantic: TextureSemantic): int =
+  proc textureIndex(img: Image, imageName: string, semantic: TextureSemantic,
+      textureSampler = defaultTextureSampler()): int =
     ## Returns the output texture index for an exported image.
     if img == nil:
       return -1
-    let key = (cast[pointer](img), semantic)
+    let sampler = Sampler(magFilter: textureSampler.magFilter,
+      minFilter: textureSampler.minFilter, wrapS: textureSampler.wrapS,
+      wrapT: textureSampler.wrapT)
+    var samplerIndex = samplers.find(sampler)
+    if samplerIndex < 0:
+      samplerIndex = samplers.len
+      samplers.add(sampler)
+    let imageKey = (cast[pointer](img), semantic)
+    let key = (cast[pointer](img), semantic, samplerIndex)
     if key in textureIds:
       return textureIds[key]
 
     var imgIdx: int
-    if key in imageIds:
-      imgIdx = imageIds[key]
+    if imageKey in imageIds:
+      imgIdx = imageIds[imageKey]
     else:
       case imageWriteMode
       of iwmEmbedded:
@@ -275,12 +285,12 @@ proc writeGLB*(
           outputDir,
           usedImageFileNames
         )
-      imageIds[key] = imgIdx
+      imageIds[imageKey] = imgIdx
 
     if imageWriteMode == iwmExternalKtx2:
       usesKhrTextureBasisu = true
       textures.add(%*{
-        "sampler": 0,
+        "sampler": samplerIndex,
         "extensions": {
           "KHR_texture_basisu": {
             "source": imgIdx
@@ -288,7 +298,7 @@ proc writeGLB*(
         }
       })
     else:
-      textures.add(%*{"source": imgIdx, "sampler": 0})
+      textures.add(%*{"source": imgIdx, "sampler": samplerIndex})
     let idx = textures.len - 1
     textureIds[key] = idx
     idx
@@ -299,6 +309,37 @@ proc writeGLB*(
     ## factor values already carry the constant). The flag is what decides:
     ## a 1x1 image the caller supplied is a real texture and must be written.
     img == nil or placeholder
+
+  proc dataTextureInfo(img: Image, ktx2Data, name: string, sampler: TextureSampler,
+      transform: TextureTransform): JsonNode =
+    var index: int
+    if ktx2Data.len > 0:
+      # Preserve native compressed maps without a decode/re-encode or dropping
+      # the slot because its CPU Image is nil.
+      let image = %*{"name": name, "mimeType": "image/ktx2"}
+      if imageWriteMode == iwmEmbedded:
+        bufferViews.add(addView(data, ktx2Data))
+        image["bufferView"] = %(bufferViews.len - 1)
+      else:
+        let filename = uniqueImageFileName(name, "image_" & $images.len,
+          usedImageFileNames, ".ktx2")
+        writeFile(outputDir / filename, ktx2Data)
+        image["uri"] = %encodeUrl(filename, usePlus = false)
+      images.add(image)
+      samplers.add(Sampler(magFilter: sampler.magFilter, minFilter: sampler.minFilter,
+        wrapS: sampler.wrapS, wrapT: sampler.wrapT))
+      textures.add(%*{"sampler": samplers.len - 1, "extensions": {
+        "KHR_texture_basisu": {"source": images.len - 1}}})
+      usesKhrTextureBasisu = true
+      index = textures.len - 1
+    else:
+      index = textureIndex(img, name, tsData, sampler)
+    result = %*{"index": index, "texCoord": transform.texCoord}
+    if transform.offset != vec2(0) or transform.scale != vec2(1) or transform.rotation != 0:
+      usesTextureTransform = true
+      result["extensions"] = %*{"KHR_texture_transform": {
+        "offset": [transform.offset.x, transform.offset.y],
+        "scale": [transform.scale.x, transform.scale.y], "rotation": transform.rotation}}
 
   proc materialIndex(mat: Material): int =
     ## Returns the output material index for a material.
@@ -343,6 +384,39 @@ proc writeGLB*(
     matNode["doubleSided"] = newJBool(mat.doubleSided)
     if mat.unlit:
       matNode["extensions"] = %*{"KHR_materials_unlit": {}}
+    if mat.hasTransmission or mat.transmissionFactor > 0 or mat.hasVolume or
+        mat.thicknessFactor > 0 or mat.hasIor or (mat.ior > 0 and mat.ior != 1.5'f):
+      if "extensions" notin matNode: matNode["extensions"] = newJObject()
+      let extensions = matNode["extensions"]
+      if mat.hasTransmission or mat.transmissionFactor > 0:
+        let transmission = %*{"transmissionFactor": mat.transmissionFactor}
+        if mat.transmission != nil or mat.transmissionKtx2.len > 0:
+          transmission["transmissionTexture"] = dataTextureInfo(mat.transmission,
+            mat.transmissionKtx2, mat.transmissionName, mat.transmissionSampler, mat.transmissionTransform)
+        extensions["KHR_materials_transmission"] = transmission
+      if mat.hasVolume or mat.thicknessFactor > 0:
+        let volume = %*{"thicknessFactor": mat.thicknessFactor,
+          "attenuationColor": [mat.attenuationColor.x, mat.attenuationColor.y, mat.attenuationColor.z]}
+        if mat.attenuationDistance > 0:
+          volume["attenuationDistance"] = %mat.attenuationDistance
+        if mat.thickness != nil or mat.thicknessKtx2.len > 0:
+          volume["thicknessTexture"] = dataTextureInfo(mat.thickness,
+            mat.thicknessKtx2, mat.thicknessName, mat.thicknessSampler, mat.thicknessTransform)
+        extensions["KHR_materials_volume"] = volume
+      if mat.hasIor or (mat.ior > 0 and mat.ior != 1.5'f):
+        extensions["KHR_materials_ior"] = %*{"ior": mat.ior}
+    if mat.hasSpecular or mat.sheenColorFactor != vec3(0):
+      if "extensions" notin matNode: matNode["extensions"] = newJObject()
+      if mat.hasSpecular:
+        matNode["extensions"]["KHR_materials_specular"] = %*{
+          "specularFactor": mat.specularFactor,
+          "specularColorFactor": [mat.specularColorFactor.x, mat.specularColorFactor.y, mat.specularColorFactor.z]
+        }
+      if mat.sheenColorFactor != vec3(0):
+        matNode["extensions"]["KHR_materials_sheen"] = %*{
+          "sheenRoughnessFactor": mat.sheenRoughnessFactor,
+          "sheenColorFactor": [mat.sheenColorFactor.x, mat.sheenColorFactor.y, mat.sheenColorFactor.z]
+        }
 
     if not isPlaceholder(mat.normal, mat.normalPlaceholder) and
         mat.hasNormalTexture:
@@ -528,22 +602,15 @@ proc writeGLB*(
       )
       attributes["NORMAL"] = newJInt(acc)
 
-    if primitive.uvs.len == primitive.points.len and primitive.uvs.len > 0:
-      var payload = newString(primitive.uvs.len * 8)
-      for i, p in primitive.uvs:
-        payload.writeFloat32(i * 8 + 0, p.x)
-        payload.writeFloat32(i * 8 + 4, p.y)
-      let acc = addAccessor(
-        accessors,
-        bufferViews,
-        data,
-        payload,
-        atVEC2,
-        FloatComponent,
-        primitive.uvs.len,
-        0
-      )
-      attributes["TEXCOORD_0"] = newJInt(acc)
+    for (semantic, uvs) in [("TEXCOORD_0", primitive.uvs), ("TEXCOORD_1", primitive.uvs1)]:
+      if uvs.len == primitive.points.len and uvs.len > 0:
+        var payload = newString(uvs.len * 8)
+        for i, p in uvs:
+          payload.writeFloat32(i * 8 + 0, p.x)
+          payload.writeFloat32(i * 8 + 4, p.y)
+        let acc = addAccessor(accessors, bufferViews, data, payload,
+          atVEC2, FloatComponent, uvs.len, 0)
+        attributes[semantic] = newJInt(acc)
 
     if primitive.colors.len == primitive.points.len and
       primitive.colors.len > 0:
@@ -671,6 +738,8 @@ proc writeGLB*(
     meshIds[key] = idx
     idx
 
+  var directionalLights: seq[JsonNode]
+
   proc walk(n: Node): int =
     ## Walks the node tree and returns the node index.
     var nodeObj = newJObject()
@@ -685,6 +754,15 @@ proc writeGLB*(
           "visible": false
         }
       }
+
+    if n.directionalLight != nil:
+      let light = n.directionalLight
+      if "extensions" notin nodeObj: nodeObj["extensions"] = newJObject()
+      nodeObj["extensions"]["KHR_lights_punctual"] = %*{"light": directionalLights.len}
+      directionalLights.add(%*{
+        "type": "directional", "intensity": light.intensity,
+        "color": [light.color.r, light.color.g, light.color.b]
+      })
 
     let meshIdx = addMeshForNode(n)
     if meshIdx >= 0:
@@ -779,7 +857,7 @@ proc writeGLB*(
       if channel.valuesWeights.len != channel.times.len:
         return
       return
-    of AnimVisibility:
+    of AnimVisibility, AnimBaseColorFactor:
       return
     if valueCount == 0:
       return
@@ -843,12 +921,15 @@ proc writeGLB*(
   var jsonRoot = newJObject()
   jsonRoot["asset"] = %*{"version": "2.0"}
   var extensionsUsed: seq[string]
+  if usesTextureTransform: extensionsUsed.add("KHR_texture_transform")
   var extensionsRequired: seq[string]
   for material in materials:
-    if material.hasKey("extensions") and
-        material["extensions"].hasKey("KHR_materials_unlit"):
-      extensionsUsed.add("KHR_materials_unlit")
-      break
+    if material.hasKey("extensions"):
+      for extension in material["extensions"].keys:
+        if extension notin extensionsUsed: extensionsUsed.add(extension)
+  if directionalLights.len > 0:
+    extensionsUsed.add("KHR_lights_punctual")
+    jsonRoot["extensions"] = %*{"KHR_lights_punctual": {"lights": directionalLights}}
   if usesNodeVisibility:
     extensionsUsed.add("KHR_node_visibility")
   if usesKhrTextureBasisu:

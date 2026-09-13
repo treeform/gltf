@@ -1,9 +1,9 @@
 {
-  "startedAt": "2026-09-13T16:51:13.667Z",
+  "startedAt": "2026-09-13T18:29:19.569Z",
   "sources": {
     "renderer": {
       "repository": "https://github.com/treeform/glTF-Sample-Renderer.git",
-      "revision": "01e68e767460117925e89a003467b3a38cd46f8e",
+      "revision": "e8832e99fd2c24b178ad29915c88b281f1939309",
       "upstreamRevision": "863b981fb755359063e370ff7b6e956bda0716e2"
     },
     "assets": {
@@ -19,7 +19,7 @@
       "url": "https://www.gstatic.com/draco/versioned/decoders/1.5.7/draco_decoder_gltf.js"
     }
   },
-  "manifestSha256": "91900d5e5e3e04323ac8dbbc5331eb993a78136c5c61fae7aed5243e94022f24",
+  "manifestSha256": "79a343b4aa54c9e30868e44d045e6144d149928bec1d7f273629a19a08f26c80",
   "browser": "Chrome/152.0.7977.75",
   "gpu": {
     "vendor": "Google Inc. (NVIDIA)",
@@ -84,5 +84,5 @@
       "warnings": []
     }
   ],
-  "finishedAt": "2026-09-13T16:54:43.106Z"
+  "finishedAt": "2026-09-13T18:29:22.683Z"
 }

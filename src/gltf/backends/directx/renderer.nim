@@ -1486,7 +1486,7 @@ proc shadyPixelConstants(
   result.putFloat(94, fogDensity)
   result.putFloat(95, fogStrength)
   result[96] = (material != nil and material.unlit).ord.uint32
-  result[97] = (material != nil and material.alphaMode == OpaqueAlphaMode).ord.uint32
+  result[97] = (material != nil and material.legacyAlphaMode == OpaqueAlphaMode).ord.uint32
 
 proc drawPrimitive(
   renderer: Renderer,
@@ -1516,7 +1516,7 @@ proc drawPrimitive(
 
   let isBlend =
     primitive.material != nil and
-    primitive.material.alphaMode == BlendAlphaMode
+    primitive.material.legacyAlphaMode == BlendAlphaMode
   if isBlend != blendedPass:
     return
 
@@ -1609,7 +1609,7 @@ proc collectOrDrawNode(
   node.mat = transform * node.trs
   if node.mesh != nil:
     for primitive in node.mesh.primitives:
-      if primitive.material != nil and primitive.material.alphaMode == BlendAlphaMode:
+      if primitive.material != nil and primitive.material.legacyAlphaMode == BlendAlphaMode:
         blended.add(BlendEntry(node: node, primitive: primitive, transform: node.mat))
       else:
         renderer.drawPrimitive(

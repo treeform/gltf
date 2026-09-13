@@ -70,6 +70,15 @@ type
     alphaCutoff*: float32
     doubleSided*: bool
     transmissionFactor*: float32
+    hasTransmission*, hasVolume*, hasIor*: bool
+    transmissionTexture*, thicknessTexture*: MaterialTexture
+    thicknessFactor*, attenuationDistance*, ior*: float32
+    attenuationColor*: Vec3
+    hasSpecular*: bool
+    specularFactor*: float32
+    specularColorFactor*: Vec3
+    sheenColorFactor*: Vec3
+    sheenRoughnessFactor*: float32
 
   MeshInfo* = object
     name*: string

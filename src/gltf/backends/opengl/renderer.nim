@@ -6,6 +6,7 @@ import
   ../../common, ../../models, ../../shaders, ../../ktx2,
   ./common as openglCommon,
   ./ibl,
+  ./transmission,
   ../shaders as shaderSources
 
 export ibl.IblEnvironment, ibl.loadIblEnvironment
@@ -59,6 +60,9 @@ type
     environmentMipCount: GLint
     environmentRotation: GLint
     hasVertexTangent: GLint
+    sheenEnabled, sheenColorFactor, sheenRoughnessFactor: GLint
+    specularFactor, specularColorFactor: GLint
+    directionalLightCount, directionalLightDirections, directionalLightColors: GLint
     baseColorTexture: GLint
     baseColorFactor: GLint
     baseColorTransform: TextureTransformUniforms
@@ -66,6 +70,11 @@ type
     metallicFactor: GLint
     roughnessFactor: GLint
     transmissionFactor: GLint
+    materialIor, thicknessFactor, attenuationColor, attenuationDistance: GLint
+    volumeScale: GLint
+    hasTransmissionTexture, hasThicknessTexture, transmissionBackground: GLint
+    exposure: GLint
+    transmissionTransform, thicknessTransform: TextureTransformUniforms
     metallicRoughnessTransform: TextureTransformUniforms
     normalTexture: GLint
     normalScale: GLint
@@ -122,6 +131,9 @@ type
     transform: Mat4
     tint: Color
     root: Node
+    useShadow: bool
+    lightSpace: Mat4
+    shadowTex: GLuint
 
   PbrPassValues = object
     ## Shadow copy of PBR uniform values already uploaded to pbrShader.
@@ -156,7 +168,7 @@ type
     ## while a pass is active. Unknown values force a real GL call.
     programBound: bool
     activeUnit: int
-    boundTexture: array[9, GLuint]
+    boundTexture: array[15, GLuint]
     textureEpoch: uint64
     blend: int8
     depthMask: int8
@@ -187,9 +199,13 @@ type
     environmentMapStrength*: float32
     environmentMap*: EnvironmentMap
     iblEnvironment*: IblEnvironment
+    directionalLightCount: int32
+    directionalLightDirections, directionalLightColors: array[8, Vec3]
     environmentRotation*: float32 ## IBL rotation about Y, in degrees.
     exposure*: float32 ## Linear exposure multiplier before PBR Neutral.
     hdrTarget: HdrTarget
+    transmissionTarget: TransmissionTarget
+    transmissionBackground: bool
     ownsIblEnvironment: bool
     maxIblAnisotropy: float32
     useShadows*: bool
@@ -211,6 +227,7 @@ type
     ownsEnvironmentMap: bool
     jointMatrices: seq[Mat4]
     blended: seq[BlendEntry]
+    backgroundDraws, transmitted: seq[BlendEntry]
     deferred: seq[BlendEntry]
     passValues: PbrPassValues
     glState: PbrGlState
@@ -276,6 +293,14 @@ proc loadPbrUniforms(shader: GLuint): PbrUniforms =
   result.environmentMipCount = uniformLocation(shader, "environmentMipCount")
   result.environmentRotation = uniformLocation(shader, "environmentRotation")
   result.hasVertexTangent = uniformLocation(shader, "hasVertexTangent")
+  result.sheenEnabled = uniformLocation(shader, "sheenEnabled")
+  result.sheenColorFactor = uniformLocation(shader, "sheenColorFactor")
+  result.sheenRoughnessFactor = uniformLocation(shader, "sheenRoughnessFactor")
+  result.specularFactor = uniformLocation(shader, "specularFactor")
+  result.specularColorFactor = uniformLocation(shader, "specularColorFactor")
+  result.directionalLightCount = uniformLocation(shader, "directionalLightCount")
+  result.directionalLightDirections = uniformLocation(shader, "directionalLightDirections")
+  result.directionalLightColors = uniformLocation(shader, "directionalLightColors")
   result.baseColorTexture = uniformLocation(shader, "baseColorTexture")
   result.baseColorFactor = uniformLocation(shader, "baseColorFactor")
   result.baseColorTransform =
@@ -285,6 +310,17 @@ proc loadPbrUniforms(shader: GLuint): PbrUniforms =
   result.metallicFactor = uniformLocation(shader, "metallicFactor")
   result.roughnessFactor = uniformLocation(shader, "roughnessFactor")
   result.transmissionFactor = uniformLocation(shader, "transmissionFactor")
+  result.materialIor = uniformLocation(shader, "materialIor")
+  result.volumeScale = uniformLocation(shader, "volumeScale")
+  result.thicknessFactor = uniformLocation(shader, "thicknessFactor")
+  result.attenuationColor = uniformLocation(shader, "attenuationColor")
+  result.attenuationDistance = uniformLocation(shader, "attenuationDistance")
+  result.hasTransmissionTexture = uniformLocation(shader, "hasTransmissionTexture")
+  result.hasThicknessTexture = uniformLocation(shader, "hasThicknessTexture")
+  result.transmissionBackground = uniformLocation(shader, "transmissionBackground")
+  result.exposure = uniformLocation(shader, "exposure")
+  result.transmissionTransform = loadTextureTransformUniforms(shader, "transmission")
+  result.thicknessTransform = loadTextureTransformUniforms(shader, "thickness")
   result.metallicRoughnessTransform =
     loadTextureTransformUniforms(shader, "metallicRoughness")
   result.normalTexture = uniformLocation(shader, "normalTexture")
@@ -757,8 +793,11 @@ proc attachIblEnvironment*(ctx: PbrContext, environment: IblEnvironment,
   glUseProgram(shader)
   for (name, unit) in [("baseColorTexture", 0), ("metallicRoughnessTexture", 1),
       ("normalTexture", 2), ("occlusionTexture", 3), ("emissiveTexture", 4),
-      ("environmentMap", 5), ("diffuseEnvironment", 7), ("ggxLut", 8)]:
+      ("environmentMap", 5), ("diffuseEnvironment", 7), ("ggxLut", 8),
+      ("charlieEnvironment", 9), ("charlieLut", 10), ("sheenEnergyLut", 11),
+      ("transmissionBuffer", 12), ("transmissionTexture", 13), ("thicknessTexture", 14)]:
     glUniform1i(uniformLocation(shader, name.cstring), unit.GLint)
+  glUniform1f(uniformLocation(shader, "transmissionBufferLod"), log2(TransmissionSize.float32))
   ctx.passValues = PbrPassValues()
   inc textureBindEpoch
   ctx.invalidateGlState()
@@ -782,6 +821,7 @@ proc destroy*(ctx: PbrContext) =
   if ctx == nil:
     return
   ctx.hdrTarget.destroy()
+  ctx.transmissionTarget.destroy()
   if ctx.ownsIblEnvironment:
     ctx.iblEnvironment.destroy()
     inc textureBindEpoch
@@ -855,7 +895,7 @@ proc ensureData(primitive: Primitive): PrimitiveData =
 
 proc beginPass*(ctx: PbrContext) =
   ## Starts a batched PBR pass. Until the matching endPass, the context
-  ## assumes it owns the GL program binding, texture units 0-6, and the
+  ## assumes it owns the GL program binding, texture units 0-14, and the
   ## blend/depth/cull/front-face enables across draw calls, and defers
   ## blended primitives from all draws into one globally sorted flush at
   ## endPass. Nesting is allowed; only the outermost pair has effect.
@@ -864,6 +904,8 @@ proc beginPass*(ctx: PbrContext) =
   if ctx.passDepth == 1:
     ctx.invalidateGlState()
     ctx.blended.setLen(0)
+    ctx.backgroundDraws.setLen(0)
+    ctx.transmitted.setLen(0)
 
 proc ensurePbrProgram(ctx: PbrContext) =
   if not ctx.glState.programBound:
@@ -1037,10 +1079,19 @@ proc uploadMaterialToGpu(material: Material) =
     )
   data.materialVersion = material.materialVersion
 
+  if data.transmissionId == 0:
+    uploadTextureToGpu(data.transmissionId, material.transmission,
+      material.transmissionKtx2, material.transmissionSampler)
+  if data.thicknessId == 0:
+    uploadTextureToGpu(data.thicknessId, material.thickness,
+      material.thicknessKtx2, material.thicknessSampler)
+
 proc clearMaterialFromGpu(material: Material) =
   if material == nil or material.data == nil:
     return
   let data = material.data
+  if data.transmissionId != 0: glDeleteTextures(1, data.transmissionId.addr)
+  if data.thicknessId != 0: glDeleteTextures(1, data.thicknessId.addr)
   if data.baseColorSrgbId != 0:
     glDeleteTextures(1, data.baseColorSrgbId.addr)
   if data.emissiveSrgbId != 0:
@@ -1374,6 +1425,8 @@ proc applyPassUniforms(
   ctx.syncPassValue(environmentMipCount, ctx.environmentMap.mipCount):
     glUniform1f(u.environmentMipCount, ctx.environmentMap.mipCount)
   if ctx.iblEnvironment.specular != 0:
+    glUniform1i(u.transmissionBackground, ctx.transmissionBackground.GLint)
+    glUniform1f(u.exposure, ctx.exposure)
     let
       angle = degToRad(ctx.environmentRotation)
       c = cos(angle)
@@ -1381,6 +1434,12 @@ proc applyPassUniforms(
       rotation = mat3(vec3(c, 0.0'f, -s), vec3(0.0'f, 1.0'f, 0.0'f), vec3(s, 0.0'f, c))
     glUniformMatrix3fv(u.environmentRotation, 1, GL_FALSE,
       cast[ptr float32](rotation.unsafeAddr))
+    glUniform1i(u.directionalLightCount, ctx.directionalLightCount)
+    if ctx.directionalLightCount > 0:
+      glUniform3fv(u.directionalLightDirections, ctx.directionalLightCount,
+        cast[ptr float32](ctx.directionalLightDirections[0].addr))
+      glUniform3fv(u.directionalLightColors, ctx.directionalLightCount,
+        cast[ptr float32](ctx.directionalLightColors[0].addr))
   ctx.syncPassValue(useShadow, useShadow):
     glUniform1i(u.useShadow, useShadow.GLint)
   ctx.passValues.valid = true
@@ -1411,6 +1470,8 @@ proc applyMaterial(
         material.emissiveKtx2, material.emissiveSampler, srgb = true)
     ctx.bindTextureCached(0, GL_TEXTURE_2D, materialData.baseColorSrgbId)
     ctx.bindTextureCached(4, GL_TEXTURE_2D, materialData.emissiveSrgbId)
+    ctx.bindTextureCached(13, GL_TEXTURE_2D, materialData.transmissionId)
+    ctx.bindTextureCached(14, GL_TEXTURE_2D, materialData.thicknessId)
   else:
     ctx.bindTextureCached(0, GL_TEXTURE_2D, materialData.baseColorId)
     ctx.bindTextureCached(4, GL_TEXTURE_2D, materialData.emissiveId)
@@ -1422,7 +1483,9 @@ proc applyMaterial(
     # Match the reference's trilinear texture filtering with hardware AF.
     for (unit, sampler) in [(0, material.baseColorSampler),
         (1, material.metallicRoughnessSampler), (2, material.normalSampler),
-        (3, material.occlusionSampler), (4, material.emissiveSampler)]:
+        (3, material.occlusionSampler), (4, material.emissiveSampler),
+        (13, material.transmissionSampler), (14, material.thicknessSampler)]:
+      if ctx.glState.boundTexture[unit] == 0: continue
       if sampler.magFilter != NearestMagFilter and sampler.minFilter in
           {NearestMipmapLinearMinFilter, LinearMipmapLinearMinFilter}:
         glActiveTexture(GLenum(GL_TEXTURE0.int + unit))
@@ -1444,7 +1507,9 @@ proc applyMaterial(
     glUniform1i(u.useNormalTexture, useNormalTexture.ord.GLint)
 
   var cutoff = material.alphaCutoff
-  case material.alphaMode
+  let alphaMode = if ctx.iblEnvironment.specular != 0: material.alphaMode
+    else: material.legacyAlphaMode
+  case alphaMode
   of MaskAlphaMode:
     ctx.setBlendCached(false)
     ctx.setDepthMaskCached(true)
@@ -1466,7 +1531,7 @@ proc applyMaterial(
     return
 
   glUniform1i(u.unlitMaterial, material.unlit.ord.GLint)
-  glUniform1i(u.opaqueMaterial, (material.alphaMode == OpaqueAlphaMode).ord.GLint)
+  glUniform1i(u.opaqueMaterial, (alphaMode == OpaqueAlphaMode).ord.GLint)
   glUniform4f(
     u.baseColorFactor,
     material.baseColorFactor.r,
@@ -1478,6 +1543,26 @@ proc applyMaterial(
   glUniform1f(u.metallicFactor, material.metallicFactor)
   glUniform1f(u.roughnessFactor, material.roughnessFactor)
   glUniform1f(u.transmissionFactor, material.transmissionFactor)
+  # The spec's explicit IOR=0 compatibility mode represents positive infinity.
+  # At 1e8 the float32 Fresnel ratio rounds to exactly one without infinities.
+  glUniform1f(u.materialIor, if material.hasIor and material.ior == 0: 1e8'f
+    elif material.ior > 0: material.ior else: 1.5'f)
+  glUniform1f(u.thicknessFactor, material.thicknessFactor)
+  glUniform1f(u.attenuationDistance, material.attenuationDistance)
+  glUniform3f(u.attenuationColor, material.attenuationColor.x,
+    material.attenuationColor.y, material.attenuationColor.z)
+  glUniform1i(u.hasTransmissionTexture, (materialData.transmissionId != 0).GLint)
+  glUniform1i(u.hasThicknessTexture, (materialData.thicknessId != 0).GLint)
+  setTextureTransformUniform(u.transmissionTransform, material.transmissionTransform)
+  setTextureTransformUniform(u.thicknessTransform, material.thicknessTransform)
+  let specularColor = if material.hasSpecular: material.specularColorFactor else: vec3(1)
+  glUniform1f(u.specularFactor, if material.hasSpecular: material.specularFactor else: 1.0'f)
+  glUniform3f(u.specularColorFactor, specularColor.x, specularColor.y, specularColor.z)
+  glUniform1i(u.sheenEnabled, (ctx.iblEnvironment.charlie != 0 and
+    material.sheenColorFactor != vec3(0)).GLint)
+  glUniform3f(u.sheenColorFactor, material.sheenColorFactor.x,
+    material.sheenColorFactor.y, material.sheenColorFactor.z)
+  glUniform1f(u.sheenRoughnessFactor, material.sheenRoughnessFactor)
   setTextureTransformUniform(
     u.metallicRoughnessTransform,
     material.metallicRoughnessTransform
@@ -1520,9 +1605,20 @@ proc renderPbrPrimitive(
     return
   let pbrUniforms = ctx.pbrUniforms
 
+  if deferBlend and ctx.iblEnvironment.specular != 0:
+    let entry = BlendEntry(node: owner, primitive: primitive,
+      transform: transform, tint: tint, root: root,
+      useShadow: useShadow, lightSpace: lightSpace, shadowTex: shadowTex)
+    if primitive.material != nil and (primitive.material.hasTransmission or
+        primitive.material.transmissionFactor > 0):
+      ctx.transmitted.add(entry)
+      return
+    ctx.backgroundDraws.add(entry)
+
   let isBlend =
     (primitive.material != nil and
-      primitive.material.alphaMode == BlendAlphaMode) or
+      (primitive.material.alphaMode == BlendAlphaMode or
+        (ctx.iblEnvironment.specular == 0 and primitive.material.legacyAlphaMode == BlendAlphaMode))) or
     tint.a < 1
   if deferBlend and isBlend:
     blended.add(BlendEntry(
@@ -1553,6 +1649,8 @@ proc renderPbrPrimitive(
   var
     modelArray = transform
     normalArray = transform.normalMatrix
+  glUniform3f(pbrUniforms.volumeScale, transform[0].xyz.length,
+    transform[1].xyz.length, transform[2].xyz.length)
   glUniformMatrix4fv(
     pbrUniforms.model,
     1,
@@ -1582,6 +1680,10 @@ proc renderPbrPrimitive(
   let primitiveData = primitive.data
   glBindVertexArray(primitiveData.vertexArrayId)
 
+  # Lazy material uploads bind on the active texture unit. Bind pass textures
+  # afterward so a first-use upload cannot replace the transmission snapshot.
+  ctx.applyMaterial(primitive, shadowTex)
+
   ctx.bindTextureCached(
     5,
     GL_TEXTURE_CUBE_MAP,
@@ -1590,8 +1692,11 @@ proc renderPbrPrimitive(
   if ctx.iblEnvironment.specular != 0:
     ctx.bindTextureCached(7, GL_TEXTURE_CUBE_MAP, ctx.iblEnvironment.diffuse)
     ctx.bindTextureCached(8, GL_TEXTURE_2D, ctx.iblEnvironment.lut)
-  ctx.applyMaterial(primitive, shadowTex)
-
+    ctx.bindTextureCached(9, GL_TEXTURE_CUBE_MAP, ctx.iblEnvironment.charlie)
+    ctx.bindTextureCached(10, GL_TEXTURE_2D, ctx.iblEnvironment.charlieLut)
+    ctx.bindTextureCached(11, GL_TEXTURE_2D, ctx.iblEnvironment.sheenEnergyLut)
+    ctx.bindTextureCached(12, GL_TEXTURE_2D,
+      if ctx.transmissionBackground: 0.GLuint else: ctx.transmissionTarget.texture)
   if tint.a < 1 and (
     primitive.material == nil or
     primitive.material.alphaMode != BlendAlphaMode
@@ -1716,44 +1821,106 @@ proc renderPbrNode(
         root=rootNode
       )
 
+proc updateDirectionalLights(ctx: PbrContext, root: Node) =
+  ## Authored lights use the same animated world transforms as the meshes.
+  ctx.directionalLightCount = 0
+  if ctx.iblEnvironment.specular == 0: return
+  proc visit(node: Node) =
+    if node == nil or not node.visible: return
+    if node.directionalLight != nil:
+      let i = ctx.directionalLightCount.int
+      if i >= ctx.directionalLightDirections.len:
+        raise newException(ValueError, "IBL supports at most 8 authored directional lights")
+      let direction = (node.mat * vec4(0, 0, -1, 0)).xyz
+      if direction.lengthSq > 0:
+        ctx.directionalLightDirections[i] = normalize(direction)
+        let light = node.directionalLight
+        ctx.directionalLightColors[i] = vec3(light.color.r, light.color.g, light.color.b) * light.intensity
+        inc ctx.directionalLightCount
+    for child in node.nodes: visit(child)
+  visit(root)
+
+proc sortByDepth(ctx: PbrContext, entries: var seq[BlendEntry]) =
+  ## Same indexed-vertex centroid and view-space depth as the reference.
+  ## Compute once per primitive, rather than walking its vertices in the sort.
+  var sorted: seq[tuple[depth: float32, entry: BlendEntry]]
+  for entry in entries:
+    let primitive = entry.primitive
+    var center = vec3(0)
+    var count = 0
+    if primitive.indices16.len > 0:
+      for index in primitive.indices16: center += primitive.points[index]
+      count = primitive.indices16.len
+    elif primitive.indices32.len > 0:
+      for index in primitive.indices32: center += primitive.points[index]
+      count = primitive.indices32.len
+    else:
+      for point in primitive.points: center += point
+      count = primitive.points.len
+    if count > 0: center /= count.float32
+    sorted.add(((ctx.view * entry.transform * vec4(center, 1)).z, entry))
+  sorted.sort(proc(a, b: tuple[depth: float32, entry: BlendEntry]): int = cmp(a.depth, b.depth))
+  for i, item in sorted: entries[i] = item.entry
+
+proc replay(ctx: PbrContext, entry: BlendEntry) =
+  ctx.updateDirectionalLights(entry.root)
+  ctx.deferred.setLen(0)
+  renderPbrPrimitive(entry.primitive, entry.transform, ctx.view, ctx.proj,
+    entry.tint, ctx.ambientLightColor, ctx.sunLightDirection, ctx.sunLightColor,
+    ctx.rimLightDirection, ctx.rimLightColor, ctx.debugView, ctx.cameraPosition,
+    useShadow=entry.useShadow, lightSpace=entry.lightSpace, shadowTex=entry.shadowTex,
+    deferBlend=false, blended=ctx.deferred, ctx=ctx, owner=entry.node, root=entry.root)
+
+proc flushTransmission(ctx: PbrContext) =
+  if ctx.transmitted.len == 0:
+    ctx.backgroundDraws.setLen(0)
+    return
+  # Opaque geometry has already reached the final target. Replay everything
+  # except transmission into a separate snapshot, including ordinary alpha.
+  # Replay uses the same evaluated pose: no animation is advanced here.
+  ctx.transmissionBackground = true
+  try:
+    ctx.transmissionTarget.beginBackground(ctx.clearColor)
+    ctx.invalidateGlState()
+    ctx.invalidateUniformCache()
+    if ctx.drawSkybox:
+      drawSkybox(ctx, ctx.view, ctx.proj, ctx.environmentMap, ctx.skyboxLod)
+      ctx.invalidateGlState()
+    for entry in ctx.backgroundDraws:
+      if entry.tint.a >= 1 and (entry.primitive.material == nil or
+          entry.primitive.material.alphaMode != BlendAlphaMode):
+        ctx.replay(entry)
+    ctx.sortByDepth(ctx.blended)
+    for entry in ctx.blended: ctx.replay(entry)
+    ctx.transmissionTarget.resolveBackground()
+  finally:
+    ctx.transmissionTarget.restore()
+    ctx.transmissionBackground = false
+    ctx.invalidateGlState()
+    ctx.invalidateUniformCache()
+  ctx.sortByDepth(ctx.transmitted)
+  for entry in ctx.transmitted: ctx.replay(entry)
+  ctx.backgroundDraws.setLen(0)
+  ctx.transmitted.setLen(0)
+
 proc flushBlended(ctx: PbrContext) =
   ## Renders deferred blended primitives back-to-front. Entries replay with
   ## the tint captured at defer time; shadows are not sampled in the blended
   ## pass, matching the pre-pass behavior.
   if ctx.blended.len == 0:
     return
-  ctx.blended.sort(proc(a, b: BlendEntry): int =
-    let
-      pa = (a.transform * vec4(0, 0, 0, 1)).xyz
-      pb = (b.transform * vec4(0, 0, 0, 1)).xyz
-      da = (ctx.cameraPosition - pa).lengthSq
-      db = (ctx.cameraPosition - pb).lengthSq
-    if da > db: -1 elif da < db: 1 else: 0
-  )
-  for entry in ctx.blended:
-    ctx.deferred.setLen(0)
-    renderPbrPrimitive(
-      entry.primitive,
-      entry.transform,
-      ctx.view,
-      ctx.proj,
-      entry.tint,
-      ctx.ambientLightColor,
-      ctx.sunLightDirection,
-      ctx.sunLightColor,
-      ctx.rimLightDirection,
-      ctx.rimLightColor,
-      ctx.debugView,
-      ctx.cameraPosition,
-      useShadow=false,
-      lightSpace=mat4(),
-      shadowTex=0,
-      deferBlend=false,
-      blended=ctx.deferred,
-      ctx=ctx,
-      owner=entry.node,
-      root=entry.root
+  if ctx.iblEnvironment.specular != 0:
+    ctx.sortByDepth(ctx.blended)
+  else:
+    ctx.blended.sort(proc(a, b: BlendEntry): int =
+      let
+        pa = (a.transform * vec4(0, 0, 0, 1)).xyz
+        pb = (b.transform * vec4(0, 0, 0, 1)).xyz
+        da = (ctx.cameraPosition - pa).lengthSq
+        db = (ctx.cameraPosition - pb).lengthSq
+      if da > db: -1 elif da < db: 1 else: 0
     )
+  for entry in ctx.blended: ctx.replay(entry)
   ctx.blended.setLen(0)
 
 proc abortPass(ctx: PbrContext) =
@@ -1762,6 +1929,10 @@ proc abortPass(ctx: PbrContext) =
   ## every cached value so the next draw starts clean.
   ctx.blended.setLen(0)
   ctx.deferred.setLen(0)
+  ctx.backgroundDraws.setLen(0)
+  ctx.transmitted.setLen(0)
+  ctx.transmissionTarget.restore()
+  ctx.transmissionBackground = false
   ctx.passDepth = 0
   try:
     glDisable(GL_BLEND)
@@ -1779,17 +1950,22 @@ proc endPass*(ctx: PbrContext) =
   ## GL state (blend off, depth writes on, CCW front faces, culling on).
   doAssert ctx != nil, "PBR context must not be nil."
   doAssert ctx.passDepth > 0, "endPass without matching beginPass."
-  if ctx.passDepth == 1:
-    ctx.flushBlended()
-    glDisable(GL_BLEND)
-    glDepthMask(GL_TRUE)
-    glFrontFace(GL_CCW)
-    glEnable(GL_CULL_FACE)
-    ctx.glState.blend = 0
-    ctx.glState.depthMask = 1
-    ctx.glState.frontFaceCw = 0
-    ctx.glState.cullFace = 1
-  dec ctx.passDepth
+  try:
+    if ctx.passDepth == 1:
+      ctx.flushTransmission()
+      ctx.flushBlended()
+      glDisable(GL_BLEND)
+      glDepthMask(GL_TRUE)
+      glFrontFace(GL_CCW)
+      glEnable(GL_CULL_FACE)
+      ctx.glState.blend = 0
+      ctx.glState.depthMask = 1
+      ctx.glState.frontFaceCw = 0
+      ctx.glState.cullFace = 1
+    dec ctx.passDepth
+  except:
+    ctx.abortPass()
+    raise
 
 proc drawPbr(
   node: Node,
@@ -1810,6 +1986,7 @@ proc drawPbr(
   var completed = false
   try:
     node.updateTransforms(ctx.transform, ctx.useTrs)
+    ctx.updateDirectionalLights(node)
 
     renderPbrNode(
       node,
@@ -2027,6 +2204,7 @@ proc drawPbrWithShadow(
 
     let (lightView, lightProj, lightSpace, _) =
       getShadowMatrices(node, ctx.transform, ctx.sunLightDirection)
+    ctx.updateDirectionalLights(node)
 
     # Save viewport and framebuffer.
     var
