@@ -15,6 +15,7 @@ const SupportedExtensions = [
   "KHR_materials_clearcoat",
   "KHR_materials_iridescence",
   "KHR_materials_specular",
+  "KHR_materials_sheen",
   "KHR_materials_volume",
   "KHR_materials_ior",
   "KHR_materials_unlit",
@@ -1334,6 +1335,10 @@ proc defaultRuntimeMaterial(): Material =
   result.diffuseTransmissionColorTransform = TextureTransform(scale: vec2(1))
   result.anisotropySampler = defaultTextureSampler()
   result.anisotropyTransform = TextureTransform(scale: vec2(1))
+  result.sheenColorSampler = defaultTextureSampler()
+  result.sheenRoughnessSampler = defaultTextureSampler()
+  result.sheenColorTransform = TextureTransform(scale: vec2(1))
+  result.sheenRoughnessTransform = TextureTransform(scale: vec2(1))
   result.specularFactor = 1
   result.specularColorFactor = vec3(1)
   result.specularSampler = defaultTextureSampler()
@@ -1635,6 +1640,9 @@ proc loadPrimitive(
     loadDataTexture(diffuseTransmission, material.diffuseTransmissionTexture)
     loadDataTexture(diffuseTransmissionColor, material.diffuseTransmissionColorTexture)
     loadDataTexture(anisotropy, material.anisotropyTexture)
+    loadDataTexture(sheenColor, material.sheenColorTexture)
+    loadDataTexture(sheenRoughness, material.sheenRoughnessTexture)
+    result.material.hasSheen = material.hasSheen
     loadDataTexture(specular, material.specularTexture)
     loadDataTexture(specularColor, material.specularColorTexture)
     loadDataTexture(iridescence, material.iridescenceTexture)
@@ -2186,6 +2194,8 @@ proc loadModelJsonInternal(
       material.diffuseTransmissionTexture = defaultMaterialTexture()
       material.diffuseTransmissionColorTexture = defaultMaterialTexture()
       material.anisotropyTexture = defaultMaterialTexture()
+      material.sheenColorTexture = defaultMaterialTexture()
+      material.sheenRoughnessTexture = defaultMaterialTexture()
       material.specularTexture = defaultMaterialTexture()
       material.specularColorTexture = defaultMaterialTexture()
       material.iridescenceTexture = defaultMaterialTexture()
@@ -2338,11 +2348,18 @@ proc loadModelJsonInternal(
           readSpecularTexture(specularColorTexture)
         if "KHR_materials_sheen" in extensions:
           let sheen = extensions["KHR_materials_sheen"]
-          if "sheenColorTexture" notin sheen and "sheenRoughnessTexture" notin sheen:
-            material.sheenRoughnessFactor = sheen{"sheenRoughnessFactor"}.getFloat().float32
-            if "sheenColorFactor" in sheen:
-              let c = sheen["sheenColorFactor"]
-              material.sheenColorFactor = vec3(c[0].getFloat(), c[1].getFloat(), c[2].getFloat())
+          material.hasSheen = true
+          material.sheenRoughnessFactor = sheen{"sheenRoughnessFactor"}.getFloat().float32
+          if "sheenColorFactor" in sheen:
+            let c = sheen["sheenColorFactor"]
+            material.sheenColorFactor = vec3(c[0].getFloat(), c[1].getFloat(), c[2].getFloat())
+          template readSheenTexture(slot: untyped) =
+            if astToStr(slot) in sheen:
+              let texture = sheen[astToStr(slot)]
+              material.slot.index = texture["index"].getInt()
+              readTextureTransform(texture, material.slot)
+          readSheenTexture(sheenColorTexture)
+          readSheenTexture(sheenRoughnessTexture)
         material.unlit = "KHR_materials_unlit" in extensions
         if "KHR_materials_iridescence" in extensions:
           let film = extensions["KHR_materials_iridescence"]

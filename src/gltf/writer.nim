@@ -454,7 +454,7 @@ proc writeGLB*(
       if "clearcoatNormalTexture" in coat:
         coat["clearcoatNormalTexture"]["scale"] = %mat.clearcoatNormalScale
       matNode["extensions"]["KHR_materials_clearcoat"] = coat
-    if mat.hasSpecular or mat.sheenColorFactor != vec3(0):
+    if mat.hasSpecular or mat.hasSheen or mat.sheenColorFactor != vec3(0):
       if "extensions" notin matNode: matNode["extensions"] = newJObject()
       if mat.hasSpecular:
         let specular = %*{
@@ -467,11 +467,17 @@ proc writeGLB*(
           specular["specularColorTexture"] = dataTextureInfo(mat.specularColor, mat.specularColorKtx2,
             mat.specularColorName, mat.specularColorSampler, mat.specularColorTransform, tsColor)
         matNode["extensions"]["KHR_materials_specular"] = specular
-      if mat.sheenColorFactor != vec3(0):
-        matNode["extensions"]["KHR_materials_sheen"] = %*{
+      if mat.hasSheen or mat.sheenColorFactor != vec3(0):
+        let sheen = %*{
           "sheenRoughnessFactor": mat.sheenRoughnessFactor,
-          "sheenColorFactor": [mat.sheenColorFactor.x, mat.sheenColorFactor.y, mat.sheenColorFactor.z]
-        }
+          "sheenColorFactor": [mat.sheenColorFactor.x, mat.sheenColorFactor.y, mat.sheenColorFactor.z]}
+        if mat.sheenColor != nil or mat.sheenColorKtx2.len > 0:
+          sheen["sheenColorTexture"] = dataTextureInfo(mat.sheenColor, mat.sheenColorKtx2,
+            mat.sheenColorName, mat.sheenColorSampler, mat.sheenColorTransform, tsColor)
+        if mat.sheenRoughness != nil or mat.sheenRoughnessKtx2.len > 0:
+          sheen["sheenRoughnessTexture"] = dataTextureInfo(mat.sheenRoughness, mat.sheenRoughnessKtx2,
+            mat.sheenRoughnessName, mat.sheenRoughnessSampler, mat.sheenRoughnessTransform)
+        matNode["extensions"]["KHR_materials_sheen"] = sheen
 
     if not isPlaceholder(mat.normal, mat.normalPlaceholder) and
         mat.hasNormalTexture:

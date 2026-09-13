@@ -61,6 +61,8 @@ type
     environmentRotation: GLint
     hasVertexTangent: GLint
     sheenEnabled, sheenColorFactor, sheenRoughnessFactor: GLint
+    hasSheenColorTexture, hasSheenRoughnessTexture: GLint
+    sheenColorTransform, sheenRoughnessTransform: TextureTransformUniforms
     specularFactor, specularColorFactor: GLint
     hasSpecularTexture, hasSpecularColorTexture: GLint
     specularTransform, specularColorTransform: TextureTransformUniforms
@@ -182,7 +184,7 @@ type
     ## while a pass is active. Unknown values force a real GL call.
     programBound: bool
     activeUnit: int
-    boundTexture: array[25, GLuint]
+    boundTexture: array[27, GLuint]
     textureEpoch: uint64
     blend: int8
     depthMask: int8
@@ -308,6 +310,10 @@ proc loadPbrUniforms(shader: GLuint): PbrUniforms =
   result.environmentMipCount = uniformLocation(shader, "environmentMipCount")
   result.environmentRotation = uniformLocation(shader, "environmentRotation")
   result.hasVertexTangent = uniformLocation(shader, "hasVertexTangent")
+  result.hasSheenColorTexture = uniformLocation(shader, "hasSheenColorTexture")
+  result.hasSheenRoughnessTexture = uniformLocation(shader, "hasSheenRoughnessTexture")
+  result.sheenColorTransform = loadTextureTransformUniforms(shader, "sheenColor")
+  result.sheenRoughnessTransform = loadTextureTransformUniforms(shader, "sheenRoughness")
   result.sheenEnabled = uniformLocation(shader, "sheenEnabled")
   result.sheenColorFactor = uniformLocation(shader, "sheenColorFactor")
   result.sheenRoughnessFactor = uniformLocation(shader, "sheenRoughnessFactor")
@@ -847,7 +853,8 @@ proc attachIblEnvironment*(ctx: PbrContext, environment: IblEnvironment,
       ("anisotropyTexture", 17), ("clearcoatTexture", 18),
       ("clearcoatRoughnessTexture", 19), ("clearcoatNormalTexture", 20),
       ("iridescenceTexture", 21), ("iridescenceThicknessTexture", 22),
-      ("specularTexture", 23), ("specularColorTexture", 24)]:
+      ("specularTexture", 23), ("specularColorTexture", 24),
+      ("sheenColorTexture", 25), ("sheenRoughnessTexture", 26)]:
     glUniform1i(uniformLocation(shader, name.cstring), unit.GLint)
   glUniform1f(uniformLocation(shader, "transmissionBufferLod"), log2(TransmissionSize.float32))
   ctx.passValues = PbrPassValues()
@@ -1143,6 +1150,12 @@ proc uploadMaterialToGpu(material: Material) =
   if data.anisotropyId == 0:
     uploadTextureToGpu(data.anisotropyId, material.anisotropy,
       material.anisotropyKtx2, material.anisotropySampler)
+  if data.sheenColorId == 0:
+    uploadTextureToGpu(data.sheenColorId, material.sheenColor,
+      material.sheenColorKtx2, material.sheenColorSampler, srgb = true)
+  if data.sheenRoughnessId == 0:
+    uploadTextureToGpu(data.sheenRoughnessId, material.sheenRoughness,
+      material.sheenRoughnessKtx2, material.sheenRoughnessSampler)
   if data.specularId == 0:
     uploadTextureToGpu(data.specularId, material.specular, material.specularKtx2, material.specularSampler)
   if data.specularColorId == 0:
@@ -1174,6 +1187,8 @@ proc clearMaterialFromGpu(material: Material) =
   if data.thicknessId != 0: glDeleteTextures(1, data.thicknessId.addr)
   if data.diffuseTransmissionId != 0: glDeleteTextures(1, data.diffuseTransmissionId.addr)
   if data.anisotropyId != 0: glDeleteTextures(1, data.anisotropyId.addr)
+  if data.sheenColorId != 0: glDeleteTextures(1, data.sheenColorId.addr)
+  if data.sheenRoughnessId != 0: glDeleteTextures(1, data.sheenRoughnessId.addr)
   if data.specularId != 0: glDeleteTextures(1, data.specularId.addr)
   if data.specularColorId != 0: glDeleteTextures(1, data.specularColorId.addr)
   if data.iridescenceId != 0: glDeleteTextures(1, data.iridescenceId.addr)
@@ -1576,6 +1591,8 @@ proc applyMaterial(
     ctx.bindTextureCached(22, GL_TEXTURE_2D, materialData.iridescenceThicknessId)
     ctx.bindTextureCached(23, GL_TEXTURE_2D, materialData.specularId)
     ctx.bindTextureCached(24, GL_TEXTURE_2D, materialData.specularColorId)
+    ctx.bindTextureCached(25, GL_TEXTURE_2D, materialData.sheenColorId)
+    ctx.bindTextureCached(26, GL_TEXTURE_2D, materialData.sheenRoughnessId)
   else:
     ctx.bindTextureCached(0, GL_TEXTURE_2D, materialData.baseColorId)
     ctx.bindTextureCached(4, GL_TEXTURE_2D, materialData.emissiveId)
@@ -1593,7 +1610,8 @@ proc applyMaterial(
         (17, material.anisotropySampler), (18, material.clearcoatSampler),
         (19, material.clearcoatRoughnessSampler), (20, material.clearcoatNormalSampler),
         (21, material.iridescenceSampler), (22, material.iridescenceThicknessSampler),
-        (23, material.specularSampler), (24, material.specularColorSampler)]:
+        (23, material.specularSampler), (24, material.specularColorSampler),
+        (25, material.sheenColorSampler), (26, material.sheenRoughnessSampler)]:
       if ctx.glState.boundTexture[unit] == 0: continue
       if sampler.magFilter != NearestMagFilter and sampler.minFilter in
           {NearestMipmapLinearMinFilter, LinearMipmapLinearMinFilter}:
@@ -1678,6 +1696,10 @@ proc applyMaterial(
   let specularColor = if material.hasSpecular: material.specularColorFactor else: vec3(1)
   glUniform1f(u.specularFactor, if material.hasSpecular: material.specularFactor else: 1.0'f)
   glUniform3f(u.specularColorFactor, specularColor.x, specularColor.y, specularColor.z)
+  glUniform1i(u.hasSheenColorTexture, (materialData.sheenColorId != 0).GLint)
+  glUniform1i(u.hasSheenRoughnessTexture, (materialData.sheenRoughnessId != 0).GLint)
+  setTextureTransformUniform(u.sheenColorTransform, material.sheenColorTransform)
+  setTextureTransformUniform(u.sheenRoughnessTransform, material.sheenRoughnessTransform)
   glUniform1i(u.sheenEnabled, (ctx.iblEnvironment.charlie != 0 and
     material.sheenColorFactor != vec3(0)).GLint)
   glUniform3f(u.sheenColorFactor, material.sheenColorFactor.x,

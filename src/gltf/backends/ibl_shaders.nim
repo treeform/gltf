@@ -14,6 +14,11 @@ var
   charlieLut*: Uniform[Sampler2d]
   sheenEnergyLut*: Uniform[Sampler2d]
   sheenEnabled*: Uniform[bool]
+  sheenColorTexture*, sheenRoughnessTexture*: Uniform[Sampler2d]
+  hasSheenColorTexture*, hasSheenRoughnessTexture*: Uniform[bool]
+  sheenColorTexCoord*, sheenRoughnessTexCoord*: Uniform[int]
+  sheenColorUvOffset*, sheenColorUvScale*, sheenRoughnessUvOffset*, sheenRoughnessUvScale*: Uniform[Vec2]
+  sheenColorUvRotation*, sheenRoughnessUvRotation*: Uniform[float32]
   sheenColorFactor*: Uniform[Vec3]
   sheenRoughnessFactor*: Uniform[float32]
   specularFactor*: Uniform[float32]
@@ -124,9 +129,9 @@ func sheenBrdf(nDotL, nDotV, nDotH, roughness: float32): float32 =
       sheenLambda(nDotL, alpha)) * (4.0'f * nDotV * nDotL)), 0.0'f, 1.0'f)
   result = distribution * visibility
 
-proc sheenScaling(nDot: float32): float32 =
-  result = 1.0'f - max(sheenColorFactor.r, max(sheenColorFactor.g, sheenColorFactor.b)) *
-    texture(sheenEnergyLut, vec2(nDot, sheenRoughnessFactor)).r
+proc sheenScaling(nDot: float32, sheenColor: Vec3, roughness: float32): float32 =
+  result = 1.0'f - max(sheenColor.r, max(sheenColor.g, sheenColor.b)) *
+    texture(sheenEnergyLut, vec2(nDot, roughness)).r
 
 proc textureLod(buffer: Uniform[Sampler2d], pos: Vec2, lod: float32): Vec4 =
   ## Shady recognizes the GLSL builtin; its current CPU API only declares Cube.
@@ -390,6 +395,16 @@ proc gltfIblFrag*(
     anisotropicT = normalize(t) * direction.x + normalize(b) * direction.y
     anisotropicB = cross(ng, anisotropicT)
     anisotropy = clamp(anisotropy, 0.0'f, 1.0'f)
+  var sheenColor: Vec3 = sheenColorFactor
+  var sheenRoughness = sheenRoughnessFactor
+  if hasSheenColorTexture:
+    let sheenUv: Vec2 = transformUv(selectUv(sheenColorTexCoord, uv, uv1),
+      sheenColorUvOffset, sheenColorUvScale, sheenColorUvRotation)
+    sheenColor *= texture(sheenColorTexture, sheenUv).rgb
+  if hasSheenRoughnessTexture:
+    let sheenUv: Vec2 = transformUv(selectUv(sheenRoughnessTexCoord, uv, uv1),
+      sheenRoughnessUvOffset, sheenRoughnessUvScale, sheenRoughnessUvRotation)
+    sheenRoughness *= texture(sheenRoughnessTexture, sheenUv).a
   var specularWeight = specularFactor
   var specularTint: Vec3 = specularColorFactor
   if hasSpecularTexture:
@@ -479,9 +494,9 @@ proc gltfIblFrag*(
   var radiance: Vec3 = mix(dielectric, metal, metallic)
   if sheenEnabled:
     let sheen: Vec3 = textureLod(charlieEnvironment, environmentRotation * reflection,
-      sheenRoughnessFactor * (environmentMipCount - 1.0'f)).rgb * environmentMapStrength *
-      sheenColorFactor * texture(charlieLut, vec2(nDotV, sheenRoughnessFactor)).b
-    radiance = sheen + radiance * sheenScaling(nDotV)
+      sheenRoughness * (environmentMipCount - 1.0'f)).rgb * environmentMapStrength *
+      sheenColor * texture(charlieLut, vec2(nDotV, sheenRoughness)).b
+    radiance = sheen + radiance * sheenScaling(nDotV, sheenColor, sheenRoughness)
   if coat > 0.0'f:
     let coatReflection: Vec3 = normalize(reflect(-v, coatNormal))
     let coatRadiance: Vec3 = textureLod(environmentMap, environmentRotation * coatReflection,
@@ -559,9 +574,9 @@ proc gltfIblFrag*(
         direct *= 1.0'f - iridescence
         throughLight = throughLight * (1.0'f - iridescence) + filmDirect * iridescence
       if sheenEnabled:
-        direct = sheenColorFactor * sheenBrdf(nDotL, nDotV, nDotH, sheenRoughnessFactor) * exitAttenuation +
-          direct * min(sheenScaling(nDotV), sheenScaling(nDotL))
-        throughLight *= min(sheenScaling(nDotV), sheenScaling(nDotL))
+        direct = sheenColor * sheenBrdf(nDotL, nDotV, nDotH, sheenRoughness) * exitAttenuation +
+          direct * min(sheenScaling(nDotV, sheenColor, sheenRoughness), sheenScaling(nDotL, sheenColor, sheenRoughness))
+        throughLight *= min(sheenScaling(nDotV, sheenColor, sheenRoughness), sheenScaling(nDotL, sheenColor, sheenRoughness))
       if coat > 0.0'f:
         let coatDirect = clearcoatBrdf(coatNormal, v, safeNormalize(pointToLight - ray), h,
           coatRoughness) * exitAttenuation

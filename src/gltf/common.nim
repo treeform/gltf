@@ -282,6 +282,11 @@ type
     specularKtx2*, specularName*, specularColorKtx2*, specularColorName*: string
     specularTransform*, specularColorTransform*: TextureTransform
     specularSampler*, specularColorSampler*: TextureSampler
+    hasSheen*: bool
+    sheenColor*, sheenRoughness*: Image
+    sheenColorKtx2*, sheenColorName*, sheenRoughnessKtx2*, sheenRoughnessName*: string
+    sheenColorTransform*, sheenRoughnessTransform*: TextureTransform
+    sheenColorSampler*, sheenRoughnessSampler*: TextureSampler
     sheenColorFactor*: Vec3
     sheenRoughnessFactor*: float32
     hasAnisotropy*: bool

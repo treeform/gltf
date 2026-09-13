@@ -530,6 +530,62 @@ let metalWithSpecular = capture()
 material.specularFactor = 0
 doAssert capture() == metalWithSpecular, "Specular extension must not attenuate metals"
 echo "Specular GPU: reflection strength/alpha, sRGB color, UV1/offset and metallic independence passed"
+
+# Isolate sheen under constant environment lighting, then test direct roughness.
+renderer.release(root)
+ctx.iblEnvironment.charlie = constantTexture(GL_TEXTURE_CUBE_MAP, [0.4'f, 0.4, 0.4, 1])
+ctx.iblEnvironment.charlieLut = constantTexture(GL_TEXTURE_2D, [0'f, 0, 1, 1])
+ctx.iblEnvironment.sheenEnergyLut = constantTexture(GL_TEXTURE_2D, [0.5'f, 0, 0, 1])
+ctx.sunLightColor = color(0, 0, 0, 0)
+material.metallicFactor = 0
+material.baseColorFactor = color(0, 0, 0, 1)
+material.sheenColorFactor = vec3(1)
+material.sheenRoughnessFactor = 0.6
+let fullSheen = capture()
+doAssert fullSheen.pixel(32, 24).r > 100
+renderer.release(root)
+material.sheenColor = newImage(2, 1)
+material.sheenColor[0, 0] = rgbx(0, 0, 0, 255)
+material.sheenColor[1, 0] = rgbx(255, 255, 255, 0)
+material.sheenColorSampler.magFilter = NearestMagFilter
+material.sheenColorSampler.minFilter = NearestMinFilter
+material.sheenColorTransform.texCoord = 1
+let sheenMask = capture()
+doAssert difference(sheenMask.pixel(20, 16), fullSheen.pixel(20, 16)) <= 1
+doAssert sheenMask.pixel(44, 16).r < 3
+material.sheenColorTransform.offset.x = 0.5
+doAssert capture().pixel(20, 16).r < 3
+renderer.release(root)
+material.sheenColor = newImage(1, 1)
+material.sheenColor.fill(rgbx(128, 64, 192, 0))
+let sheenTint = capture().pixel(32, 24)
+renderer.release(root)
+material.sheenColor = nil
+material.sheenColorFactor = vec3(0.215861, 0.051269, 0.527115)
+doAssert difference(capture().pixel(32, 24), sheenTint) <= 1,
+  "Sheen RGB must use sRGB transfer and ignore alpha"
+material.sheenColorFactor = vec3(0)
+doAssert capture().pixel(32, 24).r < 3, "Zero sheen color must be neutral"
+ctx.iblEnvironment.intensityScale = 0
+ctx.sunLightColor = color(1, 1, 1, 1)
+ctx.sunLightDirection = vec3(0, 0, -1)
+ctx.cameraPosition = vec3(1000, 0, 200)
+material.sheenColorFactor = vec3(1)
+material.sheenRoughnessFactor = 0.4
+let sheenSmooth = capture().pixel(32, 24)
+material.sheenRoughnessFactor = 0.8
+let sheenRough = capture().pixel(32, 24)
+doAssert difference(sheenSmooth, sheenRough) > 5
+renderer.release(root)
+material.sheenRoughness = newImage(1, 1)
+material.sheenRoughness.fill(rgbx(0, 255, 0, 128))
+let sheenRoughMap = capture().pixel(32, 24)
+renderer.release(root)
+material.sheenRoughness = nil
+material.sheenRoughnessFactor = 0.8'f * 128.0'f / 255.0'f
+doAssert difference(capture().pixel(32, 24), sheenRoughMap) <= 1,
+  "Sheen roughness must use linear alpha, independent of RGB"
+echo "Sheen GPU: sRGB color, alpha roughness, zero color, UV1/offset and direct lighting passed"
 ctx.destroy()
 renderer.release(root)
 renderer.shutdown()
