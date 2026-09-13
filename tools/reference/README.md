@@ -273,6 +273,67 @@ The corrected batch passes `--strict` for all 61 captures; this does not imply
 identical pixels. MorphPrimitivesTest's Pixie score fell from 2.008% to 0.0054%,
 and 99.65% of its pixels are within two channel values of the unchanged master.
 
+## Full catalog snapshot
+
+`tests/reference/manifest-all.json` covers 149 model files and 301 captures:
+every entry in the pinned 150-model catalog except ABeautifulGame. Each model
+uses its standard `glTF` variant and default scene/material variant. The suite
+includes a rest pose plus four samples per animation clip, including later and
+looping times. It does not enumerate every binary/compressed variant, camera,
+scene or material variant.
+
+All 301 masters were repeat-verified in headless Chrome in about 118 seconds.
+They are saved in `tests/reference/all`, with the same pinned renderer fork,
+lighting and source checksums as the smaller batches. Nim uses each case's
+explicit camera and absolute animation time. The full report keeps all poses
+of a file together and sorts unavailable comparisons first, then worst score.
+
+```sh
+# Build the native harness and compare the complete catalog snapshot.
+npm run compare:all -- --strict
+
+# Reuse the current harness.
+npm run compare:all -- --no-build --strict
+
+# Iterate on just one file without replacing the full report.
+npm run compare:all -- --case=Avocado --out=../../tests/tmp/reference-avocado
+
+# Refresh all 301 masters and verify each capture twice.
+npm run capture:all -- --verify
+
+# Rebuild the full manifest explicitly when changing the catalog selection.
+npm run capture:all -- --init --all-models --force --verify
+```
+
+The comparison report is `tests/tmp/reference-all/xray_report.html`.
+The full selection includes advanced materials, transmission and model lights;
+rendering these tests measures the current implementation and does not add
+support for those features. The fast 5-, 25-, 68- and 61-capture suites remain
+independent.
+
+The first full native run took 63 seconds, excluding compilation:
+
+| Capture outcome | Count |
+| --- | ---: |
+| Under the existing 2% Pixie threshold | 230 |
+| Rendered, above the threshold | 43 |
+| Skipped because a required extension is unsupported | 23 |
+| Loading error | 5 |
+
+All 149 files appear in the report: 137 rendered, 11 require unsupported
+extensions, and MeshoptCubeTest fails to load with `Invalid color component
+type: 5123` in each of its five captures. Among rendered files, 110 stay below
+the threshold in every capture and 27 have at least one larger difference.
+`--strict` returns failure for this snapshot and still writes the complete report.
+
+The largest RGB errors are VirtualCity, ScatteringSkull and USDShaderBallForGltf.
+VirtualCity's reference image is almost uniform, so its reference/view behavior
+needs investigation before attributing that score to Nim. Many other large
+differences exercise transmission, volume, iridescence or other advanced material
+features. The full run adds coverage, without implementing those features.
+All 154 masters from the earlier expanded/batch-2/batch-3 suites retain exactly
+the same PNG hashes in the full snapshot.
+
 ## Skinned normal correction in the Treeform fork
 
 A controlled comparison identified the dominant RiggedSimple/CesiumMan
