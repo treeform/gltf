@@ -31,6 +31,10 @@ npm run compare
 # Reuse the compiled harness when only the manifest or models changed.
 npm run compare -- --no-build
 
+# Run the same manifest and master images through the native API backends.
+npm run compare -- --backend=directx
+npm run compare -- --backend=vulkan
+
 # Capture only one model's cases while working on it.
 npm run compare -- --case=SimpleMorph
 
@@ -55,6 +59,32 @@ The native comparison writes `tests/tmp/reference/xray_report.html`,
 the reference images. The five native captures take about 2.3 seconds on the
 development machine, excluding compilation. Native windows are hidden in
 manifest mode.
+
+`--backend` defaults to `opengl`. DirectX and Vulkan keep separate capture
+executables, build caches and output directories (`reference-directx` and
+`reference-vulkan`). Every metrics record names the actual backend; `--no-build`
+rejects an executable reporting a different backend. All three use the same
+Shady/Nim material shaders, exported HDR environment, linear HDR presentation,
+PBR Neutral tone map and transmission snapshot. Backend code manages GPU
+resources, descriptors and render passes. No separately maintained HLSL or
+Vulkan GLSL rendering shaders are used.
+
+DirectX and Vulkan require Windows and the `dx12` / `vk14` Nim packages,
+respectively. The Nim package selects Shady's `gltf-backend-parity` branch,
+tested at `647e11a5f7be255f88b9069bb538a1f063aacf8d`. Existing sibling Shady
+checkouts must also use that revision or a compatible descendant. This is a
+branch dependency, so fresh installs can receive later commits on that branch.
+Vulkan compiles Shady's generated GLSL using `glslangValidator` from the Vulkan
+SDK; `SHADY_SPIRV_COMPILER` can override its executable path. Builds using
+`-d:shadyBinaryShaders` use the checked-in SPIR-V files instead. Rebuild these
+from the shared Nim shaders with `nim r tools/build_backend_shaders.nim`
+from the repository root.
+
+The current full catalog passes all **301 captures from 149 model files** on
+DirectX 12 and Vulkan, with no skipped comparisons. Each backend's worst Pixie
+score is 1.178%, under the unchanged 2% threshold. These are actual native GPU
+captures against the existing masters. OpenGL also passed the full catalog;
+its 25-capture regression passes with the shared shader compiler changes.
 
 The report opens with a square overview card built with Pixie from 64×64
 thumbnails. Generated renders fill the top half; their X-rays occupy the same
@@ -330,8 +360,10 @@ rendering these tests measures the current implementation and does not add
 support for those features. The fast 5-, 25-, 68- and 61-capture suites remain
 independent.
 
-After the VirtualCity and velvet fixes, the full native run took 68 seconds,
-excluding compilation:
+The current full catalog passes all 301 captures on OpenGL, DirectX 12 and
+Vulkan. The following table records the earlier state immediately after the
+VirtualCity and velvet fixes, before the subsequent material work (68 seconds
+excluding compilation):
 
 | Capture outcome | Count |
 | --- | ---: |
@@ -340,9 +372,9 @@ excluding compilation:
 | Skipped because a required extension is unsupported | 23 |
 | Loading error | 0 |
 
-All 149 files appear in the report: 138 rendered and 11 require unsupported
-extensions. MeshoptCubeTest's normalized 16-bit RGBA colors now load correctly.
-`--strict` returns failure for this snapshot and still writes the complete report.
+In that earlier snapshot, all 149 files appeared: 138 rendered and 11 required
+unsupported extensions. MeshoptCubeTest's normalized 16-bit RGBA colors loaded
+correctly. `--strict` returned failure while writing the complete report.
 
 VirtualCity's blank reference was caused by culling the final screen quad after
 a mirrored mesh. The fork now disables culling in that pass; camera poses are
@@ -352,8 +384,8 @@ base color with blue sheen and tinted dielectric reflections. Supporting those
 constant factors, the Charlie environment/LUTs, energy compensation and its
 authored directional light reduces RGB MAE from 8.666 to 0.240/255 (96.1% within
 ±2). The same shading improves the other velvet chairs and sofas.
-Many remaining large differences exercise transmission, volume, iridescence or
-other advanced material features. These changes do not implement those features.
+The large differences at that stage exercised transmission, volume, iridescence
+and other advanced material features, which were addressed in subsequent work.
 All 154 masters from the earlier expanded/batch-2/batch-3 suites retain exactly
 the same PNG hashes in the full snapshot.
 
@@ -404,7 +436,8 @@ and the Xray report identify the fork and exact revision.
 
 ## Lighting and tone mapping
 
-The default native comparison now uses matching lighting on desktop OpenGL:
+The default native comparison uses matching lighting on desktop OpenGL,
+DirectX 12 and Vulkan:
 the shared neutral HDR studio, environment rotation 90 degrees, exposure 1,
 GGX image-based reflections with multiple scattering compensation, linear
 material evaluation and Khronos PBR Neutral tone mapping. Color/emissive
@@ -448,7 +481,7 @@ The HDR target is reused and resized on demand. Other contexts retain their
 existing procedural-lighting shader. Studio filtering is performed once by
 the capture tool; Nim does not need Chrome during native rendering.
 
-Transmission is automatic on the OpenGL IBL path. At the end of a PBR pass,
+Transmission is automatic on these IBL paths. At the end of a PBR pass,
 the renderer replays non-transmissive geometry (including alpha blends) into
 a 1024-square RGBA8 background with 4x MSAA, resolves it, and generates mipmaps.
 Glass then reads this fixed snapshot; roughness selects the mip level, while
@@ -463,7 +496,8 @@ The snapshot is reused as storage, but rebuilt each pass from the current pose.
 Scenes without transmission allocate no transmission target. Like the reference,
 this is a screen-space approximation: glass does not see other glass in its
 snapshot or off-screen objects. Dispersion and diffuse transmission/scattering
-are separate extensions and are not implemented by this pass.
+are separate extensions. Diffuse transmission/scattering is implemented in the
+shared material shader; chromatic dispersion is not implemented by this pass.
 
 ## Current comparison limits
 
@@ -481,15 +515,15 @@ tangents are saved in the morph bind pose. JPEG decoding differences account
 for part of the remaining pixel error. Passing the 2% Pixie threshold does not
 mean bit-identical output or full glTF conformance.
 
-This profile is implemented for desktop OpenGL. Constant-factor sheen and
-specular extensions and up to eight authored directional lights are integrated.
-Sheen/specular texture inputs, point/spot lights, other advanced
-material extensions, skybox presentation, fog and shadows still need integration;
-other native backends keep their existing path. Partial extensions remain outside
-the reader's fully supported list, including required-extension declarations.
-The five selected models do not use these extensions. Do not infer full-catalog
-coverage from this pilot. glTF standardizes materials, but environment,
-exposure and tone mapping must also agree for engines to look alike.
+The pilot measurements above predate the full-catalog work. The shared IBL
+profile now includes sheen/specular textures, anisotropy, clearcoat, iridescence,
+legacy specular/glossiness, diffuse transmission and authored directional,
+point and spot lights on OpenGL, DirectX 12 and Vulkan. Metal keeps its existing
+path. Passing the sampled scenes does not establish complete extension or
+backend coverage; for example, the new DirectX/Vulkan IBL path is not validated
+for KTX2 uploads, skybox presentation, fog or shadows. glTF standardizes
+materials, but environment, exposure and tone mapping must also agree for
+engines to look alike.
 
 Validation: `tests/ibl_pipeline.nim` exercises real GPU tone mapping with known
 HDR colors, three exposures and contrasting per-pixel flags. The five official

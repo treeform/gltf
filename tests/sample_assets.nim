@@ -8,12 +8,11 @@ when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal
 
 const
   BackendName =
-    when defined(useMetal4): "Metal"
-    elif defined(useDirectX): "DirectX"
-    elif defined(useVulkan): "Vulkan"
-    else: "OpenGL"
-  SupportsIbl = not defined(useDirectX) and not defined(useVulkan) and
-    (not defined(useMetal4) or defined(macosx))
+    when defined(useMetal4): "metal"
+    elif defined(useDirectX): "directx"
+    elif defined(useVulkan): "vulkan"
+    else: "opengl"
+  SupportsIbl = not defined(useMetal4) or defined(macosx)
   WindowSize = 512
   VerticalFov = 45'f
   FitPadding = 1.25'f
@@ -690,6 +689,7 @@ else: "") & entries.join("\n") & "\n</body></html>"
   for result in orderedResults:
     metrics.add(%*{
       "id": result.caseId,
+      "backend": BackendName,
       "label": result.captureLabel,
       "status": result.status,
       "message": result.message,
@@ -816,8 +816,9 @@ when SupportsIbl:
   if iblDirectory.len > 0:
     pbrContext.attachIblEnvironment(loadIblEnvironment(iblDirectory))
   else:
-    when not defined(useMetal4):
-      pbrContext.attachEnvironmentMap(loadDefaultEnvironmentMap())
+    when not defined(useDirectX) and not defined(useVulkan) and
+      not defined(useMetal4):
+        pbrContext.attachEnvironmentMap(loadDefaultEnvironmentMap())
 
 var results: seq[AssetResult]
 for i, modelPath in modelPaths:

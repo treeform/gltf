@@ -9,7 +9,8 @@ var
   hdrInput*: Uniform[Sampler2d]
   toneFlags*: Uniform[USampler2d]
   exposure*: Uniform[float32]
-  renderTextureYFlip*: Uniform[bool]
+  framebufferYDown*: Uniform[bool]
+  mipInput*: Uniform[Sampler2d]
   hasVertexTangent*: Uniform[bool]
   charlieEnvironment*: Uniform[SamplerCube]
   charlieLut*: Uniform[Sampler2d]
@@ -171,7 +172,7 @@ proc volumeAttenuation(radiance: Vec3, distance: float32): Vec3 =
 proc transmittedBackground(worldPos, ray: Vec3, roughness: float32): Vec3 =
   let clip = proj * view * vec4(worldPos + ray, 1.0'f)
   var sampleUv = (clip.xy / clip.w) * 0.5'f + vec2(0.5'f)
-  if renderTextureYFlip:
+  if framebufferYDown:
     sampleUv.y = 1.0'f - sampleUv.y
   let level = transmissionBufferLod * iorRoughness(roughness, materialIor)
   result = volumeAttenuation(textureLod(transmissionBuffer, sampleUv, level).rgb, length(ray))
@@ -630,12 +631,19 @@ proc hdrPostVert*(vertexPosition: Vec2, gl_Position: var Vec4, postUv: var Vec2)
   gl_Position = vec4(vertexPosition.x, vertexPosition.y, 0.0'f, 1.0'f)
   postUv = vertexPosition * 0.5'f + vec2(0.5'f)
 
-proc hdrPostFrag*(postUv: Vec2, fragColor: var Vec4) =
-  var sampleUv = postUv
-  if renderTextureYFlip:
+proc mipDownsampleFrag*(postUv: Vec2, fragColor: var Vec4) =
+  ## Bilinear sampling at destination pixel centers averages the source's
+  ## 2x2 texels. Bind just the preceding mip level as the source view.
+  var sampleUv: Vec2 = postUv
+  if framebufferYDown:
     sampleUv.y = 1.0'f - sampleUv.y
-  let flag = texelFetch(toneFlags,
-    ivec2(sampleUv * vec2(textureSize(hdrInput, 0))), 0).r
+  fragColor = textureLod(mipInput, sampleUv, 0.0'f)
+
+proc hdrPostFrag*(postUv: Vec2, fragColor: var Vec4) =
+  var sampleUv: Vec2 = postUv
+  if framebufferYDown:
+    sampleUv.y = 1.0'f - sampleUv.y
+  let flag = texelFetch(toneFlags, ivec2(sampleUv * vec2(textureSize(hdrInput, 0))), 0).r
   let sampleValue: Vec4 = texture(hdrInput, sampleUv)
   var value: Vec3 = sampleValue.rgb
   if flag == uint32(2):

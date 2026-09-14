@@ -23,6 +23,7 @@ import
   test_sheen,
   test_unlit,
   test_texture_images
+import test_shader_layout
 
 proc writeBytes(path: string, bytes: openArray[byte]) =
   ## Writes raw bytes to a test fixture file.

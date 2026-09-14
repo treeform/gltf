@@ -4,12 +4,14 @@ when not defined(windows):
   {.error: "The glTF DirectX backend requires Windows.".}
 
 import
-  std/[algorithm, math, tables],
+  std/[math, tables],
   chroma, pixie, vmath, windy,
-  pkg/dx12, pkg/dx12/context,
+  pkg/dx12, pkg/dx12/context, shady/backends/dx12,
   ../../common, ../../models,
-  ./common,
+  ./common, ../shader_layout, ../pbr_uniforms, ../ibl_data,
   ../shaders as shaderSources
+
+export ibl_data
 
 const
   VertexEntryPoint* = "VSMain"
@@ -22,8 +24,13 @@ const
   ShadowDepthVertexShader* = shaderSources.ShadowDepthVertHlsl
   ShadowDepthFragmentShader* = shaderSources.ShadowDepthFragHlsl
 
-  TextureDescriptorCount = 7
-  RootTextureDescriptorCount = 7
+  VertexLayout = shaderLayout(shaderSources.PbrVertHlsl, hlslPacking)
+  PixelLayout = shaderLayout(shaderSources.PbrFragHlsl, hlslPacking)
+  IblLayout = shaderLayout(shaderSources.IblFragHlsl, hlslPacking)
+  PostLayout = shaderLayout(shaderSources.HdrPostFragHlsl, hlslPacking)
+  MipLayout = shaderLayout(shaderSources.MipDownsampleFragHlsl, hlslPacking)
+  TextureDescriptorCount = 28
+  RootTextureDescriptorCount = 28
   VertexConstantRegisters = 532
   PixelConstantRegisters = 25
   StudioEnvSize = 8
@@ -43,14 +50,25 @@ type
   RgbaSubresource = object
     width, height: int
     pixels: seq[ColorRGBX]
-
-  BlendEntry = object
-    node: Node
-    primitive: Primitive
-    transform: Mat4
+    floatBytes: string
 
   Renderer* = ref object
     window: Window
+    frame: PbrFrameUniforms
+    environment: Table[string, DxTexture]
+    environmentVersion: uint64
+    materialBindings: Table[string, DxMaterial]
+    defaultWhite, defaultNormal: DxTexture
+    geometryBlocks, uniformBlocks: seq[DxBufferBlock]
+    hdrColor, hdrFlags: DxTexture
+    hdrRtvHeap, hdrSrvHeap, postSamplerHeap: ID3D12DescriptorHeap
+    hdrSize: IVec2
+    fullscreenBuffer: ID3D12Resource
+    fullscreenView: D3D12_VERTEX_BUFFER_VIEW
+    transmission: DxTexture
+    transmissionMsaa, transmissionDepth: ID3D12Resource
+    transmissionRtv, transmissionDsv: ID3D12DescriptorHeap
+    transmissionMipHeaps: seq[ID3D12DescriptorHeap]
     ctx: D3D12Context
     rootSignature: ID3D12RootSignature
     pipelineStates: Table[PipelineKey, ID3D12PipelineState]
@@ -65,35 +83,10 @@ type
     readbackFootprint: D3D12_PLACED_SUBRESOURCE_FOOTPRINT
     readbackSize: IVec2
     srvDescriptorSize: UINT
-    frameResources: seq[ID3D12Resource]
 
-  PbrContext* = ref object
-    ## Reusable state for PBR rendering.
+  PbrContext* = ref object of PbrFrameUniforms
     renderer: Renderer
-    size*: IVec2
-    clearColor*: Color
-    transform*: Mat4
-    view*: Mat4
-    proj*: Mat4
-    tint*: Color
-    useTrs*: bool
-    ambientLightColor*: Color
-    sunLightDirection*: Vec3
-    sunLightColor*: Color
-    rimLightDirection*: Vec3
-    rimLightColor*: Color
-    debugView*: DebugView
-    cameraPosition*: Vec3
-    fogColor*: Color
-    fogStart*: float32
-    fogEnd*: float32
-    fogDensity*: float32
-    fogStrength*: float32
-    environmentMapStrength*: float32
-    useShadows*: bool
-    drawSkybox*: bool
-    skyboxLod*: float32
-    vsync*: bool
+    iblEnvironment*: IblEnvironment
 
 proc newPbrContext*(renderer: Renderer): PbrContext =
   ## Creates reusable state for PBR rendering.
@@ -119,6 +112,9 @@ proc newPbrContext*(renderer: Renderer): PbrContext =
   result.fogDensity = 0.0'f
   result.fogStrength = 0.0'f
   result.environmentMapStrength = 1.0'f
+  result.environmentMipCount = 3
+  result.environmentRotation = 90
+  result.exposure = 1
   result.useShadows = false
   result.drawSkybox = false
   result.skyboxLod = 0
@@ -127,41 +123,6 @@ proc newPbrContext*(renderer: Renderer): PbrContext =
 proc destroy*(ctx: PbrContext) =
   ## Releases resources owned by a PBR context.
   discard ctx
-
-proc f32bits(value: float32): uint32 =
-  cast[uint32](value)
-
-proc putFloat(data: var openArray[uint32], index: int, value: float32) =
-  data[index] = value.f32bits
-
-proc putVec2(data: var openArray[uint32], index: int, value: Vec2) =
-  data.putFloat(index + 0, value.x)
-  data.putFloat(index + 1, value.y)
-
-proc putVec3(data: var openArray[uint32], index: int, value: Vec3) =
-  data.putFloat(index + 0, value.x)
-  data.putFloat(index + 1, value.y)
-  data.putFloat(index + 2, value.z)
-
-proc putColor(data: var openArray[uint32], index: int, value: Color) =
-  data.putFloat(index + 0, value.r)
-  data.putFloat(index + 1, value.g)
-  data.putFloat(index + 2, value.b)
-  data.putFloat(index + 3, value.a)
-
-proc putMat4(data: var openArray[uint32], registerIndex: int, value: Mat4) =
-  var outIndex = registerIndex * 4
-  for i in 0 ..< 4:
-    for j in 0 ..< 4:
-      data.putFloat(outIndex, value[i, j])
-      inc outIndex
-
-proc putMat3(data: var openArray[uint32], registerIndex: int, value: Mat3) =
-  var outIndex = registerIndex * 4
-  for i in 0 ..< 3:
-    for j in 0 ..< 3:
-      data.putFloat(outIndex + j, value[i, j])
-    outIndex += 4
 
 proc perspectiveDxRh*(fovY, aspect, nearPlane, farPlane: float32): Mat4 =
   ## DirectX right-handed projection matrix for vmath camera transforms.
@@ -252,6 +213,26 @@ proc createUploadResource(
   )
   result.map(0, nil, addr mapped)
 
+proc allocateUpload(renderer: Renderer, blocks: var seq[DxBufferBlock],
+    size, alignment: int): tuple[storage: DxBufferBlock, offset: int] =
+  for storage in blocks:
+    if storage.users == 0: storage.used = 0
+    let offset = (storage.used + alignment - 1) div alignment * alignment
+    if offset + size <= storage.capacity:
+      storage.used = offset + size
+      inc storage.users
+      return (storage, offset)
+  let storage = DxBufferBlock(capacity: max(8 * 1024 * 1024, size), used: size, users: 1)
+  storage.resource = renderer.createUploadResource(storage.capacity.uint64, storage.mapped)
+  blocks.add(storage)
+  (storage, 0)
+
+proc destroyBlocks(blocks: var seq[DxBufferBlock]) =
+  for storage in blocks:
+    storage.resource.unmap(0, nil)
+    storage.resource.release()
+  blocks.setLen(0)
+
 proc alignConstantBufferSize(size: int): int =
   ((max(1, size) + 255) div 256) * 256
 
@@ -262,15 +243,13 @@ proc createFrameConstantBuffer(
   let
     dataBytes = data.len * sizeof(uint32)
     byteSize = alignConstantBufferSize(dataBytes)
-  var mapped: pointer
-  let resource = renderer.createUploadResource(uint64(byteSize), mapped)
+  let allocation = renderer.allocateUpload(renderer.uniformBlocks, byteSize, 256)
+  let mapped = cast[pointer](cast[uint](allocation.storage.mapped) + allocation.offset.uint)
   if dataBytes > 0:
     copyMem(mapped, unsafeAddr data[0], dataBytes)
   if byteSize > dataBytes:
     zeroMem(cast[pointer](cast[uint](mapped) + uint(dataBytes)), byteSize - dataBytes)
-  resource.unmap(0, nil)
-  renderer.frameResources.add(resource)
-  resource.getGPUVirtualAddress()
+  allocation.storage.resource.getGPUVirtualAddress() + allocation.offset.uint64
 
 proc offsetCpuHandle(
   base: D3D12_CPU_DESCRIPTOR_HANDLE,
@@ -556,12 +535,12 @@ proc uploadRgbaSubresources(
   for subresource in 0 ..< subresourceCount:
     let
       source = subresources[subresource]
-      srcRowSize = source.width * 4
+      srcRowSize = source.width * (if source.floatBytes.len > 0: 16 else: 4)
       rowPitch = int(footprints[subresource].Footprint.RowPitch)
     var dst = cast[ptr uint8](uploadBase + uint(footprints[subresource].Offset))
     for y in 0 ..< source.height:
       let src = cast[pointer](
-        cast[uint](unsafeAddr source.pixels[0]) + uint(y * srcRowSize)
+        (if source.floatBytes.len > 0: cast[uint](unsafeAddr source.floatBytes[0]) else: cast[uint](unsafeAddr source.pixels[0])) + uint(y * srcRowSize)
       )
       copyMem(dst, src, srcRowSize)
       if rowPitch > srcRowSize:
@@ -615,12 +594,12 @@ proc uploadRgbaSubresources(
     mipLevels: int(desc.MipLevels)
   )
 
-proc uploadImage(renderer: Renderer, image: Image): DxTexture =
+proc uploadImage(renderer: Renderer, image: Image, srgb = false): DxTexture =
   let mips = image.buildImageMips()
   var desc = textureDesc2D(
     image.width,
     image.height,
-    DXGI_FORMAT_R8G8B8A8_UNORM,
+    (if srgb: DXGI_FORMAT_R8G8B8A8_UNORM_SRGB else: DXGI_FORMAT_R8G8B8A8_UNORM),
     mipLevels = mips.len
   )
   renderer.uploadRgbaSubresources(desc, mips)
@@ -653,7 +632,8 @@ proc uploadShadowPlaceholder(renderer: Renderer): DxTexture =
 proc createSrv(
   renderer: Renderer,
   texture: DxTexture,
-  handle: D3D12_CPU_DESCRIPTOR_HANDLE
+  handle: D3D12_CPU_DESCRIPTOR_HANDLE,
+  firstMip = 0, levels = 0
 ) =
   var srvDesc: D3D12_SHADER_RESOURCE_VIEW_DESC
   srvDesc.Format = texture.format
@@ -662,8 +642,8 @@ proc createSrv(
     srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE
     srvDesc.data = D3D12_SHADER_RESOURCE_VIEW_DESC_UNION(
       TextureCube: D3D12_TEXCUBE_SRV(
-        MostDetailedMip: 0,
-        MipLevels: UINT(texture.mipLevels),
+        MostDetailedMip: UINT(firstMip),
+        MipLevels: UINT(if levels > 0: levels else: texture.mipLevels),
         ResourceMinLODClamp: 0.0
       )
     )
@@ -671,8 +651,8 @@ proc createSrv(
     srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D
     srvDesc.data = D3D12_SHADER_RESOURCE_VIEW_DESC_UNION(
       Texture2D: D3D12_TEX2D_SRV(
-        MostDetailedMip: 0,
-        MipLevels: UINT(texture.mipLevels),
+        MostDetailedMip: UINT(firstMip),
+        MipLevels: UINT(if levels > 0: levels else: texture.mipLevels),
         PlaneSlice: 0,
         ResourceMinLODClamp: 0.0
       )
@@ -820,7 +800,7 @@ proc createPipeline(
 ): ID3D12PipelineState =
   let
     vsBlob = compileShader(vsCode, VertexEntryPoint, "vs_5_0")
-    psBlob = compileShader(psCode, FragmentEntryPoint, "ps_5_0")
+    psBlob = compileShader(if key.ibl: shareHlslSamplers(psCode, key.samplerSlots) else: psCode, FragmentEntryPoint, "ps_5_0")
 
   var inputElements = [
     D3D12_INPUT_ELEMENT_DESC(
@@ -899,7 +879,7 @@ proc createPipeline(
 
   var blendDesc: D3D12_BLEND_DESC
   blendDesc.AlphaToCoverageEnable = 0
-  blendDesc.IndependentBlendEnable = 0
+  blendDesc.IndependentBlendEnable = 1
   blendDesc.RenderTarget[0] = D3D12_RENDER_TARGET_BLEND_DESC(
     BlendEnable: if key.blended: 1 else: 0,
     LogicOpEnable: 0,
@@ -912,6 +892,9 @@ proc createPipeline(
     LogicOp: 0,
     RenderTargetWriteMask: uint8(D3D12_COLOR_WRITE_ENABLE_ALL)
   )
+
+  blendDesc.RenderTarget[1] = blendDesc.RenderTarget[0]
+  blendDesc.RenderTarget[1].BlendEnable = 0
 
   let depthOp = D3D12_DEPTH_STENCILOP_DESC(
     StencilFailOp: D3D12_STENCIL_OP_KEEP,
@@ -929,8 +912,8 @@ proc createPipeline(
     SampleMask: D3D12_DEFAULT_SAMPLE_MASK,
     RasterizerState: D3D12_RASTERIZER_DESC(
       FillMode: D3D12_FILL_MODE_SOLID,
-      CullMode: if key.doubleSided: D3D12_CULL_MODE_NONE else: D3D12_CULL_MODE_BACK,
-      FrontCounterClockwise: 1,
+      CullMode: if key.doubleSided or key.post: D3D12_CULL_MODE_NONE else: D3D12_CULL_MODE_BACK,
+      FrontCounterClockwise: if key.mirrored: 0 else: 1,
       DepthBias: 0,
       DepthBiasClamp: 0.0,
       SlopeScaledDepthBias: 0.0,
@@ -941,7 +924,7 @@ proc createPipeline(
       ConservativeRaster: D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
     ),
     DepthStencilState: D3D12_DEPTH_STENCIL_DESC(
-      DepthEnable: 1,
+      DepthEnable: if key.post: 0 else: 1,
       DepthWriteMask:
         if key.blended: D3D12_DEPTH_WRITE_MASK_ZERO
         else: D3D12_DEPTH_WRITE_MASK_ALL,
@@ -970,6 +953,21 @@ proc createPipeline(
     Flags: 0
   )
   psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM
+  if key.ibl:
+    psoDesc.NumRenderTargets = 2
+    psoDesc.RTVFormats[0] = DXGI_FORMAT_R16G16B16A16_FLOAT
+    psoDesc.RTVFormats[1] = DXGI_FORMAT_R8_UINT
+    psoDesc.SampleDesc.Count = 1
+    if key.background:
+      psoDesc.NumRenderTargets = 1
+      psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM
+      psoDesc.RTVFormats[1] = DXGI_FORMAT_UNKNOWN
+      psoDesc.SampleDesc.Count = 4
+  if key.post:
+    inputElements[0].Format = DXGI_FORMAT_R32G32_FLOAT
+    psoDesc.InputLayout.NumElements = 1
+    psoDesc.DSVFormat = DXGI_FORMAT_UNKNOWN
+    psoDesc.SampleDesc.Count = 1
   result = renderer.ctx.device.createGraphicsPipelineState(addr psoDesc)
   release(vsBlob)
   release(psBlob)
@@ -978,8 +976,8 @@ proc getPipeline(renderer: Renderer, key: PipelineKey): ID3D12PipelineState =
   if key notin renderer.pipelineStates:
     renderer.pipelineStates[key] = renderer.createPipeline(
       key,
-      PbrVertexShader,
-      PbrFragmentShader
+      (if key.post: shaderSources.HdrPostVertHlsl else: PbrVertexShader),
+      (if key.downsample: shaderSources.MipDownsampleFragHlsl elif key.post: shaderSources.HdrPostFragHlsl elif key.ibl: shaderSources.IblFragHlsl else: PbrFragmentShader)
     )
   renderer.pipelineStates[key]
 
@@ -991,6 +989,9 @@ proc createRootSignature(renderer: Renderer) =
     RegisterSpace: 0,
     OffsetInDescriptorsFromTableStart: D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND
   )
+  var samplerRange = D3D12_DESCRIPTOR_RANGE(RangeType: D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER,
+    NumDescriptors: 16, BaseShaderRegister: 0, RegisterSpace: 0,
+    OffsetInDescriptorsFromTableStart: D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND)
   var rootParams = [
     D3D12_ROOT_PARAMETER(
       ParameterType: D3D12_ROOT_PARAMETER_TYPE_CBV,
@@ -1021,41 +1022,18 @@ proc createRootSignature(renderer: Renderer) =
         )
       ),
       ShaderVisibility: D3D12_SHADER_VISIBILITY_PIXEL
-    )
+    ),
+    D3D12_ROOT_PARAMETER(ParameterType: D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
+      data: D3D12_ROOT_PARAMETER_UNION(DescriptorTable: D3D12_ROOT_DESCRIPTOR_TABLE(
+        NumDescriptorRanges: 1, pDescriptorRanges: addr samplerRange)),
+      ShaderVisibility: D3D12_SHADER_VISIBILITY_PIXEL)
   ]
 
-  var samplers: array[RootTextureDescriptorCount, D3D12_STATIC_SAMPLER_DESC]
-  for i in 0 ..< samplers.len:
-    samplers[i] = D3D12_STATIC_SAMPLER_DESC(
-      Filter:
-        if i == 6: D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT
-        else: D3D12_FILTER_MIN_MAG_MIP_LINEAR,
-      AddressU:
-        if i == 5 or i == 6: D3D12_TEXTURE_ADDRESS_MODE_CLAMP
-        else: D3D12_TEXTURE_ADDRESS_MODE_WRAP,
-      AddressV:
-        if i == 5 or i == 6: D3D12_TEXTURE_ADDRESS_MODE_CLAMP
-        else: D3D12_TEXTURE_ADDRESS_MODE_WRAP,
-      AddressW:
-        if i == 5 or i == 6: D3D12_TEXTURE_ADDRESS_MODE_CLAMP
-        else: D3D12_TEXTURE_ADDRESS_MODE_WRAP,
-      MipLODBias: 0.0,
-      MaxAnisotropy: 1,
-      ComparisonFunc:
-        if i == 6: D3D12_COMPARISON_FUNC_LESS_EQUAL
-        else: D3D12_COMPARISON_FUNC_ALWAYS,
-      BorderColor: D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
-      MinLOD: 0.0,
-      MaxLOD: 1000.0,
-      ShaderRegister: uint32(i),
-      RegisterSpace: 0,
-      ShaderVisibility: D3D12_SHADER_VISIBILITY_PIXEL
-    )
   var rootDesc = D3D12_ROOT_SIGNATURE_DESC(
     NumParameters: uint32(rootParams.len),
     pParameters: addr rootParams[0],
-    NumStaticSamplers: uint32(samplers.len),
-    pStaticSamplers: addr samplers[0],
+    NumStaticSamplers: 0,
+    pStaticSamplers: nil,
     Flags: D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
   )
   let rootBlob = serializeRootSignature(addr rootDesc)
@@ -1092,28 +1070,37 @@ proc releaseTexture(texture: DxTexture) =
 proc releaseMaterial(material: DxMaterial) =
   if material == nil:
     return
+  if material.binding != nil:
+    let shared = material.binding
+    material.binding = nil
+    dec shared.references
+    if shared.references == 0:
+      shared.releaseMaterial()
+    return
   for texture in material.textures:
     texture.releaseTexture()
   material.textures.setLen(0)
+  if material.samplerHeap != nil:
+    material.samplerHeap.release()
+    material.samplerHeap = nil
   if material.heap != nil:
     material.heap.release()
     material.heap = nil
 
 proc releasePrimitive(primitive: DxPrimitive) =
-  if primitive == nil:
-    return
-  if primitive.vertexBuffer != nil:
-    if primitive.vertexBufferPtr != nil:
-      primitive.vertexBuffer.unmap(0, nil)
-      primitive.vertexBufferPtr = nil
-    primitive.vertexBuffer.release()
-    primitive.vertexBuffer = nil
-  if primitive.indexBuffer != nil:
-    if primitive.indexBufferPtr != nil:
-      primitive.indexBuffer.unmap(0, nil)
-      primitive.indexBufferPtr = nil
-    primitive.indexBuffer.release()
-    primitive.indexBuffer = nil
+  if primitive == nil: return
+  for storage in [primitive.vertexBlock, primitive.indexBlock]:
+    if storage != nil: dec storage.users
+  primitive.vertexBlock = nil
+  primitive.indexBlock = nil
+  primitive.vertexBuffer = nil
+  primitive.indexBuffer = nil
+  primitive.vertexBufferPtr = nil
+  primitive.indexBufferPtr = nil
+  primitive.vertexCapacity = 0
+  primitive.indexCapacity = 0
+
+include ibl
 
 proc resize(renderer: Renderer, size: IVec2) =
   let safeSize = ivec2(max(1'i32, size.x), max(1'i32, size.y))
@@ -1123,6 +1110,7 @@ proc resize(renderer: Renderer, size: IVec2) =
   renderer.createColorBuffer(safeSize)
   renderer.createDepthBuffer(safeSize)
   renderer.createReadbackBuffer(safeSize)
+  if renderer.frame.useIbl: renderer.createHdr(safeSize)
 
 proc vertexAt(primitive: Primitive, index: int): DxVertex =
   let colorValue =
@@ -1240,19 +1228,18 @@ proc ensurePrimitive(renderer: Renderer, primitive: Primitive): DxPrimitive =
   if primitive.data == nil:
     primitive.data = DxPrimitive()
   result = primitive.data
+  if result.vertexCapacity > 0 and result.geometryVersion == primitive.geometryVersion: return
+
 
   if primitive.points.len > result.vertexCapacity:
-    if result.vertexBuffer != nil:
-      if result.vertexBufferPtr != nil:
-        result.vertexBuffer.unmap(0, nil)
-      result.vertexBuffer.release()
+    if result.vertexBlock != nil: dec result.vertexBlock.users
     result.vertexCapacity = max(primitive.points.len, 1)
-    result.vertexBuffer = renderer.createUploadResource(
-      uint64(result.vertexCapacity * sizeof(DxVertex)),
-      result.vertexBufferPtr
-    )
+    let allocation = renderer.allocateUpload(renderer.geometryBlocks, result.vertexCapacity * sizeof(DxVertex), 16)
+    result.vertexBlock = allocation.storage
+    result.vertexBuffer = allocation.storage.resource
+    result.vertexBufferPtr = cast[pointer](cast[uint](allocation.storage.mapped) + allocation.offset.uint)
     result.vertexBufferView = D3D12_VERTEX_BUFFER_VIEW(
-      BufferLocation: result.vertexBuffer.getGPUVirtualAddress(),
+      BufferLocation: result.vertexBuffer.getGPUVirtualAddress() + allocation.offset.uint64,
       SizeInBytes: UINT(result.vertexCapacity * sizeof(DxVertex)),
       StrideInBytes: UINT(sizeof(DxVertex))
     )
@@ -1274,17 +1261,14 @@ proc ensurePrimitive(renderer: Renderer, primitive: Primitive): DxPrimitive =
   result.topologyKind = topologyKind
   result.indexCount = indices.len
   if indices.len > result.indexCapacity:
-    if result.indexBuffer != nil:
-      if result.indexBufferPtr != nil:
-        result.indexBuffer.unmap(0, nil)
-      result.indexBuffer.release()
+    if result.indexBlock != nil: dec result.indexBlock.users
     result.indexCapacity = max(indices.len, 1)
-    result.indexBuffer = renderer.createUploadResource(
-      uint64(result.indexCapacity * sizeof(uint32)),
-      result.indexBufferPtr
-    )
+    let allocation = renderer.allocateUpload(renderer.geometryBlocks, result.indexCapacity * sizeof(uint32), 16)
+    result.indexBlock = allocation.storage
+    result.indexBuffer = allocation.storage.resource
+    result.indexBufferPtr = cast[pointer](cast[uint](allocation.storage.mapped) + allocation.offset.uint)
     result.indexBufferView = D3D12_INDEX_BUFFER_VIEW(
-      BufferLocation: result.indexBuffer.getGPUVirtualAddress(),
+      BufferLocation: result.indexBuffer.getGPUVirtualAddress() + allocation.offset.uint64,
       SizeInBytes: UINT(result.indexCapacity * sizeof(uint32)),
       Format: DXGI_FORMAT_R32_UINT
     )
@@ -1299,14 +1283,25 @@ proc ensurePrimitive(renderer: Renderer, primitive: Primitive): DxPrimitive =
 proc ensureMaterial(renderer: Renderer, material: Material): DxMaterial =
   if material == nil:
     return nil
-  if material.data != nil and material.data.materialVersion == material.materialVersion:
+  if material.data != nil and material.data.materialVersion == material.materialVersion and
+      material.data.ibl == renderer.frame.useIbl and material.data.environmentVersion == renderer.environmentVersion:
     return material.data
   if material.data != nil:
     material.data.releaseMaterial()
 
-  result = DxMaterial()
-  material.data = result
-
+  let inputs = material.textureInputs()
+  let bindingKey = materialBindingKey(inputs, renderer.frame.useIbl, renderer.environmentVersion, material.materialVersion)
+  var cached = renderer.materialBindings.getOrDefault(bindingKey)
+  if cached != nil and cached.heap != nil:
+    inc cached.references
+    result = DxMaterial(materialVersion: material.materialVersion, ibl: renderer.frame.useIbl,
+      environmentVersion: renderer.environmentVersion, binding: cached)
+    material.data = result
+    return
+  result = DxMaterial(ibl: renderer.frame.useIbl, environmentVersion: renderer.environmentVersion)
+  if renderer.defaultWhite == nil:
+    renderer.defaultWhite = renderer.uploadSolidImage(rgbx(255, 255, 255, 255))
+    renderer.defaultNormal = renderer.uploadSolidImage(rgbx(128, 128, 255, 255))
   var heapDesc = D3D12_DESCRIPTOR_HEAP_DESC(
     typ: D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
     NumDescriptors: TextureDescriptorCount,
@@ -1317,50 +1312,66 @@ proc ensureMaterial(renderer: Renderer, material: Material): DxMaterial =
   let baseHandle = result.heap.getCPUDescriptorHandleForHeapStart()
   result.handleGpu = result.heap.getGPUDescriptorHandleForHeapStart()
 
-  let
-    baseColor =
-      if material != nil and material.baseColor != nil:
-        renderer.uploadImage(material.baseColor)
+  let layout = if renderer.frame.useIbl: IblLayout else: PixelLayout
+  var states: seq[D3D12_SAMPLER_DESC]
+  var bound: seq[DxTexture]
+  for i, name in layout.textures:
+    var texture: DxTexture
+    var state = dxSampler(TextureSampler(), environment = true)
+    for input in inputs:
+      if name == input.name & "Texture":
+        if input.image != nil:
+          if input.image.width == 1 and input.image.height == 1 and input.image.data[0] == rgbx(255, 255, 255, 255):
+            texture = renderer.defaultWhite
+          elif not input.srgb and input.image.width == 1 and input.image.height == 1 and input.image.data[0] == rgbx(128, 128, 255, 255):
+            texture = renderer.defaultNormal
+          else:
+            texture = renderer.uploadImage(input.image, renderer.frame.useIbl and input.srgb)
+        else:
+          texture = if input.name == "normal": renderer.defaultNormal else: renderer.defaultWhite
+        if texture != renderer.defaultWhite and texture != renderer.defaultNormal: result.textures.add(texture)
+        state = dxSampler(input.sampler)
+        break
+    if texture == nil:
+      if renderer.frame.useIbl:
+        let asset = case name
+          of "diffuseEnvironment": "diffuse"
+          of "environmentMap": "specular"
+          of "ggxLut": "ggx-lut"
+          of "charlieEnvironment": "charlie"
+          of "charlieLut": "charlie-lut"
+          of "sheenEnergyLut": "sheen-energy-lut"
+          of "transmissionBuffer": ""
+          else: raise newException(ValueError, "Unbound IBL texture: " & name)
+        if asset.len > 0: texture = renderer.environment[asset]
+        else:
+          texture = renderer.transmission
+          state.Filter = D3D12_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR
       else:
-        renderer.uploadSolidImage(rgbx(255, 255, 255, 255))
-    metallicRoughness =
-      if material != nil and material.metallicRoughness != nil:
-        renderer.uploadImage(material.metallicRoughness)
-      else:
-        renderer.uploadSolidImage(rgbx(255, 255, 255, 255))
-    occlusion =
-      if material != nil and material.occlusion != nil:
-        renderer.uploadImage(material.occlusion)
-      else:
-        renderer.uploadSolidImage(rgbx(255, 255, 255, 255))
-    emissive =
-      if material != nil and material.emissive != nil:
-        renderer.uploadImage(material.emissive)
-      else:
-        renderer.uploadSolidImage(rgbx(255, 255, 255, 255))
-    normal =
-      if material != nil and material.normal != nil:
-        renderer.uploadImage(material.normal)
-      else:
-        renderer.uploadSolidImage(rgbx(128, 128, 255, 255))
-    shadow = renderer.uploadShadowPlaceholder()
-    environment = renderer.uploadStudioCube()
-
-  result.textures = @[
-    baseColor,
-    metallicRoughness,
-    occlusion,
-    emissive,
-    normal,
-    environment,
-    shadow
-  ]
-  for i, texture in result.textures:
-    renderer.createSrv(
-      texture,
-      offsetCpuHandle(baseHandle, renderer.srvDescriptorSize, i)
-    )
-  result.materialVersion = material.materialVersion
+        if name == "environmentMap": texture = renderer.uploadStudioCube()
+        elif name == "shadowMap":
+          texture = renderer.uploadShadowPlaceholder()
+          state = dxSampler(TextureSampler(), environment = true, comparison = true)
+        else: raise newException(ValueError, "Unbound shader texture: " & name)
+        result.textures.add(texture)
+    bound.add(texture)
+    var slot = -1
+    if renderer.frame.useIbl:
+      for j, existing in states:
+        if existing == state: slot = j; break
+    if slot < 0:
+      slot = states.len
+      states.add(state)
+    if slot >= 16: raise newException(ValueError, "Material exceeds DirectX's 16 distinct sampler states")
+    result.samplerSlots[i] = slot
+  result.samplerHeap = renderer.samplerHeap(states)
+  for i in 0 ..< TextureDescriptorCount:
+    renderer.createSrv(bound[min(i, bound.high)], offsetCpuHandle(baseHandle, renderer.srvDescriptorSize, i))
+  result.references = 1
+  renderer.materialBindings[bindingKey] = result
+  result = DxMaterial(materialVersion: material.materialVersion, ibl: renderer.frame.useIbl,
+    environmentVersion: renderer.environmentVersion, binding: result)
+  material.data = result
 
 proc prepareNodeResources(renderer: Renderer, node: Node) =
   if node == nil:
@@ -1373,184 +1384,34 @@ proc prepareNodeResources(renderer: Renderer, node: Node) =
   for child in node.nodes:
     renderer.prepareNodeResources(child)
 
-proc putTextureTransform(
-  data: var openArray[uint32],
-  texCoordIndex,
-  offsetIndex,
-  scaleIndex,
-  rotationIndex: int,
-  transform: TextureTransform
-) =
-  data[texCoordIndex] = transform.texCoord.uint32
-  data.putVec2(offsetIndex, transform.offset)
-  data.putVec2(scaleIndex, transform.scale)
-  data.putFloat(rotationIndex, transform.rotation)
-
-proc shadyVertexConstants(
-  owner,
-  root: Node,
-  transform,
-  view,
-  proj: Mat4
-): array[VertexConstantRegisters * 4, uint32] =
-  let jointMatrices = root.skinMatrices(owner)
-  result[0] = (jointMatrices.len > 0).ord.uint32
-  for i in 0 ..< min(jointMatrices.len, 128):
-    result.putMat4(1 + i * 4, jointMatrices[i])
-  result.putMat4(513, transform)
-  result.putMat3(517, transform.normalMatrix)
-  result.putMat4(520, mat4())
-  result.putMat4(524, proj)
-  result.putMat4(528, view)
-
-proc shadyPixelConstants(
-  primitive: Primitive,
-  tint: Color,
-  ambientLightColor: Color,
-  sunLightDirection: Vec3,
-  sunLightColor: Color,
-  rimLightDirection: Vec3,
-  rimLightColor: Color,
-  cameraPosition: Vec3,
-  fogColor: Color,
-  fogStart,
-  fogEnd,
-  fogDensity,
-  fogStrength,
-  environmentMapStrength: float32
-): array[PixelConstantRegisters * 4, uint32] =
-  let material = primitive.material
-  if material != nil:
-    result.putTextureTransform(0, 1, 4, 6, material.baseColorTransform)
-    result.putTextureTransform(7, 8, 10, 12, material.metallicRoughnessTransform)
-    result.putTextureTransform(13, 14, 16, 18, material.normalTransform)
-    result.putTextureTransform(19, 20, 22, 24, material.occlusionTransform)
-    result.putTextureTransform(25, 26, 28, 30, material.emissiveTransform)
-    result.putColor(32, material.baseColorFactor)
-    result.putFloat(
-      36,
-      if material.alphaMode == MaskAlphaMode: material.alphaCutoff else: -1.0'f32
-    )
-    result.putFloat(37, material.roughnessFactor)
-    result.putFloat(38, material.metallicFactor)
-    result.putFloat(39, material.transmissionFactor)
-    result.putFloat(40, material.occlusionStrength)
-    result.putVec3(41, vec3(
-      material.emissiveRadiance.r,
-      material.emissiveRadiance.g,
-      material.emissiveRadiance.b
-    ))
-    result.putFloat(44, material.normalScale)
-    result[45] = (
-      material.hasNormalTexture and
-      primitive.normals.len > 0 and
-      primitive.tangents.len > 0
-    ).ord.uint32
-  else:
-    let identityTransform = TextureTransform(
-      texCoord: 0,
-      offset: vec2(0, 0),
-      scale: vec2(1, 1),
-      rotation: 0.0'f32
-    )
-    result.putTextureTransform(0, 1, 4, 6, identityTransform)
-    result.putTextureTransform(7, 8, 10, 12, identityTransform)
-    result.putTextureTransform(13, 14, 16, 18, identityTransform)
-    result.putTextureTransform(19, 20, 22, 24, identityTransform)
-    result.putTextureTransform(25, 26, 28, 30, identityTransform)
-    result.putColor(32, color(1, 1, 1, 1))
-    result.putFloat(36, -1.0'f32)
-    result.putFloat(37, 1.0'f32)
-    result.putFloat(38, 1.0'f32)
-    result.putFloat(39, 0.0'f32)
-    result.putFloat(40, 1.0'f32)
-    result.putVec3(41, vec3(0, 0, 0))
-    result.putFloat(44, 1.0'f32)
-    result[45] = 0
-  result.putVec3(48, sunLightDirection)
-  result.putVec3(52, rimLightDirection)
-  result.putVec3(56, cameraPosition)
-  result.putColor(60, sunLightColor)
-  result.putColor(64, rimLightColor)
-  result.putFloat(68, 3.0'f32)
-  result.putColor(72, ambientLightColor)
-  result.putFloat(76, environmentMapStrength)
-  result[77] = 0
-  result.putFloat(78, 0.0005'f32)
-  result.putVec2(80, vec2(1.0'f32 / 2048.0'f32, 1.0'f32 / 2048.0'f32))
-  result[82] = 0
-  result.putColor(84, tint)
-  result.putColor(88, fogColor)
-  result.putFloat(92, fogStart)
-  result.putFloat(93, fogEnd)
-  result.putFloat(94, fogDensity)
-  result.putFloat(95, fogStrength)
-  result[96] = (material != nil and material.unlit).ord.uint32
-  result[97] = (material != nil and material.legacyAlphaMode == OpaqueAlphaMode).ord.uint32
-
-proc drawPrimitive(
-  renderer: Renderer,
-  primitive: Primitive,
-  owner,
-  root: Node,
-  transform,
-  view,
-  proj: Mat4,
-  tint: Color,
-  ambientLightColor: Color,
-  sunLightDirection: Vec3,
-  sunLightColor: Color,
-  rimLightDirection: Vec3,
-  rimLightColor: Color,
-  cameraPosition: Vec3,
-  fogColor: Color,
-  fogStart,
-  fogEnd,
-  fogDensity,
-  fogStrength: float32,
-  environmentMapStrength: float32,
-  blendedPass: bool
-) =
+proc drawPrimitive(renderer: Renderer, entry: SceneDraw, root: Node) =
+  let primitive = entry.primitive
+  let owner = entry.owner
+  let transform = entry.transform
+  let view = renderer.frame.view
+  let proj = renderer.frame.proj
   if primitive == nil or not primitive.hasGeometry():
     return
 
-  let isBlend =
-    primitive.material != nil and
-    primitive.material.legacyAlphaMode == BlendAlphaMode
-  if isBlend != blendedPass:
-    return
+  let isBlend = entry.blended
 
   let dxPrimitive = renderer.ensurePrimitive(primitive)
   if dxPrimitive.indexCount == 0:
     return
-  let dxMaterial = renderer.ensureMaterial(primitive.material)
+  let dxMaterial = renderer.ensureMaterial(primitive.material).binding
   let key = PipelineKey(
     topology: dxPrimitive.topologyKind,
     doubleSided: primitive.material != nil and primitive.material.doubleSided,
-    blended: isBlend
+    blended: isBlend, ibl: renderer.frame.useIbl, background: renderer.frame.transmissionBackground, mirrored: determinant(transform) < 0,
+    samplerSlots: dxMaterial.samplerSlots
   )
   let pipeline = renderer.getPipeline(key)
   renderer.ctx.commandList.setPipelineState(pipeline)
   renderer.ctx.commandList.setGraphicsRootSignature(renderer.rootSignature)
 
   let
-    vertexConstants = shadyVertexConstants(owner, root, transform, view, proj)
-    pixelConstants = shadyPixelConstants(
-      primitive,
-      tint,
-      ambientLightColor,
-      sunLightDirection,
-      sunLightColor,
-      rimLightDirection,
-      rimLightColor,
-      cameraPosition,
-      fogColor,
-      fogStart,
-      fogEnd,
-      fogDensity,
-      fogStrength,
-      environmentMapStrength
-    )
+    vertexConstants = vertexUniforms(VertexLayout, owner, root, transform, view, proj)
+    pixelConstants = pixelUniforms(if renderer.frame.useIbl: IblLayout else: PixelLayout, primitive, renderer.frame, transform)
     vertexConstantsGpu = renderer.createFrameConstantBuffer(vertexConstants)
     pixelConstantsGpu = renderer.createFrameConstantBuffer(pixelConstants)
   renderer.ctx.commandList.setGraphicsRootConstantBufferView(
@@ -1561,8 +1422,9 @@ proc drawPrimitive(
     1,
     pixelConstantsGpu
   )
-  var heaps = [dxMaterial.heap]
-  renderer.ctx.commandList.setDescriptorHeaps(1, addr heaps[0])
+  var heaps = [dxMaterial.heap, dxMaterial.samplerHeap]
+  renderer.ctx.commandList.setDescriptorHeaps(2, addr heaps[0])
+  renderer.ctx.commandList.setGraphicsRootDescriptorTable(3, dxMaterial.samplerHeap.getGPUDescriptorHandleForHeapStart())
   renderer.ctx.commandList.setGraphicsRootDescriptorTable(
     2,
     dxMaterial.handleGpu
@@ -1582,87 +1444,13 @@ proc drawPrimitive(
     0
   )
 
-proc collectOrDrawNode(
-  renderer: Renderer,
-  node,
-  root: Node,
-  transform,
-  view,
-  proj: Mat4,
-  tint: Color,
-  ambientLightColor: Color,
-  sunLightDirection: Vec3,
-  sunLightColor: Color,
-  rimLightDirection: Vec3,
-  rimLightColor: Color,
-  cameraPosition: Vec3,
-  fogColor: Color,
-  fogStart,
-  fogEnd,
-  fogDensity,
-  fogStrength: float32,
-  environmentMapStrength: float32,
-  blended: var seq[BlendEntry]
-) =
-  if node == nil or not node.visible:
-    return
-  node.mat = transform * node.trs
-  if node.mesh != nil:
-    for primitive in node.mesh.primitives:
-      if primitive.material != nil and primitive.material.legacyAlphaMode == BlendAlphaMode:
-        blended.add(BlendEntry(node: node, primitive: primitive, transform: node.mat))
-      else:
-        renderer.drawPrimitive(
-          primitive,
-          node,
-          root,
-          node.mat,
-          view,
-          proj,
-          tint,
-          ambientLightColor,
-          sunLightDirection,
-          sunLightColor,
-          rimLightDirection,
-          rimLightColor,
-          cameraPosition,
-          fogColor,
-          fogStart,
-          fogEnd,
-          fogDensity,
-          fogStrength,
-          environmentMapStrength,
-          blendedPass = false
-        )
-  for child in node.nodes:
-    renderer.collectOrDrawNode(
-      child,
-      root,
-      node.mat,
-      view,
-      proj,
-      tint,
-      ambientLightColor,
-      sunLightDirection,
-      sunLightColor,
-      rimLightDirection,
-      rimLightColor,
-      cameraPosition,
-      fogColor,
-      fogStart,
-      fogEnd,
-      fogDensity,
-      fogStrength,
-      environmentMapStrength,
-      blended
-    )
-
 proc drawPbrFrame(
   renderer: Renderer,
   node: Node,
   ctx: PbrContext
 ) =
   ## Draws a full glTF PBR frame through DirectX 12.
+  renderer.frame = PbrFrameUniforms(ctx[])
   let
     size = ctx.size
     clearColor = ctx.clearColor
@@ -1683,17 +1471,27 @@ proc drawPbrFrame(
     fogStrength = ctx.fogStrength
     environmentMapStrength = ctx.environmentMapStrength
     vsync = ctx.vsync
+  if node != nil: node.updateTransforms(transform, true)
+  renderer.frame.updateLights(node)
+  let draws = renderer.frame.sceneDraws(node)
   renderer.resize(size)
-  for resource in renderer.frameResources:
-    if resource != nil:
-      resource.release()
-  renderer.frameResources.setLen(0)
+  for storage in renderer.uniformBlocks:
+    storage.used = 0
+    storage.users = 0
 
   if node != nil:
     renderer.prepareNodeResources(node)
 
   renderer.ctx.commandAllocator.reset()
   renderer.ctx.commandList.reset(renderer.ctx.commandAllocator, nil)
+
+  if renderer.frame.useIbl and draws.transmitted.len > 0:
+    renderer.beginTransmission(clearColor)
+    renderer.frame.transmissionBackground = true
+    for entry in draws.opaque: renderer.drawPrimitive(entry, node)
+    for entry in draws.blended: renderer.drawPrimitive(entry, node)
+    renderer.resolveTransmission()
+    renderer.frame.transmissionBackground = false
 
   var barrier = D3D12_RESOURCE_BARRIER(
     typ: D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
@@ -1744,62 +1542,13 @@ proc drawPbrFrame(
     nil
   )
 
-  if node != nil and node.visible:
-    node.updateTransforms(transform, true)
-    var blended: seq[BlendEntry]
-    renderer.collectOrDrawNode(
-      node,
-      node,
-      transform,
-      view,
-      proj,
-      tint,
-      ambientLightColor,
-      sunLightDirection,
-      sunLightColor,
-      rimLightDirection,
-      rimLightColor,
-      cameraPosition,
-      fogColor,
-      fogStart,
-      fogEnd,
-      fogDensity,
-      fogStrength,
-      environmentMapStrength,
-      blended
-    )
-    if blended.len > 0:
-      blended.sort(proc(a, b: BlendEntry): int =
-        let
-          pa = (a.transform * vec4(0, 0, 0, 1)).xyz
-          pb = (b.transform * vec4(0, 0, 0, 1)).xyz
-          da = (cameraPosition - pa).lengthSq
-          db = (cameraPosition - pb).lengthSq
-        if da > db: -1 elif da < db: 1 else: 0
-      )
-      for entry in blended:
-        renderer.drawPrimitive(
-          entry.primitive,
-          entry.node,
-          node,
-          entry.transform,
-          view,
-          proj,
-          tint,
-          ambientLightColor,
-          sunLightDirection,
-          sunLightColor,
-          rimLightDirection,
-          rimLightColor,
-          cameraPosition,
-          fogColor,
-          fogStart,
-          fogEnd,
-          fogDensity,
-          fogStrength,
-          environmentMapStrength,
-          blendedPass = true
-        )
+  if renderer.frame.useIbl: renderer.beginHdr(clearColor)
+
+  for entry in draws.opaque: renderer.drawPrimitive(entry, node)
+  for entry in draws.transmitted: renderer.drawPrimitive(entry, node)
+  for entry in draws.blended: renderer.drawPrimitive(entry, node)
+
+  if renderer.frame.useIbl: renderer.endHdr()
 
   if renderer.msaaEnabled:
     var resolveBarrier = D3D12_RESOURCE_BARRIER(
@@ -1909,10 +1658,8 @@ proc shutdown*(renderer: Renderer) =
   if renderer == nil:
     return
   renderer.ctx.waitForGpu()
-  for resource in renderer.frameResources:
-    if resource != nil:
-      resource.release()
-  renderer.frameResources.setLen(0)
+  destroyBlocks(renderer.uniformBlocks)
+  destroyBlocks(renderer.geometryBlocks)
   if renderer.readbackBuffer != nil:
     renderer.readbackBuffer.release()
     renderer.readbackBuffer = nil
@@ -1935,6 +1682,7 @@ proc shutdown*(renderer: Renderer) =
   if renderer.rootSignature != nil:
     renderer.rootSignature.release()
     renderer.rootSignature = nil
+  renderer.destroyIbl()
   renderer.ctx.cleanup()
 
 proc beginFrame*(renderer: Renderer; window: Window; size: IVec2) =

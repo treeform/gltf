@@ -9,7 +9,8 @@ const { values: args } = parseArgs({ options: {
   commit: { type: 'string' }, backend: { type: 'string', default: 'opengl' },
   'no-build': { type: 'boolean' }, strict: { type: 'boolean' }, legacy: { type: 'boolean' }
 } });
-if (!['opengl', 'metal'].includes(args.backend)) throw new Error('Backend must be opengl or metal');
+const backendFlags = { opengl: '-d:useOpenGL', directx: '-d:useDirectX', vulkan: '-d:useVulkan', metal: '-d:useMetal4' };
+if (!Object.hasOwn(backendFlags, args.backend)) throw new Error('--backend must be opengl, directx, vulkan or metal');
 if (args.backend === 'metal' && process.platform !== 'darwin') throw new Error('Metal comparison requires macOS');
 const manifest = path.resolve(args.manifest || defaultManifest);
 const spec = JSON.parse(await readFile(manifest, 'utf8'));
@@ -34,12 +35,12 @@ if (!args.legacy) {
     if (sha256(bytes) !== texture.sha256) throw new Error(`Lighting checksum mismatch: ${texture.file}`);
   }
 }
-const outDir = path.resolve(args.out || path.join(repoDir, 'tests/tmp/reference'));
+const backendSuffix = args.backend === 'opengl' ? '' : `-${args.backend}`;
+const outDir = path.resolve(args.out || path.join(repoDir, `tests/tmp/reference${backendSuffix}`));
 await mkdir(outDir, { recursive: true });
-const executable = path.join(repoDir, `tests/tmp/sample_assets_reference${args.backend === 'metal' ? '_metal' : ''}` + (process.platform === 'win32' ? '.exe' : ''));
+const executable = path.join(repoDir, `tests/tmp/sample_assets_reference${backendSuffix}` + (process.platform === 'win32' ? '.exe' : ''));
 if (!args['no-build']) {
-  const build = spawnSync('nim', ['c', '--hints:off', `--nimcache:${path.join(repoDir, `tests/tmp/reference-nimcache-${args.backend}`)}`,
-    args.backend === 'metal' ? '-d:useMetal4' : '-d:useOpenGL',
+  const build = spawnSync('nim', ['c', '--hints:off', backendFlags[args.backend], `--nimcache:${path.join(repoDir, `tests/tmp/reference${backendSuffix}-nimcache`)}`,
     `-o:${executable}`, path.join(repoDir, 'tests/sample_assets.nim')], { cwd: repoDir, stdio: 'inherit' });
   if (build.error) throw build.error;
   if (build.status !== 0) process.exit(build.status || 1);
@@ -66,6 +67,7 @@ await writeFile(path.join(outDir, 'implementation.json'), JSON.stringify({
   passed: metrics.filter(m => m.status === 'ok').length,
   capturedAt: new Date().toISOString()
 }, null, 2) + '\n');
+if (metrics.some(m => m.backend !== args.backend)) throw new Error('The rendered backend differs from --backend. Rebuild the capture executable.');
 if (args.commit) {
   if (!/^[0-9a-f]{7,40}$/i.test(args.commit)) throw new Error('--commit must be a Git commit hash');
   const commit = git(repoDir, 'rev-parse', `${args.commit}^{commit}`);

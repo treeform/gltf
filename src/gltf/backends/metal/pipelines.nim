@@ -384,7 +384,7 @@ when defined(macosx):
     post.setVertexBuffer(renderer.postVertices, 0, MetalVertexBufferIndex)
     var data = constants(metalUniformLayout(shaderSources.HdrPostFragMsl))
     data.put("exposure", ctx.exposure)
-    data.put("renderTextureYFlip", true)
+    data.put("framebufferYDown", true)
     post.setFragmentBytes(data.data[0].addr, data.data.len.uint, 1)
     post.setFragmentTexture(renderer.flagTexture, 0)
     post.setFragmentTexture(renderer.hdrTexture, 1)

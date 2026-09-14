@@ -62,7 +62,7 @@ when defined(macosx):
     data.put("shadowBias", 0.0005'f)
     data.put("shadowMapTexelSize", vec2(1.0'f / 2048.0'f))
     data.put("exposure", ctx.exposure)
-    data.put("renderTextureYFlip", true)
+    data.put("framebufferYDown", true)
     data.put("environmentMapStrength", ctx.environmentMapStrength)
     data.put("environmentMipCount", if ctx.iblEnvironment.specular.isNil:
       3.0'f else: ctx.iblEnvironment.mipCount.float32)

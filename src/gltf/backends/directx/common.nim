@@ -12,6 +12,8 @@ type
     topology*: DxTopology
     doubleSided*: bool
     blended*: bool
+    ibl*, post*, mirrored*, background*, downsample*: bool
+    samplerSlots*: array[28, int]
 
   DxTexture* = ref object
     resource*: ID3D12Resource
@@ -19,7 +21,13 @@ type
     isCube*: bool
     mipLevels*: int
 
+  DxBufferBlock* = ref object
+    resource*: ID3D12Resource
+    mapped*: pointer
+    capacity*, used*, users*: int
+
   PrimitiveData* = ref object
+    vertexBlock*, indexBlock*: DxBufferBlock
     geometryVersion*: uint64
     vertexBuffer*: ID3D12Resource
     vertexBufferPtr*: pointer
@@ -34,10 +42,16 @@ type
     topologyKind*: DxTopology
 
   MaterialData* = ref object
+    binding*: MaterialData
+    references*: int
     materialVersion*: uint64
+    environmentVersion*: uint64
     heap*: ID3D12DescriptorHeap
     handleGpu*: D3D12_GPU_DESCRIPTOR_HANDLE
     textures*: seq[DxTexture]
+    samplerHeap*: ID3D12DescriptorHeap
+    samplerSlots*: array[28, int]
+    ibl*: bool
 
   GltfFileData* = ref object
     sceneVersion*: uint64

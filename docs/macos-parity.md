@@ -1,7 +1,8 @@
 # macOS Khronos parity
 
-PR #53 is checked out on `khronos-parity-macos`. The matching Shady changes
-are on the same branch name in the sibling Shady checkout, at `3954ee0fd7054e895dc3a94435fe9fbb8c1e5ae2`.
+The macOS fixes are integrated with PR #53 on `khronos-parity`.
+The matching Shady changes are on `gltf-backend-parity`, at
+`703f21052849dc0e9e0e713c8c86d17c24d34528`.
 Both repositories are required. All shader source generation and texture
 specialization run through Shady. glTF contains shared Nim shader procedures
 and backend resource and draw submission code.

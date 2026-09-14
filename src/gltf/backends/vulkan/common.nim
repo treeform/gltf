@@ -8,6 +8,7 @@ type
     topology*: uint32
     doubleSided*: bool
     blended*: bool
+    ibl*, post*, mirrored*, background*: bool
 
   VkTextureData* = ref object
     image*: VkImage
@@ -19,13 +20,25 @@ type
     layers*: int
     isCube*: bool
 
+  VkBufferBlock* = ref object
+    buffer*: VkBuffer
+    memory*: VkDeviceMemory
+    mapped*: pointer
+    capacity*, used*, users*: int
+
   MaterialData* = ref object
+    binding*: MaterialData
+    references*: int
     materialVersion*: uint64
+    environmentVersion*: uint64
     descriptorPool*: VkDescriptorPool
     descriptorSet*: VkDescriptorSet
     textures*: seq[VkTextureData]
+    ibl*: bool
 
   PrimitiveData* = ref object
+    vertexBlock*, indexBlock*: VkBufferBlock
+    vertexOffset*, indexOffset*: VkDeviceSize
     geometryVersion*: uint64
     vertexBuffer*: VkBuffer
     vertexMemory*: VkDeviceMemory
