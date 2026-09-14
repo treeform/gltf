@@ -31,8 +31,8 @@ From the repository root, with the sibling Nim dependencies installed:
 
 ```sh
 export GLTF_SAMPLE_ASSETS="$PWD/tests/tmp/reference-assets"
-npm --prefix tools/reference run compare:all -- --strict --backend=opengl --out=../../tests/tmp/reference-opengl-mac
-npm --prefix tools/reference run compare:all -- --strict --backend=metal --out=../../tests/tmp/reference-metal-mac
+npm --prefix tools/reference run compare -- --strict --backend=opengl --out=../../tests/tmp/reference-opengl-mac
+npm --prefix tools/reference run compare -- --strict --backend=metal --out=../../tests/tmp/reference-metal-mac
 ```
 
 The assets path above is the detached worktree created for this run. For a

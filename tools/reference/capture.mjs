@@ -3,23 +3,23 @@ import { createServer } from 'node:http';
 import { parseArgs } from 'node:util';
 import path from 'node:path';
 import { toolDir, assetsDir, rendererDir, cacheDir, sources, defaultManifest,
-  git, sha256, checkedFile, safePath, writeJson, validateManifest } from './common.mjs';
+  git, sha256, checkedFile, safePath, writeJson, validateManifest,
+  retainedCaptures } from './common.mjs';
 
 const { values: args } = parseArgs({ options: {
   init: { type: 'boolean' }, force: { type: 'boolean' }, verify: { type: 'boolean' }, refit: { type: 'boolean' },
   software: { type: 'boolean' }, manifest: { type: 'string' }, out: { type: 'string' },
   'report-only': { type: 'boolean' },
   'export-environment': { type: 'boolean' },
-  'all-models': { type: 'boolean' },
-  expanded: { type: 'boolean' },
   models: { type: 'string' }, cases: { type: 'string' }
 } });
 const manifestFile = path.resolve(args.manifest || defaultManifest);
 const outDir = path.resolve(args.out || path.dirname(manifestFile));
-const pilotModels = ['AnimatedCube', 'DamagedHelmet', 'Fox', 'OrientationTest', 'SimpleMorph'];
-const pilotLabels = { AnimatedCube: 'a0_t0p74', DamagedHelmet: 'rest', Fox: 'a2_t0p428583', OrientationTest: 'rest', SimpleMorph: 'a0_t1p48' };
-const selectedModels = args.models?.split(',') || (args.init && !args['all-models'] ? pilotModels : undefined);
+const selectedModels = args.models?.split(',');
 const selectedCases = args.cases?.split(',');
+const matchesSelection = c => (!selectedModels || selectedModels.includes(c.model.split('/')[1])) &&
+  (!selectedCases || selectedCases.includes(c.id));
+if (args.init && (selectedModels || selectedCases)) throw new Error('--init creates the complete catalog; use filters when capturing an existing manifest.');
 if (args.refit && selectedCases) throw new Error('--refit requires a complete model selection; use --models instead of --cases');
 const settings = {
   width: 512, height: 512, renderFrames: 2, toneMap: 'KHR_PBR_NEUTRAL',
@@ -74,12 +74,19 @@ let exportedEnvironment = false;
 process.once('SIGINT', async () => { await browser?.close(); server.closeAllConnections(); server.close(); process.exit(130); });
 let previous;
 if (!args.init) {
-  try { previous = JSON.parse(await readFile(path.join(outDir, 'run.json'), 'utf8')); } catch {}
+  try { previous = JSON.parse(await readFile(path.join(outDir, 'run.json'), 'utf8')); }
+  catch (error) { if (error.code !== 'ENOENT') throw error; }
 }
-const results = args['report-only'] ? previous?.captures || [] : [];
+const results = args['report-only'] ? previous?.captures || [] :
+  !args.init && (selectedModels || selectedCases)
+    ? retainedCaptures(previous, manifest, sha256(await readFile(manifestFile)),
+      manifest.cases.filter(matchesSelection).map(c => c.id))
+    : [];
 const run = args['report-only'] ? previous : { startedAt: new Date().toISOString(), sources: manifest.sources, manifestSha256: null, browser: null, gpu: null, captures: results };
 const escape = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 async function report() {
+  const order = new Map(manifest.cases.map((c, index) => [c.id, index]));
+  results.sort((a, b) => (order.get(a.id) ?? Infinity) - (order.get(b.id) ?? Infinity));
   run.finishedAt = new Date().toISOString();
   run.manifestSha256 = sha256(await readFile(manifestFile));
   await writeJson(path.join(outDir, 'run.json'), run);
@@ -104,7 +111,7 @@ try {
       return { name: m.name, model: `Models/${m.name}/${variant}/${m.variants[variant]}` };
     });
   } else {
-    const selected = manifest.cases.filter(c => (!selectedModels || selectedModels.includes(c.model.split('/')[1])) && (!selectedCases || selectedCases.includes(c.id)));
+    const selected = manifest.cases.filter(matchesSelection);
     jobs = [...new Set(selected.map(c => c.model))].map(model => ({ name: model.split('/')[1], model, cases: selected.filter(c => c.model === model) }));
   }
   if (!jobs.length) throw new Error('No models match the selection');
@@ -145,10 +152,7 @@ try {
         const description = await page.evaluate((model, s) => window.reference.describe(model, s), job.model, manifest.settings);
         if (errors.length) throw new Error(errors.join('\n'));
         const base = job.name.replace(/[^A-Za-z0-9_.-]/g, '_');
-        const samples = !args.expanded && !args['all-models']
-          ? description.samples.filter(sample => sample.label === (pilotLabels[job.name] || 'rest'))
-          : description.samples;
-        job.cases = samples.map(sample => ({
+        job.cases = description.samples.map(sample => ({
           id: `${base}__${sample.label}`, model: job.model, scene: sample.scene,
           animationIndices: sample.animationIndices, timeSeconds: sample.timeSeconds,
           ...(sample.animationName ? { animationName: sample.animationName, animationEndSeconds: sample.animationEndSeconds } : {}),

@@ -6,15 +6,7 @@
     "setup": "node setup.mjs",
     "manifest": "node capture.mjs --init",
     "capture": "node capture.mjs",
-    "capture:25": "node capture.mjs --manifest=../../tests/reference/manifest-25.json --out=../../tests/reference/expanded",
-    "capture:batch-2": "node capture.mjs --manifest=../../tests/reference/manifest-batch-2.json --out=../../tests/reference/batch-2",
-    "capture:batch-3": "node capture.mjs --manifest=../../tests/reference/manifest-batch-3.json --out=../../tests/reference/batch-3",
-    "capture:all": "node capture.mjs --manifest=../../tests/reference/manifest-all.json --out=../../tests/reference/all",
     "compare": "node compare.mjs",
-    "compare:25": "node compare.mjs --manifest=../../tests/reference/manifest-25.json --baselines=../../tests/reference/expanded/images --out=../../tests/tmp/reference-25",
-    "compare:batch-2": "node compare.mjs --manifest=../../tests/reference/manifest-batch-2.json --baselines=../../tests/reference/batch-2/images --out=../../tests/tmp/reference-batch-2",
-    "compare:batch-3": "node compare.mjs --manifest=../../tests/reference/manifest-batch-3.json --baselines=../../tests/reference/batch-3/images --out=../../tests/tmp/reference-batch-3",
-    "compare:all": "node compare.mjs --manifest=../../tests/reference/manifest-all.json --baselines=../../tests/reference/all/images --out=../../tests/tmp/reference-all",
     "test": "node --test test.mjs"
   },
   "dependencies": {

@@ -220,7 +220,7 @@ Current controls:
 The [reference-image tools](tools/reference/README.md) capture a pinned Treeform
 fork of the Khronos renderer and compare fixed camera/animation cases with the Nim
 renderer in an HTML Xray report. Run `npm run compare` in `tools/reference` for
-the fast five-image loop, or `npm run compare:all` for the full catalog snapshot.
+the full catalog, or add `-- --case=ModelName` for a focused comparison.
 
 glTF material texture `Image` buffers use **straight RGBA** bytes, including RGB
 where alpha is zero. Use `loadStraightAlphaImage(path)` or

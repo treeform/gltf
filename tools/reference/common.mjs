@@ -28,6 +28,18 @@ export async function checkedFile(root, relative) {
   safePath(await realpath(root), path.relative(await realpath(root), file));
   return file;
 }
+export function retainedCaptures(previous, manifest, manifestSha256, selectedIds) {
+  if (!previous) return [];
+  if (previous.manifestSha256 !== manifestSha256 ||
+      JSON.stringify(previous.sources) !== JSON.stringify(manifest.sources)) {
+    throw new Error('Existing masters use different sources or manifest data; recapture the complete catalog.');
+  }
+  const selected = new Set(selectedIds);
+  return previous.captures.filter(c => !selected.has(c.id)).map(c => ({
+    ...c,
+    capturedWith: c.capturedWith || { browser: previous.browser, gpu: previous.gpu }
+  }));
+}
 export function validateManifest(manifest) {
   if (manifest.version !== 1 || !Array.isArray(manifest.cases) || !manifest.cases.length) throw new Error('Expected a version 1 manifest with cases');
   for (const key of ['width', 'height', 'renderFrames']) {

@@ -71,6 +71,8 @@ jobs:
         with:
           path: ${{ github.workspace }}
       - run: nim check src/gltf.nim
+      - name: Verify the reference catalog
+        run: node --test tools/reference/test.mjs
       - run: nim check tests/draco/tests.nim
       - run: nim r -d:release tests/backend_shaders.nim
       - run: nim r -d:release tests/draco/tests.nim
