@@ -1,10 +1,12 @@
 ## Render known HDR values through the real GPU presentation pass. Contrasting
 ## tone flags on the two rows also catches a vertically flipped flag lookup.
+import glframes
 import opengl, windy, vmath, chroma, gltf/backends/opengl/ibl
 
 let window = newWindow("IBL pipeline test", ivec2(4, 2), visible = false)
 makeContextCurrent(window)
 loadExtensions()
+var testFrame = newTestFrame(ivec2(4, 2))
 var target: HdrTarget
 let colors = [[0.04'f, 0.04'f, 0.04'f, 1.0'f],
   [0.18'f, 0.18'f, 0.18'f, 1.0'f], [1.0'f, 1.0'f, 1.0'f, 1.0'f],
@@ -15,6 +17,7 @@ let neutralExpected = [
   [[31, 31, 31], [104, 104, 104], [239, 239, 239], [253, 155, 149]],
   [[59, 59, 59], [152, 152, 152], [250, 250, 250], [254, 191, 188]]]
 for iteration, exposure in [0.5'f, 1.0'f, 2.0'f]:
+  testFrame.bindFrame()
   target.beginHdr(ivec2(4, 2), color(0, 0, 0, 1))
   glEnable(GL_SCISSOR_TEST)
   for y in 0 ..< 2:
@@ -27,7 +30,7 @@ for iteration, exposure in [0.5'f, 1.0'f, 2.0'f]:
   glDisable(GL_SCISSOR_TEST)
   target.endHdr(exposure)
   var pixels: array[4 * 2 * 4, uint8]
-  glReadBuffer(GL_BACK)
+  glReadBuffer(GL_COLOR_ATTACHMENT0)
   glReadPixels(0, 0, 4, 2, GL_RGBA, GL_UNSIGNED_BYTE, pixels[0].addr)
   for y in 0 ..< 2:
     for x in 0 ..< 4:
@@ -40,3 +43,5 @@ for iteration, exposure in [0.5'f, 1.0'f, 2.0'f]:
   doAssert glGetError() == GL_NO_ERROR
 target.destroy()
 echo "HDR GPU pipeline: neutral highlights, exposure, gamma and per-pixel flags passed"
+
+testFrame.destroy()

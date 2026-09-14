@@ -1,4 +1,5 @@
 ## Actual GPU regressions for the multi-pass renderer, independent of masters.
+import glframes
 import std/json, flatty/binny, opengl, windy, vmath, chroma, pixie, gltf
 
 proc constantTexture(target: GLenum, value: array[4, float32]): GLuint =
@@ -17,6 +18,7 @@ proc constantTexture(target: GLenum, value: array[4, float32]): GLuint =
 let window = newWindow("Transmission pipeline test", ivec2(64, 48), visible = false)
 makeContextCurrent(window)
 loadExtensions()
+var testFrame = newTestFrame(ivec2(64, 48))
 let renderer = newRenderer(window)
 let ctx = newPbrContext(renderer)
 ctx.attachIblEnvironment(IblEnvironment(
@@ -76,6 +78,7 @@ bgMaterial.baseColorSampler.minFilter = NearestMinFilter
 proc capture(separateDraws = false, reverse = false): seq[ColorRGBA] =
   inc material.materialVersion
   inc bgMaterial.materialVersion
+  testFrame.bindFrame()
   renderer.beginFrame(window, ctx.size)
   ctx.beginIblFrame()
   if separateDraws:
@@ -98,7 +101,7 @@ proc capture(separateDraws = false, reverse = false): seq[ColorRGBA] =
   ctx.endIblFrame()
   renderer.endFrame()
   result.setLen(ctx.size.x * ctx.size.y)
-  glReadBuffer(GL_BACK)
+  glReadBuffer(GL_COLOR_ATTACHMENT0)
   glReadPixels(0, 0, ctx.size.x, ctx.size.y, GL_RGBA, GL_UNSIGNED_BYTE, result[0].addr)
   doAssert glGetError() == GL_NO_ERROR
   for pixel in result: doAssert pixel.a == 255, "Transmission is not reduced coverage"
@@ -644,3 +647,5 @@ ctx.destroy()
 renderer.release(root)
 renderer.shutdown()
 echo "Transmission GPU pipeline: coverage, ordering, repeated frames, UV/data maps, absorption/scale, refraction, roughness, IOR, direct lighting and shadow coexistence passed"
+
+testFrame.destroy()

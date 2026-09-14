@@ -7,6 +7,13 @@ when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal
   import opengl
 
 const
+  BackendName =
+    when defined(useMetal4): "Metal"
+    elif defined(useDirectX): "DirectX"
+    elif defined(useVulkan): "Vulkan"
+    else: "OpenGL"
+  SupportsIbl = not defined(useDirectX) and not defined(useVulkan) and
+    (not defined(useMetal4) or defined(macosx))
   WindowSize = 512
   VerticalFov = 45'f
   FitPadding = 1.25'f
@@ -289,7 +296,7 @@ proc renderScene(window: Window, model: Node) =
   pbrContext.drawSkybox = false
   pbrContext.skyboxLod = 0
   pbrContext.vsync = false
-  when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
+  when SupportsIbl:
     if iblDirectory.len > 0:
       pbrContext.sunLightColor = color(0, 0, 0, 0)
       pbrContext.environmentRotation = referenceSettings["rendering"]["environmentRotation"].getFloat().float32
@@ -298,7 +305,7 @@ proc renderScene(window: Window, model: Node) =
       pbrContext.exposure = referenceSettings["rendering"]["exposure"].getFloat().float32
       pbrContext.beginIblFrame()
   pbrContext.draw(model)
-  when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
+  when SupportsIbl:
     if iblDirectory.len > 0:
       pbrContext.endIblFrame()
   renderer.endFrame()
@@ -663,13 +670,14 @@ proc writeReport(path: string, results: seq[AssetResult]) =
 <style>body{font-family:monospace;margin:16px}.model-group{border:2px solid #aab4c2;margin:24px 0}.model-heading{position:sticky;top:0;z-index:1;background:#eef1f6;padding:12px 16px;border-bottom:1px solid #aab4c2}.model-heading h2{margin:0 0 6px;font-size:18px;overflow-wrap:anywhere}.model-heading p{margin:0}.tiles{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.tile{width:256px}.tile-label{margin-bottom:6px}img{display:block;max-width:256px;background:repeating-conic-gradient(#eee 0% 25%,#fff 0% 50%) 0 0/16px 16px}.statistics{box-sizing:border-box;width:256px;height:256px;padding:12px;background:#ffffffb3;border:1px solid #ccc;font-size:13px;line-height:1.35}.statistics p{margin:0 0 12px}.statistics p:last-child{margin-bottom:0}.overview{margin:0 0 24px}.overview-image{position:relative;max-width:min(100%,calc(100vh - 160px))}.overview img{width:100%;height:auto;max-width:none;background:#181e28}.overview-tile{position:absolute;display:block;box-sizing:border-box}.overview-tile:hover,.overview-tile:focus-visible{box-shadow:inset 0 0 0 2px #ffb347;z-index:2}.overview figcaption{margin-top:10px;line-height:1.5}.capture{scroll-margin-top:100px}</style>
 </head><body>
 <h1>Xray Report</h1>
-""" & cardHtml & """
+""" & "<p><b>Backend:</b> " & BackendName & " on " & hostOS &
+    " / " & hostCPU & "</p>" & cardHtml & """
 <p>Grouped by source file: missing, skipped and failed comparisons first, then each file's worst Pixie score. All frames, poses and views stay together in manifest order.</p>
 <p>Same model, camera, scene, animation clip and absolute time. Images are compared without alignment or resizing.</p>
 <p>Pixel counts use RGB bytes over the entire image, including the background. Within ±2 means every RGB channel differs by at most 2 on the 0–255 scale. Xray: green = generated darker; blue = generated brighter; red = alpha difference.</p>
 <p>The ok label uses the existing 2% Pixie threshold; visible differences can still pass it. Skipped or failed captures are not comparisons.</p>
 """ & (if iblDirectory.len > 0:
-  "<p><b>Matched lighting:</b> shared Khronos neutral HDR environment, rotation and exposure; linear sRGB textures, GGX image-based lighting, HDR framebuffer and PBR Neutral tone mapping. Core metallic/roughness pilot on OpenGL; advanced material extensions and model punctual lights are not yet matched.</p>"
+  "<p><b>Matched lighting:</b> shared Khronos neutral HDR environment, rotation and exposure; linear sRGB textures, GGX image-based lighting, HDR framebuffer and PBR Neutral tone mapping. Shared material extensions and authored punctual lights are included.</p>"
 elif referenceSettings != nil:
   "<p><b>Lighting currently differs:</b> Khronos uses the neutral HDR studio and PBR Neutral tone mapping. Nim uses its current procedural environment and sun/rim/ambient lighting. These measurements include that difference.</p>"
 else: "") & (if referenceRenderer != nil:
@@ -804,11 +812,12 @@ elif defined(useDirectX) or defined(useVulkan):
   loadExtensions()
 renderer = newRenderer(window)
 pbrContext = newPbrContext(renderer)
-when not defined(useDirectX) and not defined(useVulkan) and not defined(useMetal4):
+when SupportsIbl:
   if iblDirectory.len > 0:
     pbrContext.attachIblEnvironment(loadIblEnvironment(iblDirectory))
   else:
-    pbrContext.attachEnvironmentMap(loadDefaultEnvironmentMap())
+    when not defined(useMetal4):
+      pbrContext.attachEnvironmentMap(loadDefaultEnvironmentMap())
 
 var results: seq[AssetResult]
 for i, modelPath in modelPaths:

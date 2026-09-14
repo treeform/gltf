@@ -1,12 +1,14 @@
 import
-  std/algorithm,
-  chroma, pixie, vmath, windy,
+  std/[algorithm, math, strutils, tables],
+  chroma, pixie, vmath, windy, shady,
   ../../common, ../../models,
   ./common,
+  ../materials,
   ../shaders as shaderSources
 
 when defined(macosx):
-  import pkg/metal4
+  import pkg/metal4, ./environments
+  export environments
 
 const
   VertexEntryPoint* = "vertexMain"
@@ -56,8 +58,19 @@ type
       environmentTexture*: MTLTexture
       depthTexture*: MTLTexture
       offscreenTexture*: MTLTexture
+      hdrTexture, flagTexture: MTLTexture
+      transmissionTexture, transmissionMsaa, transmissionDepth: MTLTexture
+      postPipeline: MTLRenderPipelineState
+      postVertices: MTLBuffer
+      iblPipelines: seq[MetalIblPipeline]
+      frameResources: seq[NSObject]
       targetWidth*: int
       targetHeight*: int
+
+  MetalIblPipeline = object
+    key: string
+    when defined(macosx):
+      opaque, blended, backgroundOpaque, backgroundBlended: MTLRenderPipelineState
 
   PbrContext* = ref object
     ## Reusable state for PBR rendering.
@@ -86,6 +99,14 @@ type
     drawSkybox*: bool
     skyboxLod*: float32
     vsync*: bool
+    environmentRotation*, exposure*: float32
+    when defined(macosx):
+      iblEnvironment*: IblEnvironment
+    ownsIblEnvironment: bool
+    transmissionBackground: bool
+    punctualLightCount: int32
+    punctualLightDirections, punctualLightColors, punctualLightPositions: array[32, Vec3]
+    punctualLightParameters: array[32, Vec4]
 
   BlendEntry = object
     node: Node
@@ -124,10 +145,14 @@ proc newPbrContext*(renderer: Renderer): PbrContext =
   result.drawSkybox = false
   result.skyboxLod = 0
   result.vsync = false
+  result.exposure = 1.0
+  result.environmentRotation = 0.0
 
 proc destroy*(ctx: PbrContext) =
   ## Releases resources owned by a PBR context.
-  discard ctx
+  when defined(macosx):
+    if ctx != nil and ctx.ownsIblEnvironment:
+      ctx.iblEnvironment.destroy()
 
 when defined(macosx):
   type
@@ -207,6 +232,8 @@ when defined(macosx):
       bytesPerRow: uint,
       bytesPerImage: uint
     )
+    proc setFragmentBuffer*(self: MTLRenderCommandEncoder, x: MTLBuffer,
+      offset: uint, atIndex: uint)
     proc setFragmentBytes*(
       self: MTLRenderCommandEncoder,
       x: pointer,
@@ -490,6 +517,10 @@ when defined(macosx):
         not renderer.offscreenTexture.isNil:
       return
 
+    renderer.depthTexture.freeMetal()
+    renderer.offscreenTexture.freeMetal()
+    renderer.hdrTexture.freeMetal()
+    renderer.flagTexture.freeMetal()
     let depthDescriptor =
       MTLTextureDescriptor.texture2DDescriptorWithPixelFormat(
         MTLPixelFormatDepth32Float,
@@ -749,6 +780,8 @@ proc ensurePrimitive(renderer: Renderer, primitive: Primitive) =
   primitive.data.geometryVersion = primitive.geometryVersion
 
   when defined(macosx):
+    primitive.data.vertexBuffer.freeMetal()
+    primitive.data.indexBuffer.freeMetal()
     primitive.data.vertexBuffer = renderer.uploadBuffer(vertices)
     if primitive.indices32.len > 0:
       primitive.data.indexBuffer = renderer.uploadBuffer(primitive.indices32)
@@ -818,93 +851,7 @@ proc shadyVertexConstants(
   writer.putMat4(view)
   writer.finish()
 
-proc shadyFragmentConstants(
-  primitive: Primitive,
-  tint: Color,
-  ambientLightColor: Color,
-  sunLightDirection: Vec3,
-  sunLightColor: Color,
-  rimLightDirection: Vec3,
-  rimLightColor: Color,
-  debugView: DebugView,
-  cameraPosition: Vec3,
-  fogColor: Color,
-  fogStart,
-  fogEnd,
-  fogDensity,
-  fogStrength,
-  environmentMapStrength: float32
-): seq[uint32] =
-  var writer: Std140Writer
-  let material = primitive.material
-  if material != nil:
-    writer.putTextureTransform(material.baseColorTransform)
-    writer.putTextureTransform(material.metallicRoughnessTransform)
-    writer.putTextureTransform(material.normalTransform)
-    writer.putTextureTransform(material.occlusionTransform)
-    writer.putTextureTransform(material.emissiveTransform)
-    writer.putColor(material.baseColorFactor)
-    writer.putFloat(
-      if material.alphaMode == MaskAlphaMode: material.alphaCutoff else: -1.0'f
-    )
-    writer.putFloat(material.roughnessFactor)
-    writer.putFloat(material.metallicFactor)
-    writer.putFloat(material.transmissionFactor)
-    writer.putFloat(material.occlusionStrength)
-    writer.putVec3(vec3(
-      material.emissiveRadiance.r,
-      material.emissiveRadiance.g,
-      material.emissiveRadiance.b
-    ))
-    writer.putFloat(material.normalScale)
-    writer.putBool(
-      material.hasNormalTexture and
-      primitive.normals.len > 0 and
-      primitive.tangents.len > 0
-    )
-  else:
-    let identityTransform = TextureTransform(
-      texCoord: 0,
-      offset: vec2(0, 0),
-      scale: vec2(1, 1),
-      rotation: 0.0'f
-    )
-    writer.putTextureTransform(identityTransform)
-    writer.putTextureTransform(identityTransform)
-    writer.putTextureTransform(identityTransform)
-    writer.putTextureTransform(identityTransform)
-    writer.putTextureTransform(identityTransform)
-    writer.putColor(color(1, 1, 1, 1))
-    writer.putFloat(-1.0'f)
-    writer.putFloat(1.0'f)
-    writer.putFloat(1.0'f)
-    writer.putFloat(0.0'f)
-    writer.putFloat(1.0'f)
-    writer.putVec3(vec3(0, 0, 0))
-    writer.putFloat(1.0'f)
-    writer.putBool(false)
-
-  writer.putVec3(sunLightDirection)
-  writer.putVec3(rimLightDirection)
-  writer.putVec3(cameraPosition)
-  writer.putColor(sunLightColor)
-  writer.putColor(rimLightColor)
-  writer.putFloat(3.0'f)
-  writer.putColor(ambientLightColor)
-  writer.putFloat(environmentMapStrength)
-  writer.putBool(false)
-  writer.putFloat(0.0005'f)
-  writer.putVec2(vec2(1.0'f / 2048.0'f, 1.0'f / 2048.0'f))
-  writer.putInt(debugView.int)
-  writer.putColor(tint)
-  writer.putColor(fogColor)
-  writer.putFloat(fogStart)
-  writer.putFloat(fogEnd)
-  writer.putFloat(fogDensity)
-  writer.putFloat(fogStrength)
-  writer.putInt((material != nil and material.unlit).ord)
-  writer.putInt((material != nil and material.legacyAlphaMode == OpaqueAlphaMode).ord)
-  writer.finish()
+include ./uniforms
 
 when defined(macosx):
   proc metalPrimitive(mode: PrimitiveMode): MTLPrimitiveType =
@@ -997,34 +944,15 @@ when defined(macosx):
       ctx.view,
       ctx.proj
     )
-    var fragmentConstants = shadyFragmentConstants(
-      primitive,
-      ctx.tint,
-      ctx.ambientLightColor,
-      ctx.sunLightDirection,
-      ctx.sunLightColor,
-      ctx.rimLightDirection,
-      ctx.rimLightColor,
-      ctx.debugView,
-      ctx.cameraPosition,
-      ctx.fogColor,
-      ctx.fogStart,
-      ctx.fogEnd,
-      ctx.fogDensity,
-      ctx.fogStrength,
-      ctx.environmentMapStrength
-    )
+    let fragmentConstants = ctx.materialConstants(primitive, transform, PbrLayout)
     encoder.setVertexBuffer(data.vertexBuffer, 0, MetalVertexBufferIndex)
-    encoder.setVertexBytes(
-      vertexConstants[0].addr,
-      (vertexConstants.len * sizeof(uint32)).uint,
-      0
-    )
-    encoder.setFragmentBytes(
-      fragmentConstants[0].addr,
-      (fragmentConstants.len * sizeof(uint32)).uint,
-      1
-    )
+    let
+      vertexBuffer = renderer.uploadBuffer(vertexConstants)
+      fragmentBuffer = renderer.uploadBuffer(fragmentConstants)
+    renderer.frameResources.add(cast[NSObject](vertexBuffer))
+    renderer.frameResources.add(cast[NSObject](fragmentBuffer))
+    encoder.setVertexBuffer(vertexBuffer, 0, 0)
+    encoder.setFragmentBuffer(fragmentBuffer, 0, 1)
     encoder.setFragmentTexture(baseColor, 0)
     encoder.setFragmentTexture(metallicRoughness, 1)
     encoder.setFragmentTexture(occlusion, 2)
@@ -1069,6 +997,10 @@ when defined(macosx):
     for child in node.nodes:
       renderer.renderNode(encoder, child, ctx, deferBlend, blended)
 
+include ./textures
+include ./pipelines
+
+when defined(macosx):
   proc encodeScene(
     renderer: Renderer,
     commandBuffer: MTLCommandBuffer,
@@ -1077,6 +1009,10 @@ when defined(macosx):
     height: int,
     storeDepth: bool
   ) =
+    if renderer.pbrContext != nil and
+      not renderer.pbrContext.iblEnvironment.specular.isNil:
+        renderer.encodeIbl(commandBuffer, colorTexture, width, height)
+        return
     let renderPass = MTLRenderPassDescriptor.renderPassDescriptor()
     let colorAttachment =
       renderPass.colorAttachments().objectAtIndexedSubscript(0)
@@ -1185,7 +1121,11 @@ proc draw*(ctx: PbrContext; node: Node) =
   doAssert ctx != nil, "PBR context must not be nil."
   doAssert ctx.renderer != nil, "PBR context renderer must not be nil."
   if node != nil:
-    ctx.renderer.prepareNode(node)
+    when defined(macosx):
+      if ctx.iblEnvironment.specular.isNil:
+        ctx.renderer.prepareNode(node)
+    else:
+      ctx.renderer.prepareNode(node)
   ctx.renderer.scene = node
   ctx.renderer.size = clampSize(ctx.size)
   ctx.renderer.clearColor = ctx.clearColor
@@ -1201,71 +1141,79 @@ proc draw*(ctx: PbrContext; file: GltfFile) =
 
 proc endFrame*(renderer: Renderer) =
   when defined(macosx):
-    renderer.ctx.window = renderer.window
-    let drawable = renderer.ctx.currentDrawable()
-    if drawable.isNil:
-      return
+    autoreleasepool:
+      if not renderer.window.visible:
+        return
+      renderer.ctx.window = renderer.window
+      let drawable = renderer.ctx.currentDrawable()
+      if drawable.isNil:
+        return
 
-    let
-      drawableSize = renderer.ctx.layer.drawableSize()
-      width = max(1, drawableSize.width.int)
-      height = max(1, drawableSize.height.int)
-    renderer.ensureTargets(width, height)
-    let
-      commandBuffer = renderer.ctx.newCommandBuffer()
-      texture = drawable.texture()
-    renderer.encodeScene(commandBuffer, texture, width, height, false)
-    commandBuffer.presentDrawable(drawable)
-    commandBuffer.commit()
+      let
+        drawableSize = renderer.ctx.layer.drawableSize()
+        width = max(1, drawableSize.width.int)
+        height = max(1, drawableSize.height.int)
+      renderer.ensureTargets(width, height)
+      let
+        commandBuffer = renderer.ctx.newCommandBuffer()
+        texture = drawable.texture()
+      renderer.encodeScene(commandBuffer, texture, width, height, false)
+      commandBuffer.presentDrawable(drawable)
+      commandBuffer.commit()
+      commandBuffer.waitUntilCompleted()
+      renderer.releaseFrame()
   else:
     discard renderer
 
 proc captureScreenshot*(renderer: Renderer): Image =
   when defined(macosx):
-    let
-      width = max(1, renderer.size.x.int)
-      height = max(1, renderer.size.y.int)
-      sampleScale = 4
-      renderWidth = width * sampleScale
-      renderHeight = height * sampleScale
-    renderer.ensureTargets(renderWidth, renderHeight)
-    let commandBuffer = renderer.ctx.newCommandBuffer()
-    renderer.encodeScene(
-      commandBuffer,
-      renderer.offscreenTexture,
-      renderWidth,
-      renderHeight,
-      true
-    )
-    commandBuffer.commit()
-    commandBuffer.waitUntilCompleted()
+    autoreleasepool:
+      let
+        width = max(1, renderer.size.x.int)
+        height = max(1, renderer.size.y.int)
+        sampleScale = if renderer.pbrContext != nil and
+          not renderer.pbrContext.iblEnvironment.specular.isNil: 1 else: 4
+        renderWidth = width * sampleScale
+        renderHeight = height * sampleScale
+      renderer.ensureTargets(renderWidth, renderHeight)
+      let commandBuffer = renderer.ctx.newCommandBuffer()
+      renderer.encodeScene(
+        commandBuffer,
+        renderer.offscreenTexture,
+        renderWidth,
+        renderHeight,
+        true
+      )
+      commandBuffer.commit()
+      commandBuffer.waitUntilCompleted()
+      renderer.releaseFrame()
 
-    var pixels = newSeq[uint8](renderWidth * renderHeight * 4)
-    renderer.offscreenTexture.getBytes(
-      pixels[0].addr,
-      (renderWidth * 4).uint,
-      MTLRegion(
-        origin: MTLOrigin(x: 0, y: 0, z: 0),
-        size: MTLSize(
-          width: renderWidth.uint,
-          height: renderHeight.uint,
-          depth: 1
-        )
-      ),
-      0
-    )
+      var pixels = newSeq[uint8](renderWidth * renderHeight * 4)
+      renderer.offscreenTexture.getBytes(
+        pixels[0].addr,
+        (renderWidth * 4).uint,
+        MTLRegion(
+          origin: MTLOrigin(x: 0, y: 0, z: 0),
+          size: MTLSize(
+            width: renderWidth.uint,
+            height: renderHeight.uint,
+            depth: 1
+          )
+        ),
+        0
+      )
 
-    let supersampled = newImage(renderWidth, renderHeight)
-    for y in 0 ..< renderHeight:
-      for x in 0 ..< renderWidth:
-        let i = (y * renderWidth + x) * 4
-        supersampled[x, y] = rgbx(
-          pixels[i + 2],
-          pixels[i + 1],
-          pixels[i],
-          pixels[i + 3]
-        )
-    result = supersampled.resize(width, height)
+      let supersampled = newImage(renderWidth, renderHeight)
+      for y in 0 ..< renderHeight:
+        for x in 0 ..< renderWidth:
+          let i = (y * renderWidth + x) * 4
+          supersampled[x, y] = rgbx(
+            pixels[i + 2],
+            pixels[i + 1],
+            pixels[i],
+            pixels[i + 3]
+          )
+      result = supersampled.resize(width, height)
   else:
     result = newImage(renderer.size.x.int, renderer.size.y.int)
     result.fill(renderer.clearColor.toRgbx())
@@ -1276,6 +1224,19 @@ proc release*(renderer: Renderer; node: Node) =
     return
   if node.mesh != nil:
     for primitive in node.mesh.primitives:
+      when defined(macosx):
+        if primitive.data != nil:
+          primitive.data.vertexBuffer.freeMetal()
+          primitive.data.indexBuffer.freeMetal()
+        let material = primitive.material
+        if material != nil and material.data != nil:
+          for texture in material.data.iblTextures:
+            if texture != nil:
+              texture.texture.freeMetal()
+          for texture in [material.data.baseColor, material.data.metallicRoughness,
+              material.data.normal, material.data.occlusion, material.data.emissive]:
+            if texture != nil:
+              texture.texture.freeMetal()
       primitive.data = nil
       if primitive.material != nil:
         primitive.material.data = nil
@@ -1283,4 +1244,33 @@ proc release*(renderer: Renderer; node: Node) =
     renderer.release(child)
 
 proc shutdown*(renderer: Renderer) =
-  discard renderer
+  ## Releases the renderer's persistent GPU resources.
+  when defined(macosx):
+    if renderer == nil:
+      return
+    renderer.releaseFrame()
+    for item in renderer.iblPipelines.mitems:
+      item.opaque.freeMetal()
+      item.blended.freeMetal()
+      item.backgroundOpaque.freeMetal()
+      item.backgroundBlended.freeMetal()
+    renderer.iblPipelines.setLen(0)
+    renderer.pipelineState.freeMetal()
+    renderer.blendPipelineState.freeMetal()
+    renderer.postPipeline.freeMetal()
+    renderer.postVertices.freeMetal()
+    renderer.depthState.freeMetal()
+    renderer.depthReadState.freeMetal()
+    renderer.sampler.freeMetal()
+    renderer.whiteTexture.freeMetal()
+    renderer.environmentTexture.freeMetal()
+    renderer.depthTexture.freeMetal()
+    renderer.offscreenTexture.freeMetal()
+    renderer.hdrTexture.freeMetal()
+    renderer.flagTexture.freeMetal()
+    renderer.transmissionTexture.freeMetal()
+    renderer.transmissionMsaa.freeMetal()
+    renderer.transmissionDepth.freeMetal()
+    renderer.ctx.commandQueue.freeMetal()
+  else:
+    discard renderer

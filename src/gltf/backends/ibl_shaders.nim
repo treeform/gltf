@@ -9,6 +9,7 @@ var
   hdrInput*: Uniform[Sampler2d]
   toneFlags*: Uniform[USampler2d]
   exposure*: Uniform[float32]
+  renderTextureYFlip*: Uniform[bool]
   hasVertexTangent*: Uniform[bool]
   charlieEnvironment*: Uniform[SamplerCube]
   charlieLut*: Uniform[Sampler2d]
@@ -84,11 +85,11 @@ var
   diffuseTransmissionColorUvOffset*, diffuseTransmissionColorUvScale*: Uniform[Vec2]
   diffuseTransmissionUvRotation*, diffuseTransmissionColorUvRotation*: Uniform[float32]
 
-func pbrNeutral*(input: Vec3): Vec3 =
+func pbrNeutral*(radiance: Vec3): Vec3 =
   ## Khronos PBR Neutral, operating on exposed linear radiance.
-  let x = min(input.r, min(input.g, input.b))
+  let x = min(radiance.r, min(radiance.g, radiance.b))
   let offset = if x < 0.08'f: x - 6.25'f * x * x else: 0.04'f
-  var value: Vec3 = input - vec3(offset)
+  var value: Vec3 = radiance - vec3(offset)
   let peak = max(value.r, max(value.g, value.b))
   if peak < 0.76'f:
     return value
@@ -169,7 +170,9 @@ proc volumeAttenuation(radiance: Vec3, distance: float32): Vec3 =
 
 proc transmittedBackground(worldPos, ray: Vec3, roughness: float32): Vec3 =
   let clip = proj * view * vec4(worldPos + ray, 1.0'f)
-  let sampleUv = (clip.xy / clip.w) * 0.5'f + vec2(0.5'f)
+  var sampleUv = (clip.xy / clip.w) * 0.5'f + vec2(0.5'f)
+  if renderTextureYFlip:
+    sampleUv.y = 1.0'f - sampleUv.y
   let level = transmissionBufferLod * iorRoughness(roughness, materialIor)
   result = volumeAttenuation(textureLod(transmissionBuffer, sampleUv, level).rgb, length(ray))
 
@@ -188,9 +191,9 @@ proc punctualTransmission(n, v, l: Vec3, alphaRoughness: float32): float32 =
   if denom > 0.0'f and visibilityDenom > 0.0'f:
     result = a2 / (ShaderPi * denom * denom) * 0.5'f / visibilityDenom
 
-proc inverseNeutralForTransmission(input: Vec3): Vec3 =
+proc inverseNeutralForTransmission(radiance: Vec3): Vec3 =
   # Match the reference's approximate inverse for unlit objects in the snapshot.
-  var value: Vec3 = input
+  var value: Vec3 = radiance
   let peak = max(value.r, max(value.g, value.b))
   if peak >= 0.76'f:
     value = value * ((peak / (1.0'f - peak + 0.76'f)) / peak)
@@ -628,8 +631,12 @@ proc hdrPostVert*(vertexPosition: Vec2, gl_Position: var Vec4, postUv: var Vec2)
   postUv = vertexPosition * 0.5'f + vec2(0.5'f)
 
 proc hdrPostFrag*(postUv: Vec2, fragColor: var Vec4) =
-  let flag = texelFetch(toneFlags, ivec2(postUv * textureSize(hdrInput, 0)), 0).r
-  let sampleValue: Vec4 = texture(hdrInput, postUv)
+  var sampleUv = postUv
+  if renderTextureYFlip:
+    sampleUv.y = 1.0'f - sampleUv.y
+  let flag = texelFetch(toneFlags,
+    ivec2(sampleUv * vec2(textureSize(hdrInput, 0))), 0).r
+  let sampleValue: Vec4 = texture(hdrInput, sampleUv)
   var value: Vec3 = sampleValue.rgb
   if flag == uint32(2):
     value = pbrNeutral(value * exposure)

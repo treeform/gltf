@@ -1,4 +1,5 @@
 ## Exercise unlit materials through both real OpenGL presentation paths.
+import glframes
 import std/[json, math], flatty/binny, opengl, windy, vmath, chroma, pixie,
   pixie/fileformats/png, gltf
 
@@ -22,6 +23,7 @@ proc decode(v: float64): float64 =
 let window = newWindow("Unlit pipeline test", ivec2(32, 32), visible = false)
 makeContextCurrent(window)
 loadExtensions()
+var testFrame = newTestFrame(ivec2(32, 32))
 # Check KTX2 export with the GPU decoder, including color hidden by zero alpha.
 let redTexture = newImage(4, 4)
 redTexture.fill(rgbx(255, 0, 0, 0))
@@ -91,6 +93,7 @@ for hdr in [false, true]:
       material.alphaMode = [OpaqueAlphaMode, MaskAlphaMode, MaskAlphaMode, BlendAlphaMode][testCase]
       material.alphaCutoff = if testCase == 2: 0.75 else: 0.25
       inc material.materialVersion
+      testFrame.bindFrame()
       renderer.beginFrame(window, window.size)
       renderer.clearScreen(color(0, 0, 0, 1))
       if hdr: pbr.beginIblFrame()
@@ -98,7 +101,7 @@ for hdr in [false, true]:
       if hdr: pbr.endIblFrame()
       renderer.endFrame()
       var actual: array[4, uint8]
-      glReadBuffer(GL_BACK)
+      glReadBuffer(GL_COLOR_ATTACHMENT0)
       glReadPixels(16, 16, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, actual[0].addr)
       for channel in 0 ..< 3:
         let expected =
@@ -115,3 +118,5 @@ for hdr in [false, true]:
 renderer.release(root)
 renderer.shutdown()
 echo "Unlit GPU pipeline: texture/factor/vertex colors, alpha modes, and lighting/exposure independence passed"
+
+testFrame.destroy()

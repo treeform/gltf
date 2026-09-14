@@ -137,7 +137,7 @@ proc fogAmount(worldPos: Vec3): float32 =
 
 proc applyFog(value, worldPos: Vec3): Vec3 =
   ## Applies the configured fog color to a shaded RGB value.
-  mix(value, fogColor.rgb, fogAmount(worldPos) * fogColor.a)
+  result = mix(value, fogColor.rgb, fogAmount(worldPos) * fogColor.a)
 
 proc gltfPbrVert*(
   vertexPosition: Vec3,
@@ -529,6 +529,9 @@ const
 
   PbrVertMsl* = toShader(gltfPbrVert, metalMSL, shaderVertex)
   PbrFragMsl* = toShader(gltfPbrFrag, metalMSL, shaderFragment)
+  IblFragMsl* = toShader(gltfIblFrag, metalMSL, shaderFragment)
+  HdrPostVertMsl* = toShader(hdrPostVert, metalMSL, shaderVertex)
+  HdrPostFragMsl* = toShader(hdrPostFrag, metalMSL, shaderFragment)
   SkyboxVertMsl* = toShader(gltfSkyboxVert, metalMSL, shaderVertex)
   SkyboxFragMsl* = toShader(gltfSkyboxFrag, metalMSL, shaderFragment)
   ShadowDepthVertMsl* =

@@ -6,9 +6,11 @@ import { assetsDir, repoDir, defaultManifest, validateManifest, cacheDir, source
 
 const { values: args } = parseArgs({ options: {
   manifest: { type: 'string' }, out: { type: 'string' }, case: { type: 'string' }, baselines: { type: 'string' },
-  commit: { type: 'string' },
+  commit: { type: 'string' }, backend: { type: 'string', default: 'opengl' },
   'no-build': { type: 'boolean' }, strict: { type: 'boolean' }, legacy: { type: 'boolean' }
 } });
+if (!['opengl', 'metal'].includes(args.backend)) throw new Error('Backend must be opengl or metal');
+if (args.backend === 'metal' && process.platform !== 'darwin') throw new Error('Metal comparison requires macOS');
 const manifest = path.resolve(args.manifest || defaultManifest);
 const spec = JSON.parse(await readFile(manifest, 'utf8'));
 validateManifest(spec);
@@ -34,9 +36,10 @@ if (!args.legacy) {
 }
 const outDir = path.resolve(args.out || path.join(repoDir, 'tests/tmp/reference'));
 await mkdir(outDir, { recursive: true });
-const executable = path.join(repoDir, 'tests/tmp/sample_assets_reference' + (process.platform === 'win32' ? '.exe' : ''));
+const executable = path.join(repoDir, `tests/tmp/sample_assets_reference${args.backend === 'metal' ? '_metal' : ''}` + (process.platform === 'win32' ? '.exe' : ''));
 if (!args['no-build']) {
-  const build = spawnSync('nim', ['c', '--hints:off', `--nimcache:${path.join(repoDir, 'tests/tmp/reference-nimcache')}`,
+  const build = spawnSync('nim', ['c', '--hints:off', `--nimcache:${path.join(repoDir, `tests/tmp/reference-nimcache-${args.backend}`)}`,
+    args.backend === 'metal' ? '-d:useMetal4' : '-d:useOpenGL',
     `-o:${executable}`, path.join(repoDir, 'tests/sample_assets.nim')], { cwd: repoDir, stdio: 'inherit' });
   if (build.error) throw build.error;
   if (build.status !== 0) process.exit(build.status || 1);
@@ -52,6 +55,17 @@ await writeFile(path.join(outDir, 'nim-run.log'), (render.stdout || '') + (rende
 let metrics;
 try { metrics = JSON.parse(await readFile(path.join(outDir, 'metrics.json'), 'utf8')); }
 catch { console.error(render.stdout, render.stderr); process.exit(1); }
+const selectedIds = spec.cases.filter(c => !args.case || args.case.split(',').some(filter => filter && c.id.includes(filter))).map(c => c.id);
+if (metrics.length !== selectedIds.length || new Set(metrics.map(m => m.id)).size !== selectedIds.length || selectedIds.some(id => !metrics.some(m => m.id === id))) {
+  throw new Error('The native report is incomplete or has duplicate captures');
+}
+await writeFile(path.join(outDir, 'implementation.json'), JSON.stringify({
+  backend: args.backend, platform: process.platform, architecture: process.arch,
+  commit: git(repoDir, 'rev-parse', 'HEAD'), dirty: Boolean(git(repoDir, 'status', '--porcelain', '--untracked-files=no')),
+  expectedCaptures: selectedIds.length, actualCaptures: metrics.length,
+  passed: metrics.filter(m => m.status === 'ok').length,
+  capturedAt: new Date().toISOString()
+}, null, 2) + '\n');
 if (args.commit) {
   if (!/^[0-9a-f]{7,40}$/i.test(args.commit)) throw new Error('--commit must be a Git commit hash');
   const commit = git(repoDir, 'rev-parse', `${args.commit}^{commit}`);

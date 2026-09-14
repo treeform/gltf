@@ -23,6 +23,7 @@ type
     normal*: MetalTexture
     occlusion*: MetalTexture
     emissive*: MetalTexture
+    iblTextures*: array[29, MetalTexture]
 
   GltfFileData* = ref object
     sceneVersion*: uint64

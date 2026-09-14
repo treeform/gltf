@@ -6,6 +6,7 @@ import
   ../../common, ../../models, ../../shaders, ../../ktx2,
   ./common as openglCommon,
   ./ibl,
+  ../materials,
   ./transmission,
   ../shaders as shaderSources
 
@@ -194,6 +195,12 @@ type
     cullFace: int8
     frontFaceCw: int8
 
+  IblVariant = object
+    mask: IblTextureMask
+    program: GLuint
+    uniforms: PbrUniforms
+    units: array[29, int]
+
   PbrContext* = ref object
     ## Reusable state for PBR rendering.
     size*: IVec2
@@ -227,6 +234,10 @@ type
     transmissionTarget: TransmissionTarget
     transmissionBackground: bool
     ownsIblEnvironment: bool
+    iblVariants: seq[IblVariant]
+    iblUnits: array[29, int]
+    iblMask: IblTextureMask
+    iblSpecialized: bool
     maxIblAnisotropy: float32
     useShadows*: bool
     drawSkybox*: bool
@@ -839,14 +850,17 @@ proc attachIblEnvironment*(ctx: PbrContext, environment: IblEnvironment,
   ## procedural-lighting contexts keep their original shader and texture data.
   doAssert not ctx.hdrTarget.active
   doAssert environment.specular != 0 and environment.diffuse != 0 and environment.lut != 0
-  let shader = compileShaderFiles(PbrVertexShader, shaderSources.IblFragSrc)
   if ctx.ownsIblEnvironment:
     ctx.iblEnvironment.destroy()
   if ctx.ownsEnvironmentMap:
     ctx.environmentMap.destroy()
-  glDeleteProgram(ctx.pbrShader)
-  ctx.pbrShader = shader
-  ctx.pbrUniforms = loadPbrUniforms(shader)
+  for variant in ctx.iblVariants:
+    glDeleteProgram(variant.program)
+  if ctx.iblVariants.len == 0:
+    glDeleteProgram(ctx.pbrShader)
+  ctx.iblVariants.setLen(0)
+  ctx.pbrShader = 0
+  ctx.iblSpecialized = false
   ctx.iblEnvironment = environment
   ctx.ownsIblEnvironment = owned
   ctx.maxIblAnisotropy = maxIblAnisotropy()
@@ -854,23 +868,54 @@ proc attachIblEnvironment*(ctx: PbrContext, environment: IblEnvironment,
     mipCount: environment.mipCount.float32)
   ctx.ownsEnvironmentMap = false
   ctx.environmentMapStrength = environment.intensityScale
-  glUseProgram(shader)
-  for (name, unit) in [("baseColorTexture", 0), ("metallicRoughnessTexture", 1),
-      ("normalTexture", 2), ("occlusionTexture", 3), ("emissiveTexture", 4),
-      ("environmentMap", 5), ("diffuseEnvironment", 7), ("ggxLut", 8),
-      ("charlieEnvironment", 9), ("charlieLut", 10), ("sheenEnergyLut", 11),
-      ("transmissionBuffer", 12), ("transmissionTexture", 13), ("thicknessTexture", 14),
-      ("diffuseTransmissionTexture", 15), ("diffuseTransmissionColorTexture", 16),
-      ("anisotropyTexture", 17), ("clearcoatTexture", 18),
-      ("clearcoatRoughnessTexture", 19), ("clearcoatNormalTexture", 20),
-      ("iridescenceTexture", 21), ("iridescenceThicknessTexture", 22),
-      ("specularTexture", 23), ("specularColorTexture", 24),
-      ("sheenColorTexture", 25), ("sheenRoughnessTexture", 26),
-      ("diffuseTexture", 27), ("specularGlossinessTexture", 28)]:
-    glUniform1i(uniformLocation(shader, name.cstring), unit.GLint)
-  glUniform1f(uniformLocation(shader, "transmissionBufferLod"), log2(TransmissionSize.float32))
   ctx.passValues = PbrPassValues()
   inc textureBindEpoch
+  ctx.invalidateGlState()
+
+proc selectIblVariant(ctx: PbrContext, material: Material) =
+  ## Caches material texture combinations with densely assigned sampler units.
+  let mask = material.textureMask()
+  if ctx.iblSpecialized and ctx.iblMask == mask:
+    return
+  var selected = -1
+  for i, variant in ctx.iblVariants:
+    if variant.mask == mask:
+      selected = i
+      break
+  if selected < 0:
+    var variant = IblVariant(mask: mask)
+    variant.program = compileShaderFiles(
+      PbrVertexShader,
+      specializeIbl(shaderSources.IblFragSrc, mask)
+    )
+    variant.uniforms = loadPbrUniforms(variant.program)
+    glUseProgram(variant.program)
+    var nextUnit = 0
+    for unit, name in IblSamplerNames:
+      variant.units[unit] = -1
+      if name.len == 0:
+        continue
+      let location = uniformLocation(variant.program, name.cstring)
+      if location >= 0:
+        variant.units[unit] = nextUnit
+        glUniform1i(location, nextUnit.GLint)
+        inc nextUnit
+    glUniform1f(
+      uniformLocation(variant.program, "transmissionBufferLod"),
+      log2(TransmissionSize.float32)
+    )
+    if ctx.iblVariants.len == 64:
+      glDeleteProgram(ctx.iblVariants[0].program)
+      ctx.iblVariants.delete(0)
+    selected = ctx.iblVariants.len
+    ctx.iblVariants.add(variant)
+  let variant = ctx.iblVariants[selected]
+  ctx.pbrShader = variant.program
+  ctx.pbrUniforms = variant.uniforms
+  ctx.iblUnits = variant.units
+  ctx.iblMask = mask
+  ctx.iblSpecialized = true
+  ctx.invalidateUniformCache()
   ctx.invalidateGlState()
 
 proc beginIblFrame*(ctx: PbrContext) =
@@ -908,8 +953,11 @@ proc destroy*(ctx: PbrContext) =
     glDeleteBuffers(1, ctx.skyboxVbo.addr)
   if ctx.skyboxVao != 0:
     glDeleteVertexArrays(1, ctx.skyboxVao.addr)
-  if ctx.pbrShader != 0:
+  for variant in ctx.iblVariants:
+    glDeleteProgram(variant.program)
+  if ctx.iblVariants.len == 0 and ctx.pbrShader != 0:
     glDeleteProgram(ctx.pbrShader)
+  ctx.iblVariants.setLen(0)
   if ctx.skyboxShader != 0:
     glDeleteProgram(ctx.skyboxShader)
   if ctx.shadowDepthShader != 0:
@@ -989,6 +1037,13 @@ proc bindTextureCached(
   target: GLenum,
   id: GLuint
 ) =
+  let physicalUnit =
+    if ctx.iblEnvironment.specular != 0:
+      ctx.iblUnits[unit]
+    else:
+      unit
+  if physicalUnit < 0:
+    return
   if ctx.glState.textureEpoch != textureBindEpoch:
     for cachedUnit in 0 ..< ctx.glState.boundTexture.len:
       ctx.glState.boundTexture[cachedUnit] = TextureUnknown
@@ -996,7 +1051,7 @@ proc bindTextureCached(
   if ctx.glState.boundTexture[unit] == id:
     return
   if ctx.glState.activeUnit != unit:
-    glActiveTexture(GLenum(GL_TEXTURE0.int + unit))
+    glActiveTexture(GLenum(GL_TEXTURE0.int + physicalUnit))
     ctx.glState.activeUnit = unit
   glBindTexture(target, id)
   ctx.glState.boundTexture[unit] = id
@@ -1570,7 +1625,6 @@ proc applyPassUniforms(
         cast[ptr float32](ctx.punctualLightParameters[0].addr))
   ctx.syncPassValue(useShadow, useShadow):
     glUniform1i(u.useShadow, useShadow.GLint)
-  ctx.passValues.valid = true
 
 proc applyMaterial(
   ctx: PbrContext,
@@ -1634,10 +1688,11 @@ proc applyMaterial(
         (23, material.specularSampler), (24, material.specularColorSampler),
         (25, material.sheenColorSampler), (26, material.sheenRoughnessSampler),
         (27, material.diffuseSampler), (28, material.specularGlossinessSampler)]:
-      if ctx.glState.boundTexture[unit] == 0: continue
+      if ctx.iblUnits[unit] < 0 or ctx.glState.boundTexture[unit] == 0:
+        continue
       if sampler.magFilter != NearestMagFilter and sampler.minFilter in
           {NearestMipmapLinearMinFilter, LinearMipmapLinearMinFilter}:
-        glActiveTexture(GLenum(GL_TEXTURE0.int + unit))
+        glActiveTexture(GLenum(GL_TEXTURE0.int + ctx.iblUnits[unit]))
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, ctx.maxIblAnisotropy)
     ctx.glState.activeUnit = -1
   let activeShadowTex =
@@ -1799,8 +1854,6 @@ proc renderPbrPrimitive(
 ) =
   if primitive == nil:
     return
-  let pbrUniforms = ctx.pbrUniforms
-
   if deferBlend and ctx.iblEnvironment.specular != 0:
     let entry = BlendEntry(node: owner, primitive: primitive,
       transform: transform, tint: tint, root: root,
@@ -1826,6 +1879,9 @@ proc renderPbrPrimitive(
     ))
     return
 
+  if ctx.iblEnvironment.specular != 0:
+    ctx.selectIblVariant(primitive.material)
+  let pbrUniforms = ctx.pbrUniforms
   ctx.ensurePbrProgram()
   ctx.applyPassUniforms(
     view,
@@ -1879,6 +1935,7 @@ proc renderPbrPrimitive(
   # Lazy material uploads bind on the active texture unit. Bind pass textures
   # afterward so a first-use upload cannot replace the transmission snapshot.
   ctx.applyMaterial(primitive, shadowTex)
+  ctx.passValues.valid = true
 
   ctx.bindTextureCached(
     5,
