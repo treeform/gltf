@@ -83,11 +83,13 @@ SDK; `SHADY_SPIRV_COMPILER` can override its executable path. Builds using
 from the shared Nim shaders with `nim r tools/build_backend_shaders.nim`
 from the repository root.
 
-The current full catalog passes all **301 captures from 149 model files** on
-DirectX 12 and Vulkan, with no skipped comparisons. Each backend's worst Pixie
-score is 1.178%, under the unchanged 2% threshold. These are actual native GPU
-captures against the existing masters. OpenGL also passed the full catalog;
-its 25-capture regression passes with the shared shader compiler changes.
+The current Windows full catalog passes all **301 captures from 149 model
+files** on every backend, with no skipped comparisons. All 903 captures also
+score below 1%: the worst Pixie scores are 0.8974% on OpenGL, 0.8953% on DirectX
+12 and 0.9427% on Vulkan. These are actual native GPU captures against the
+existing masters after the texture-filtering corrections below. The report's
+existing 2% pass threshold is unchanged; the below-1% result is checked
+separately across every capture.
 
 DirectX and Vulkan now generate color-texture mipmaps in linear light before
 encoding them back to sRGB. Data maps and alpha are averaged as linear bytes,
