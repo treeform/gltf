@@ -6,7 +6,8 @@ proc cmdImageBarrier(commandBuffer: VkCommandBuffer, image: VkImage,
   srcStage, dstStage: VkPipelineStageFlags2, srcAccess, dstAccess: VkAccessFlags2,
   mipLevel = 0)
 
-proc materialSampler(renderer: Renderer, sampler: TextureSampler, levels: int): VkSampler =
+proc materialSampler(renderer: Renderer, sampler: TextureSampler, levels: int,
+    anisotropic = false): VkSampler =
   proc wrap(value: TextureWrap): VkSamplerAddressMode =
     case value
     of ClampToEdgeWrap: VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE
@@ -19,6 +20,11 @@ proc materialSampler(renderer: Renderer, sampler: TextureSampler, levels: int): 
     addressModeU: wrap(sampler.wrapS), addressModeV: wrap(sampler.wrapT), addressModeW: wrap(sampler.wrapS),
     maxLod: (if sampler.minFilter in {NearestMinFilter, LinearMinFilter}: 0'f else: (levels - 1).float32),
     maxAnisotropy: 1)
+  if anisotropic and renderer.ctx.maxSamplerAnisotropy > 1 and
+      sampler.magFilter != NearestMagFilter and sampler.minFilter in
+        {NearestMipmapLinearMinFilter, LinearMipmapLinearMinFilter}:
+    desc.anisotropyEnable = VkBool32(VK_TRUE)
+    desc.maxAnisotropy = min(16.0'f, renderer.ctx.maxSamplerAnisotropy)
   checkVk(vkCreateSampler(renderer.ctx.device, addr desc, nil, addr result), "Creating material sampler")
 
 proc createHdr(renderer: Renderer, size: IVec2) =

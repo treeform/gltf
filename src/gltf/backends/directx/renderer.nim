@@ -8,7 +8,7 @@ import
   chroma, pixie, vmath, windy,
   pkg/dx12, pkg/dx12/context, shady/backends/dx12,
   ../../common, ../../models,
-  ./common, ../shader_layout, ../pbr_uniforms, ../ibl_data,
+  ./common, ../shader_layout, ../pbr_uniforms, ../ibl_data, ../texture_mips,
   ../shaders as shaderSources
 
 export ibl_data
@@ -282,46 +282,19 @@ proc textureDescCube(size: int, format: uint32, mipLevels = 1): D3D12_RESOURCE_D
   result = textureDesc2D(size, size, format, mipLevels = mipLevels)
   result.DepthOrArraySize = 6
 
-proc downsample(src: RgbaSubresource): RgbaSubresource =
-  result.width = max(1, src.width div 2)
-  result.height = max(1, src.height div 2)
-  result.pixels = newSeq[ColorRGBX](result.width * result.height)
-  for y in 0 ..< result.height:
-    let
-      sy0 = y * src.height div result.height
-      sy1 = min(src.height, max(sy0 + 1, (y + 1) * src.height div result.height))
-    for x in 0 ..< result.width:
-      let
-        sx0 = x * src.width div result.width
-        sx1 = min(src.width, max(sx0 + 1, (x + 1) * src.width div result.width))
-      var
-        r, g, b, a, count: uint32
-      for sy in sy0 ..< sy1:
-        for sx in sx0 ..< sx1:
-          let pixel = src.pixels[sy * src.width + sx]
-          r += pixel.r.uint32
-          g += pixel.g.uint32
-          b += pixel.b.uint32
-          a += pixel.a.uint32
-          inc count
-      result.pixels[y * result.width + x] = rgbx(
-        uint8(r div count),
-        uint8(g div count),
-        uint8(b div count),
-        uint8(a div count)
-      )
+proc downsample(src: RgbaSubresource, srgb = false): RgbaSubresource =
+  let mip = downsampleTexture(TextureMip(width: src.width, height: src.height,
+    pixels: src.pixels), srgb)
+  RgbaSubresource(width: mip.width, height: mip.height, pixels: mip.pixels)
 
-proc buildMipChain(base: RgbaSubresource): seq[RgbaSubresource] =
+proc buildMipChain(base: RgbaSubresource, srgb = false): seq[RgbaSubresource] =
   result.add(base)
   while result[^1].width > 1 or result[^1].height > 1:
-    result.add(result[^1].downsample())
+    result.add(result[^1].downsample(srgb))
 
-proc buildImageMips(image: Image): seq[RgbaSubresource] =
-  result = buildMipChain(RgbaSubresource(
-    width: image.width,
-    height: image.height,
-    pixels: image.data
-  ))
+proc buildImageMips(image: Image, srgb = false): seq[RgbaSubresource] =
+  buildMipChain(RgbaSubresource(width: image.width, height: image.height,
+    pixels: image.data), srgb)
 
 proc studioFaceDirection(face, x, y, size: int): Vec3 =
   let
@@ -595,7 +568,7 @@ proc uploadRgbaSubresources(
   )
 
 proc uploadImage(renderer: Renderer, image: Image, srgb = false): DxTexture =
-  let mips = image.buildImageMips()
+  let mips = image.buildImageMips(srgb)
   var desc = textureDesc2D(
     image.width,
     image.height,
@@ -1330,7 +1303,7 @@ proc ensureMaterial(renderer: Renderer, material: Material): DxMaterial =
         else:
           texture = if input.name == "normal": renderer.defaultNormal else: renderer.defaultWhite
         if texture != renderer.defaultWhite and texture != renderer.defaultNormal: result.textures.add(texture)
-        state = dxSampler(input.sampler)
+        state = dxSampler(input.sampler, anisotropic = renderer.frame.useIbl)
         break
     if texture == nil:
       if renderer.frame.useIbl:

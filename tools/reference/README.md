@@ -74,6 +74,9 @@ respectively. The Nim package selects Shady's `gltf-backend-parity` branch,
 tested at `647e11a5f7be255f88b9069bb538a1f063aacf8d`. Existing sibling Shady
 checkouts must also use that revision or a compatible descendant. This is a
 branch dependency, so fresh installs can receive later commits on that branch.
+Vulkan also selects vk14's `gltf-anisotropic-sampling` branch, tested at
+`0bd91f6a841dfca3cefcdbab4dd7efd0574b3329`, to enable anisotropic sampling
+when the device supports it. Existing vk14 checkouts need that change too.
 Vulkan compiles Shady's generated GLSL using `glslangValidator` from the Vulkan
 SDK; `SHADY_SPIRV_COMPILER` can override its executable path. Builds using
 `-d:shadyBinaryShaders` use the checked-in SPIR-V files instead. Rebuild these
@@ -85,6 +88,14 @@ DirectX 12 and Vulkan, with no skipped comparisons. Each backend's worst Pixie
 score is 1.178%, under the unchanged 2% threshold. These are actual native GPU
 captures against the existing masters. OpenGL also passed the full catalog;
 its 25-capture regression passes with the shared shader compiler changes.
+
+DirectX and Vulkan now generate color-texture mipmaps in linear light before
+encoding them back to sRGB. Data maps and alpha are averaged as linear bytes,
+with rounding, and RGB remains independent of alpha. Their IBL material
+samplers also match the reference's anisotropic filtering policy for compatible
+mipmap filters, up to 16 samples and the device's supported limit. Authored
+nearest filtering is retained. These resource/upload changes do not alter the
+shared material shaders or the masters.
 
 The report opens with a square overview card built with Pixie from 64×64
 thumbnails. Generated renders fill the top half; their X-rays occupy the same

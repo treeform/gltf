@@ -19,7 +19,8 @@ proc samplerHeap(renderer: Renderer, states: openArray[D3D12_SAMPLER_DESC]): ID3
     var state = states[min(i, states.high)]
     renderer.ctx.device.createSampler(addr state, offsetCpuHandle(base, step, i))
 
-proc dxSampler(sampler: TextureSampler, environment = false, comparison = false): D3D12_SAMPLER_DESC =
+proc dxSampler(sampler: TextureSampler, environment = false, comparison = false,
+    anisotropic = false): D3D12_SAMPLER_DESC =
   proc wrap(value: TextureWrap): uint32 =
     case value
     of ClampToEdgeWrap: D3D12_TEXTURE_ADDRESS_MODE_CLAMP
@@ -35,6 +36,10 @@ proc dxSampler(sampler: TextureSampler, environment = false, comparison = false)
   result.MaxLOD = if sampler.minFilter in {NearestMinFilter, LinearMinFilter}: 0 else: 1000
   result.MaxAnisotropy = 1
   result.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS
+  # Match the reference's material texture filtering, preserving nearest modes.
+  if anisotropic and sampler.magFilter != NearestMagFilter and mipLinear:
+    result.Filter = D3D12_FILTER_ANISOTROPIC
+    result.MaxAnisotropy = 16
   if environment:
     result.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR
     result.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP

@@ -24,6 +24,7 @@ import
   test_unlit,
   test_texture_images
 import test_shader_layout
+import test_texture_mips
 
 proc writeBytes(path: string, bytes: openArray[byte]) =
   ## Writes raw bytes to a test fixture file.
