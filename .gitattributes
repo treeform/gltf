@@ -1,0 +1,2 @@
+# Preserve reference manifest bytes used by the capture checksums.
+/tests/reference/*.json text eol=lf

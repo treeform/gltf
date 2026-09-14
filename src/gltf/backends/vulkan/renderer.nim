@@ -4,17 +4,17 @@ when not defined(windows):
   {.error: "The glTF Vulkan backend requires Windows.".}
 
 import
-  std/[algorithm, math, tables],
+  std/[math, tables],
   chroma, pixie, vmath, windy,
   ../../common, ../../models,
-  ./common,
+  ./common, ../shader_layout, ../pbr_uniforms, ../ibl_data, ../texture_mips,
   ../shaders as shaderSources
+
+export ibl_data
 
 import pkg/vk14 except Window
 
-when not defined(shadyBinaryShaders):
-  import std/os
-  import shady
+import std/os, shady
 
 const
   VertexEntryPoint* = "main"
@@ -27,7 +27,11 @@ const
   ShadowDepthVertexShader* = shaderSources.ShadowDepthVertVulkan
   ShadowDepthFragmentShader* = shaderSources.ShadowDepthFragVulkan
 
-  TextureDescriptorCount = 7
+  VertexLayout = shaderLayout(shaderSources.PbrVertVulkan, std140Packing)
+  PixelLayout = shaderLayout(shaderSources.PbrFragVulkan, std140Packing)
+  IblLayout = shaderLayout(shaderSources.IblFragVulkan, std140Packing)
+  PostLayout = shaderLayout(shaderSources.HdrPostFragVulkan, std140Packing)
+  TextureDescriptorCount = 28
   VertexUniformBinding = 0
   PixelUniformBinding = 1
   MaxFrameUniformSets = 8192
@@ -35,13 +39,12 @@ const
   DepthFormat = VK_FORMAT_D32_SFLOAT
   PreferredMsaaSamples = 8'u32
 
-when not defined(shadyBinaryShaders):
-  const
-    ShaderCacheDir = getTempDir() / "gltf-shady-vulkan"
-    PbrVertexGlslPath = ShaderCacheDir / "gltf_pbr.vert"
-    PbrFragmentGlslPath = ShaderCacheDir / "gltf_pbr.frag"
-    PbrVertexSpvPath = ShaderCacheDir / "gltf_pbr.vert.spv"
-    PbrFragmentSpvPath = ShaderCacheDir / "gltf_pbr.frag.spv"
+const
+  ShaderCacheDir = getTempDir() / "gltf-shady-vulkan"
+  PbrVertexGlslPath = ShaderCacheDir / "gltf_pbr.vert"
+  PbrFragmentGlslPath = ShaderCacheDir / "gltf_pbr.frag"
+  PbrVertexSpvPath = ShaderCacheDir / "gltf_pbr.vert.spv"
+  PbrFragmentSpvPath = ShaderCacheDir / "gltf_pbr.frag.spv"
 
 type
   VkVertex {.packed.} = object
@@ -57,22 +60,26 @@ type
   RgbaSubresource = object
     width, height: int
     pixels: seq[ColorRGBX]
+    floatBytes: string
 
   FrameBuffer = object
     buffer: VkBuffer
     memory: VkDeviceMemory
-
-  BlendEntry = object
-    node: Node
-    primitive: Primitive
-    transform: Mat4
-
-  Std140Writer = object
-    data: seq[uint32]
-    offset: int
+    offset: VkDeviceSize
 
   Renderer* = ref object
     window: Window
+    frame: PbrFrameUniforms
+    environment: Table[string, VkTexture]
+    environmentVersion: uint64
+    materialBindings: Table[string, VkMaterial]
+    defaultWhite, defaultNormal: VkTexture
+    geometryBlocks, uniformBlocks: seq[VkBufferBlock]
+    hdrColor, hdrFlags: VkTexture
+    hdrSize: IVec2
+    postMaterial: VkMaterial
+    fullscreen: FrameBuffer
+    transmission, transmissionMsaa, transmissionDepth: VkTexture
     ctx: VulkanContext
     materialSetLayout: VkDescriptorSetLayout
     uniformSetLayout: VkDescriptorSetLayout
@@ -88,39 +95,15 @@ type
     depthMemories: seq[VkDeviceMemory]
     depthViews: seq[VkImageView]
     commandBuffers: seq[VkCommandBuffer]
-    frameDescriptorPool: VkDescriptorPool
-    frameBuffers: seq[FrameBuffer]
+    frameDescriptorPools: seq[VkDescriptorPool]
+    frameUniformSets, uniformAlignment: int
     readbackBuffer: VkBuffer
     readbackMemory: VkDeviceMemory
     readbackSize: IVec2
 
-  PbrContext* = ref object
-    ## Reusable state for PBR rendering.
+  PbrContext* = ref object of PbrFrameUniforms
     renderer: Renderer
-    size*: IVec2
-    clearColor*: Color
-    transform*: Mat4
-    view*: Mat4
-    proj*: Mat4
-    tint*: Color
-    useTrs*: bool
-    ambientLightColor*: Color
-    sunLightDirection*: Vec3
-    sunLightColor*: Color
-    rimLightDirection*: Vec3
-    rimLightColor*: Color
-    debugView*: DebugView
-    cameraPosition*: Vec3
-    fogColor*: Color
-    fogStart*: float32
-    fogEnd*: float32
-    fogDensity*: float32
-    fogStrength*: float32
-    environmentMapStrength*: float32
-    useShadows*: bool
-    drawSkybox*: bool
-    skyboxLod*: float32
-    vsync*: bool
+    iblEnvironment*: IblEnvironment
 
 proc newPbrContext*(renderer: Renderer): PbrContext =
   ## Creates reusable state for PBR rendering.
@@ -146,6 +129,9 @@ proc newPbrContext*(renderer: Renderer): PbrContext =
   result.fogDensity = 0.0'f
   result.fogStrength = 0.0'f
   result.environmentMapStrength = 1.0'f
+  result.environmentMipCount = 3
+  result.environmentRotation = 90
+  result.exposure = 1
   result.useShadows = false
   result.drawSkybox = false
   result.skyboxLod = 0
@@ -154,79 +140,6 @@ proc newPbrContext*(renderer: Renderer): PbrContext =
 proc destroy*(ctx: PbrContext) =
   ## Releases resources owned by a PBR context.
   discard ctx
-
-proc f32bits(value: float32): uint32 =
-  cast[uint32](value)
-
-proc align(value, alignment: int): int =
-  ((value + alignment - 1) div alignment) * alignment
-
-proc alignOffset(writer: var Std140Writer, alignment: int) =
-  writer.offset = align(writer.offset, alignment)
-
-proc ensureBytes(writer: var Std140Writer, byteCount: int) =
-  let words = (max(0, byteCount) + 3) div 4
-  if writer.data.len < words:
-    writer.data.setLen(words)
-
-proc putU32(writer: var Std140Writer, value: uint32) =
-  writer.ensureBytes(writer.offset + 4)
-  writer.data[writer.offset div 4] = value
-  writer.offset += 4
-
-proc putFloat(writer: var Std140Writer, value: float32) =
-  writer.putU32(value.f32bits)
-
-proc putInt(writer: var Std140Writer, value: int) =
-  writer.putU32(value.uint32)
-
-proc putBool(writer: var Std140Writer, value: bool) =
-  writer.putU32(value.ord.uint32)
-
-proc putVec2(writer: var Std140Writer, value: Vec2) =
-  writer.alignOffset(8)
-  writer.putFloat(value.x)
-  writer.putFloat(value.y)
-
-proc putVec3(writer: var Std140Writer, value: Vec3) =
-  writer.alignOffset(16)
-  writer.putFloat(value.x)
-  writer.putFloat(value.y)
-  writer.putFloat(value.z)
-
-proc putColor(writer: var Std140Writer, value: Color) =
-  writer.alignOffset(16)
-  writer.putFloat(value.r)
-  writer.putFloat(value.g)
-  writer.putFloat(value.b)
-  writer.putFloat(value.a)
-
-proc putMat4(writer: var Std140Writer, value: Mat4) =
-  writer.alignOffset(16)
-  for i in 0 ..< 4:
-    for j in 0 ..< 4:
-      writer.putFloat(value[i, j])
-
-proc putMat3(writer: var Std140Writer, value: Mat3) =
-  writer.alignOffset(16)
-  for i in 0 ..< 3:
-    for j in 0 ..< 3:
-      writer.putFloat(value[i, j])
-    writer.ensureBytes(writer.offset + 4)
-    writer.offset += 4
-
-proc putMat4Array(writer: var Std140Writer, values: openArray[Mat4], count: int) =
-  writer.alignOffset(16)
-  for i in 0 ..< count:
-    if i < values.len:
-      writer.putMat4(values[i])
-    else:
-      writer.ensureBytes(writer.offset + 64)
-      writer.offset += 64
-
-proc finish(writer: var Std140Writer): seq[uint32] =
-  writer.ensureBytes(max(4, align(writer.offset, 4)))
-  writer.data
 
 proc perspectiveVkRh*(fovY, aspect, nearPlane, farPlane: float32): Mat4 =
   ## Vulkan right-handed projection matrix for vmath camera transforms.
@@ -312,6 +225,32 @@ proc createBuffer(
     "Allocating Vulkan buffer memory")
   checkVk(vkBindBufferMemory(ctx.device, buffer, memory, VkDeviceSize(0)),
     "Binding Vulkan buffer memory")
+
+proc allocateBuffer(renderer: Renderer, blocks: var seq[VkBufferBlock],
+    size, alignment: int): tuple[storage: VkBufferBlock, offset: int] =
+  for storage in blocks:
+    if storage.users == 0: storage.used = 0
+    let offset = (storage.used + alignment - 1) div alignment * alignment
+    if offset + size <= storage.capacity:
+      storage.used = offset + size
+      inc storage.users
+      return (storage, offset)
+  let storage = VkBufferBlock(capacity: max(8 * 1024 * 1024, size), used: size, users: 1)
+  createBuffer(renderer.ctx, VkDeviceSize(storage.capacity),
+    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT.uint32 or VK_BUFFER_USAGE_INDEX_BUFFER_BIT.uint32 or VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT.uint32,
+    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT.uint32 or VK_MEMORY_PROPERTY_HOST_COHERENT_BIT.uint32,
+    storage.buffer, storage.memory)
+  checkVk(vkMapMemory(renderer.ctx.device, storage.memory, VkDeviceSize(0),
+    VkDeviceSize(storage.capacity), VkMemoryMapFlags(0), addr storage.mapped), "Mapping buffer arena")
+  blocks.add(storage)
+  (storage, 0)
+
+proc destroyBlocks(renderer: Renderer, blocks: var seq[VkBufferBlock]) =
+  for storage in blocks:
+    vkUnmapMemory(renderer.ctx.device, storage.memory)
+    vkDestroyBuffer(renderer.ctx.device, storage.buffer, nil)
+    vkFreeMemory(renderer.ctx.device, storage.memory, nil)
+  blocks.setLen(0)
 
 proc createImage(
   ctx: VulkanContext,
@@ -427,45 +366,19 @@ proc transitionImageLayout(
     VkDependencyFlags(0), 0, nil, 0, nil, 1, barrier.addr)
   endSingleTimeCommands(ctx, commandBuffer)
 
-proc downsample(src: RgbaSubresource): RgbaSubresource =
-  result.width = max(1, src.width div 2)
-  result.height = max(1, src.height div 2)
-  result.pixels = newSeq[ColorRGBX](result.width * result.height)
-  for y in 0 ..< result.height:
-    let
-      sy0 = y * src.height div result.height
-      sy1 = min(src.height, max(sy0 + 1, (y + 1) * src.height div result.height))
-    for x in 0 ..< result.width:
-      let
-        sx0 = x * src.width div result.width
-        sx1 = min(src.width, max(sx0 + 1, (x + 1) * src.width div result.width))
-      var r, g, b, a, count: uint32
-      for sy in sy0 ..< sy1:
-        for sx in sx0 ..< sx1:
-          let pixel = src.pixels[sy * src.width + sx]
-          r += pixel.r.uint32
-          g += pixel.g.uint32
-          b += pixel.b.uint32
-          a += pixel.a.uint32
-          inc count
-      result.pixels[y * result.width + x] = rgbx(
-        uint8(r div count),
-        uint8(g div count),
-        uint8(b div count),
-        uint8(a div count)
-      )
+proc downsample(src: RgbaSubresource, srgb = false): RgbaSubresource =
+  let mip = downsampleTexture(TextureMip(width: src.width, height: src.height,
+    pixels: src.pixels), srgb)
+  RgbaSubresource(width: mip.width, height: mip.height, pixels: mip.pixels)
 
-proc buildMipChain(base: RgbaSubresource): seq[RgbaSubresource] =
+proc buildMipChain(base: RgbaSubresource, srgb = false): seq[RgbaSubresource] =
   result.add(base)
   while result[^1].width > 1 or result[^1].height > 1:
-    result.add(result[^1].downsample())
+    result.add(result[^1].downsample(srgb))
 
-proc buildImageMips(image: Image): seq[RgbaSubresource] =
-  buildMipChain(RgbaSubresource(
-    width: image.width,
-    height: image.height,
-    pixels: image.data
-  ))
+proc buildImageMips(image: Image, srgb = false): seq[RgbaSubresource] =
+  buildMipChain(RgbaSubresource(width: image.width, height: image.height,
+    pixels: image.data), srgb)
 
 proc studioFaceDirection(face, x, y, size: int): Vec3 =
   let
@@ -548,7 +461,8 @@ proc uploadRgbaSubresources(
   renderer: Renderer,
   width, height, mipLevels, layers: int,
   subresources: openArray[RgbaSubresource],
-  isCube = false
+  isCube = false,
+  format = VK_FORMAT_R8G8B8A8_UNORM
 ): VkTexture =
   let
     subresourceCount = mipLevels * layers
@@ -559,7 +473,7 @@ proc uploadRgbaSubresources(
   var totalBytes = VkDeviceSize(0)
   for i in 0 ..< subresourceCount:
     offsets[i] = totalBytes
-    totalBytes += VkDeviceSize(subresources[i].width * subresources[i].height * 4)
+    totalBytes += VkDeviceSize(subresources[i].width * subresources[i].height * (if subresources[i].floatBytes.len > 0: 16 else: 4))
 
   var stagingBuffer: VkBuffer
   var stagingMemory: VkDeviceMemory
@@ -577,13 +491,14 @@ proc uploadRgbaSubresources(
   for i in 0 ..< subresourceCount:
     let src = subresources[i]
     let dst = cast[pointer](base + uint(offsets[i]))
-    copyMem(dst, unsafeAddr src.pixels[0], src.width * src.height * 4)
+    if src.floatBytes.len > 0: copyMem(dst, unsafeAddr src.floatBytes[0], src.floatBytes.len)
+    else: copyMem(dst, unsafeAddr src.pixels[0], src.width * src.height * 4)
   vkUnmapMemory(renderer.ctx.device, stagingMemory)
 
   var image: VkImage
   var memory: VkDeviceMemory
   createImage(renderer.ctx, width, height, mipLevels, layers,
-    VK_FORMAT_R8G8B8A8_UNORM,
+    format,
     VK_IMAGE_USAGE_TRANSFER_DST_BIT.uint32 or VK_IMAGE_USAGE_SAMPLED_BIT.uint32,
     imageFlags, VK_SAMPLE_COUNT_1_BIT, image, memory)
 
@@ -633,7 +548,7 @@ proc uploadRgbaSubresources(
     sType: VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
     image: image,
     viewType: if isCube: VK_IMAGE_VIEW_TYPE_CUBE else: VK_IMAGE_VIEW_TYPE_2D,
-    format: VK_FORMAT_R8G8B8A8_UNORM,
+    format: format,
     components: VkComponentMapping(
       r: VK_COMPONENT_SWIZZLE_IDENTITY,
       g: VK_COMPONENT_SWIZZLE_IDENTITY,
@@ -656,15 +571,16 @@ proc uploadRgbaSubresources(
     memory: memory,
     view: view,
     sampler: renderer.createSampler(mipLevels, clampToEdge = isCube),
-    format: VK_FORMAT_R8G8B8A8_UNORM,
+    format: format,
     mipLevels: mipLevels,
     layers: layers,
     isCube: isCube
   )
 
-proc uploadImage(renderer: Renderer, image: Image): VkTexture =
-  let mips = image.buildImageMips()
-  renderer.uploadRgbaSubresources(image.width, image.height, mips.len, 1, mips)
+proc uploadImage(renderer: Renderer, image: Image, srgb = false): VkTexture =
+  let mips = image.buildImageMips(srgb)
+  renderer.uploadRgbaSubresources(image.width, image.height, mips.len, 1, mips,
+    format = (if srgb: VK_FORMAT_R8G8B8A8_SRGB else: VK_FORMAT_R8G8B8A8_UNORM))
 
 proc uploadSolidImage(renderer: Renderer, color: ColorRGBX): VkTexture =
   var image = newImage(1, 1)
@@ -986,10 +902,12 @@ proc createDescriptorSetLayouts(renderer: Renderer) =
 
 proc createPipelineLayout(renderer: Renderer) =
   var layouts = [renderer.materialSetLayout, renderer.uniformSetLayout]
+  var push = VkPushConstantRange(stageFlags: VkShaderStageFlags(VK_SHADER_STAGE_FRAGMENT_BIT), offset: 0, size: 128)
   var pipelineLayoutInfo = VkPipelineLayoutCreateInfo(
     sType: VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
     setLayoutCount: layouts.len.uint32,
-    pSetLayouts: layouts[0].addr
+    pSetLayouts: layouts[0].addr,
+    pushConstantRangeCount: 1, pPushConstantRanges: push.addr
   )
   checkVk(vkCreatePipelineLayout(renderer.ctx.device,
     pipelineLayoutInfo.addr, nil, renderer.pipelineLayout.addr),
@@ -1006,9 +924,11 @@ proc createFrameDescriptorPool(renderer: Renderer) =
     poolSizeCount: 1,
     pPoolSizes: poolSize.addr
   )
+  var pool: VkDescriptorPool
   checkVk(vkCreateDescriptorPool(renderer.ctx.device, poolInfo.addr, nil,
-    renderer.frameDescriptorPool.addr),
+    pool.addr),
     "Creating Vulkan frame descriptor pool")
+  renderer.frameDescriptorPools.add(pool)
 
 proc createPipeline(
   renderer: Renderer,
@@ -1018,6 +938,9 @@ proc createPipeline(
     const
       vertShaderCode = staticRead("../shaders/gltf_pbr.vert.spv")
       fragShaderCode = staticRead("../shaders/gltf_pbr.frag.spv")
+      iblCode = staticRead("../shaders/gltf_ibl.frag.spv")
+      postVertCode = staticRead("../shaders/gltf_post.vert.spv")
+      postFragCode = staticRead("../shaders/gltf_post.frag.spv")
   else:
     const
       vertShaderCode = compileSpirvShader(
@@ -1032,17 +955,20 @@ proc createPipeline(
         PbrFragmentSpvPath,
         binaryFragment
       )
+      iblCode = compileSpirvShader(shaderSources.IblFragVulkan, ShaderCacheDir / "gltf_ibl.frag", ShaderCacheDir / "gltf_ibl.frag.spv", binaryFragment)
+      postVertCode = compileSpirvShader(shaderSources.HdrPostVertVulkan, ShaderCacheDir / "gltf_post.vert", ShaderCacheDir / "gltf_post.vert.spv", binaryVertex)
+      postFragCode = compileSpirvShader(shaderSources.HdrPostFragVulkan, ShaderCacheDir / "gltf_post.frag", ShaderCacheDir / "gltf_post.frag.spv", binaryFragment)
   let
-    vertModule = createShaderModule(renderer.ctx.device, vertShaderCode)
-    fragModule = createShaderModule(renderer.ctx.device, fragShaderCode)
+    vertModule = createShaderModule(renderer.ctx.device, if key.post: postVertCode else: vertShaderCode)
+    fragModule = createShaderModule(renderer.ctx.device, if key.post: postFragCode elif key.ibl: iblCode else: fragShaderCode)
   try:
     var
-      colorFormat = renderer.ctx.swapChainImageFormat
+      colorFormats = [(if key.background: VK_FORMAT_R8G8B8A8_UNORM elif key.ibl: VK_FORMAT_R16G16B16A16_SFLOAT else: renderer.ctx.swapChainImageFormat), VK_FORMAT_R8_UINT]
       renderingInfo = VkPipelineRenderingCreateInfo(
         sType: VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
-        colorAttachmentCount: 1,
-        pColorAttachmentFormats: colorFormat.addr,
-        depthAttachmentFormat: DepthFormat
+        colorAttachmentCount: (if key.ibl and not key.background: 2 else: 1),
+        pColorAttachmentFormats: colorFormats[0].addr,
+        depthAttachmentFormat: (if key.post: VK_FORMAT_UNDEFINED else: DepthFormat)
       )
       dynamicStates = [
         VkDynamicState(VK_DYNAMIC_STATE_VIEWPORT),
@@ -1068,12 +994,12 @@ proc createPipeline(
       shaderStages = [vertStage, fragStage]
       bindingDesc = VkVertexInputBindingDescription(
         binding: 0,
-        stride: sizeof(VkVertex).uint32,
+        stride: (if key.post: 8 else: sizeof(VkVertex)).uint32,
         inputRate: VK_VERTEX_INPUT_RATE_VERTEX
       )
       attributeDescs = [
         VkVertexInputAttributeDescription(
-          location: 0, binding: 0, format: VK_FORMAT_R32G32B32_SFLOAT, offset: 0),
+          location: 0, binding: 0, format: (if key.post: VK_FORMAT_R32G32_SFLOAT else: VK_FORMAT_R32G32B32_SFLOAT), offset: 0),
         VkVertexInputAttributeDescription(
           location: 1, binding: 0, format: VK_FORMAT_R32G32B32A32_SFLOAT, offset: 12),
         VkVertexInputAttributeDescription(
@@ -1093,7 +1019,7 @@ proc createPipeline(
         sType: VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
         vertexBindingDescriptionCount: 1,
         pVertexBindingDescriptions: bindingDesc.addr,
-        vertexAttributeDescriptionCount: attributeDescs.len.uint32,
+        vertexAttributeDescriptionCount: (if key.post: 1 else: attributeDescs.len).uint32,
         pVertexAttributeDescriptions: attributeDescs[0].addr
       )
       inputAssembly = VkPipelineInputAssemblyStateCreateInfo(
@@ -1113,21 +1039,21 @@ proc createPipeline(
         polygonMode: VK_POLYGON_MODE_FILL,
         lineWidth: 1.0,
         cullMode:
-          if key.doubleSided:
+          if key.doubleSided or key.post:
             VkCullModeFlags(VK_CULL_MODE_NONE)
           else:
             VkCullModeFlags(VK_CULL_MODE_BACK_BIT),
-        frontFace: VK_FRONT_FACE_COUNTER_CLOCKWISE,
+        frontFace: (if key.mirrored: VK_FRONT_FACE_CLOCKWISE else: VK_FRONT_FACE_COUNTER_CLOCKWISE),
         depthBiasEnable: VkBool32(VK_FALSE)
       )
       multisampling = VkPipelineMultisampleStateCreateInfo(
         sType: VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
         sampleShadingEnable: VkBool32(VK_FALSE),
-        rasterizationSamples: renderer.sampleCount
+        rasterizationSamples: (if key.background: VK_SAMPLE_COUNT_4_BIT elif key.ibl or key.post: VK_SAMPLE_COUNT_1_BIT else: renderer.sampleCount)
       )
       depthStencil = VkPipelineDepthStencilStateCreateInfo(
         sType: VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-        depthTestEnable: VkBool32(VK_TRUE),
+        depthTestEnable: VkBool32(if key.post: VK_FALSE else: VK_TRUE),
         depthWriteEnable: VkBool32(if key.blended: VK_FALSE else: VK_TRUE),
         depthCompareOp: VK_COMPARE_OP_LESS,
         depthBoundsTestEnable: VkBool32(VK_FALSE),
@@ -1145,12 +1071,13 @@ proc createPipeline(
         dstAlphaBlendFactor: if key.blended: VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA else: VK_BLEND_FACTOR_ZERO,
         alphaBlendOp: VK_BLEND_OP_ADD
       )
+      colorAttachments = [colorBlendAttachment, VkPipelineColorBlendAttachmentState(colorWriteMask: VkColorComponentFlags(0xF))]
       colorBlending = VkPipelineColorBlendStateCreateInfo(
         sType: VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
         logicOpEnable: VkBool32(VK_FALSE),
         logicOp: VK_LOGIC_OP_COPY,
-        attachmentCount: 1,
-        pAttachments: colorBlendAttachment.addr,
+        attachmentCount: (if key.ibl and not key.background: 2 else: 1),
+        pAttachments: colorAttachments[0].addr,
         blendConstants: [0.0'f32, 0.0'f32, 0.0'f32, 0.0'f32]
       )
       pipelineInfo = VkGraphicsPipelineCreateInfo(
@@ -1187,10 +1114,14 @@ proc newRenderer*(window: Window): Renderer =
   let hwnd = window.getHWND()
   if hwnd == 0:
     raise newException(GltfError, "Failed to acquire HWND for Vulkan renderer.")
-  result.ctx.initDevice(hwnd, safeSize.x.int, safeSize.y.int, window.vsync)
+  result.ctx.initDevice(hwnd, safeSize.x.int, safeSize.y.int, window.vsync,
+    samplerAnisotropy = true)
   result.sampleCount = chooseMsaaSampleCount(result.ctx)
   result.createDescriptorSetLayouts()
   result.createPipelineLayout()
+  var properties: VkPhysicalDeviceProperties
+  vkGetPhysicalDeviceProperties(result.ctx.physicalDevice, addr properties)
+  result.uniformAlignment = max(16, properties.limits.minUniformBufferOffsetAlignment.int)
   result.createFrameDescriptorPool()
   result.createSwapChainResources()
 
@@ -1213,6 +1144,13 @@ proc releaseTexture(renderer: Renderer, texture: VkTexture) =
 proc releaseMaterial(renderer: Renderer, material: VkMaterial) =
   if material == nil:
     return
+  if material.binding != nil:
+    let shared = material.binding
+    material.binding = nil
+    dec shared.references
+    if shared.references == 0:
+      renderer.releaseMaterial(shared)
+    return
   for texture in material.textures:
     renderer.releaseTexture(texture)
   material.textures.setLen(0)
@@ -1221,41 +1159,76 @@ proc releaseMaterial(renderer: Renderer, material: VkMaterial) =
     material.descriptorPool = VkDescriptorPool(0)
 
 proc releasePrimitive(renderer: Renderer, primitive: VkPrimitive) =
-  if primitive == nil:
-    return
-  if primitive.vertexPtr != nil:
-    vkUnmapMemory(renderer.ctx.device, primitive.vertexMemory)
-    primitive.vertexPtr = nil
-  if primitive.vertexBuffer.int64 != 0:
-    vkDestroyBuffer(renderer.ctx.device, primitive.vertexBuffer, nil)
-    primitive.vertexBuffer = VkBuffer(0)
-  if primitive.vertexMemory.int64 != 0:
-    vkFreeMemory(renderer.ctx.device, primitive.vertexMemory, nil)
-    primitive.vertexMemory = VkDeviceMemory(0)
-  if primitive.indexPtr != nil:
-    vkUnmapMemory(renderer.ctx.device, primitive.indexMemory)
-    primitive.indexPtr = nil
-  if primitive.indexBuffer.int64 != 0:
-    vkDestroyBuffer(renderer.ctx.device, primitive.indexBuffer, nil)
-    primitive.indexBuffer = VkBuffer(0)
-  if primitive.indexMemory.int64 != 0:
-    vkFreeMemory(renderer.ctx.device, primitive.indexMemory, nil)
-    primitive.indexMemory = VkDeviceMemory(0)
-
-proc releaseFrameBuffers(renderer: Renderer) =
-  for frameBuffer in renderer.frameBuffers:
-    if frameBuffer.buffer.int64 != 0:
-      vkDestroyBuffer(renderer.ctx.device, frameBuffer.buffer, nil)
-    if frameBuffer.memory.int64 != 0:
-      vkFreeMemory(renderer.ctx.device, frameBuffer.memory, nil)
-  renderer.frameBuffers.setLen(0)
+  if primitive == nil: return
+  for storage in [primitive.vertexBlock, primitive.indexBlock]:
+    if storage != nil: dec storage.users
+  primitive.vertexBlock = nil
+  primitive.indexBlock = nil
+  primitive.vertexBuffer = VkBuffer(0)
+  primitive.indexBuffer = VkBuffer(0)
+  primitive.vertexMemory = VkDeviceMemory(0)
+  primitive.indexMemory = VkDeviceMemory(0)
+  primitive.vertexPtr = nil
+  primitive.indexPtr = nil
+  primitive.vertexCapacity = 0
+  primitive.indexCapacity = 0
 
 proc resetFrameResources(renderer: Renderer) =
-  renderer.releaseFrameBuffers()
-  if renderer.frameDescriptorPool.int64 != 0:
-    checkVk(vkResetDescriptorPool(renderer.ctx.device,
-      renderer.frameDescriptorPool, VkDescriptorPoolResetFlags(0)),
-      "Resetting Vulkan frame descriptor pool")
+  for storage in renderer.uniformBlocks:
+    storage.used = 0
+    storage.users = 0
+  for pool in renderer.frameDescriptorPools:
+    checkVk(vkResetDescriptorPool(renderer.ctx.device, pool, VkDescriptorPoolResetFlags(0)),
+      "Resetting Vulkan frame descriptors")
+  renderer.frameUniformSets = 0
+
+proc bindTextures(renderer: Renderer, result: VkMaterial, textures: openArray[VkTexture]) =
+  var poolSize = VkDescriptorPoolSize(
+    `type`: VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+    descriptorCount: TextureDescriptorCount.uint32
+  )
+  var poolInfo = VkDescriptorPoolCreateInfo(
+    sType: VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+    maxSets: 1,
+    poolSizeCount: 1,
+    pPoolSizes: poolSize.addr
+  )
+  checkVk(vkCreateDescriptorPool(renderer.ctx.device, poolInfo.addr, nil,
+    result.descriptorPool.addr),
+    "Creating Vulkan material descriptor pool")
+  var layout = renderer.materialSetLayout
+  var allocInfo = VkDescriptorSetAllocateInfo(
+    sType: VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+    descriptorPool: result.descriptorPool,
+    descriptorSetCount: 1,
+    pSetLayouts: layout.addr
+  )
+  checkVk(vkAllocateDescriptorSets(renderer.ctx.device, allocInfo.addr,
+    result.descriptorSet.addr),
+    "Allocating Vulkan material descriptor set")
+
+  var imageInfos: array[TextureDescriptorCount, VkDescriptorImageInfo]
+  var writes: array[TextureDescriptorCount, VkWriteDescriptorSet]
+  for i in 0 ..< TextureDescriptorCount:
+    let texture = textures[min(i, textures.high)]
+    imageInfos[i] = VkDescriptorImageInfo(
+      sampler: texture.sampler,
+      imageView: texture.view,
+      imageLayout: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+    )
+    writes[i] = VkWriteDescriptorSet(
+      sType: VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+      dstSet: result.descriptorSet,
+      dstBinding: i.uint32,
+      dstArrayElement: 0,
+      descriptorCount: 1,
+      descriptorType: VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+      pImageInfo: imageInfos[i].addr
+    )
+  vkUpdateDescriptorSets(renderer.ctx.device, writes.len.uint32,
+    writes[0].addr, 0, nil)
+
+include ibl
 
 proc resize(renderer: Renderer, size: IVec2) =
   let safeSize = ivec2(max(1'i32, size.x), max(1'i32, size.y))
@@ -1265,6 +1238,7 @@ proc resize(renderer: Renderer, size: IVec2) =
   renderer.destroySwapChainResources()
   recreateSwapChain(renderer.ctx, safeSize.x.int, safeSize.y.int)
   renderer.createSwapChainResources()
+  if renderer.frame.useIbl: renderer.createHdr(renderer.readbackSize)
 
 proc vertexAt(primitive: Primitive, index: int): VkVertex =
   let colorValue =
@@ -1368,25 +1342,17 @@ proc ensurePrimitive(renderer: Renderer, primitive: Primitive): VkPrimitive =
   if primitive.data == nil:
     primitive.data = VkPrimitive()
   result = primitive.data
+  if result.vertexCapacity > 0 and result.geometryVersion == primitive.geometryVersion: return
+
 
   if primitive.points.len > result.vertexCapacity:
-    if result.vertexPtr != nil:
-      vkUnmapMemory(renderer.ctx.device, result.vertexMemory)
-      result.vertexPtr = nil
-    if result.vertexBuffer.int64 != 0:
-      vkDestroyBuffer(renderer.ctx.device, result.vertexBuffer, nil)
-      vkFreeMemory(renderer.ctx.device, result.vertexMemory, nil)
+    if result.vertexBlock != nil: dec result.vertexBlock.users
     result.vertexCapacity = max(primitive.points.len, 1)
-    createBuffer(renderer.ctx, VkDeviceSize(result.vertexCapacity * sizeof(VkVertex)),
-      VK_BUFFER_USAGE_VERTEX_BUFFER_BIT.uint32,
-      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT.uint32 or
-        VK_MEMORY_PROPERTY_HOST_COHERENT_BIT.uint32,
-      result.vertexBuffer,
-      result.vertexMemory)
-    checkVk(vkMapMemory(renderer.ctx.device, result.vertexMemory,
-      VkDeviceSize(0), VkDeviceSize(result.vertexCapacity * sizeof(VkVertex)),
-      VkMemoryMapFlags(0), result.vertexPtr.addr),
-      "Mapping Vulkan vertex buffer")
+    let allocation = renderer.allocateBuffer(renderer.geometryBlocks, result.vertexCapacity * sizeof(VkVertex), 16)
+    result.vertexBlock = allocation.storage
+    result.vertexBuffer = allocation.storage.buffer
+    result.vertexOffset = VkDeviceSize(allocation.offset)
+    result.vertexPtr = cast[pointer](cast[uint](allocation.storage.mapped) + allocation.offset.uint)
 
   var vertices = newSeq[VkVertex](primitive.points.len)
   for i in 0 ..< primitive.points.len:
@@ -1399,23 +1365,14 @@ proc ensurePrimitive(renderer: Renderer, primitive: Primitive): VkPrimitive =
   result.topology = topology
   result.indexCount = indices.len
   if indices.len > result.indexCapacity:
-    if result.indexPtr != nil:
-      vkUnmapMemory(renderer.ctx.device, result.indexMemory)
-      result.indexPtr = nil
-    if result.indexBuffer.int64 != 0:
-      vkDestroyBuffer(renderer.ctx.device, result.indexBuffer, nil)
-      vkFreeMemory(renderer.ctx.device, result.indexMemory, nil)
+    if result.indexBlock != nil: dec result.indexBlock.users
     result.indexCapacity = max(indices.len, 1)
-    createBuffer(renderer.ctx, VkDeviceSize(result.indexCapacity * sizeof(uint32)),
-      VK_BUFFER_USAGE_INDEX_BUFFER_BIT.uint32,
-      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT.uint32 or
-        VK_MEMORY_PROPERTY_HOST_COHERENT_BIT.uint32,
-      result.indexBuffer,
-      result.indexMemory)
-    checkVk(vkMapMemory(renderer.ctx.device, result.indexMemory,
-      VkDeviceSize(0), VkDeviceSize(result.indexCapacity * sizeof(uint32)),
-      VkMemoryMapFlags(0), result.indexPtr.addr),
-      "Mapping Vulkan index buffer")
+    let allocation = renderer.allocateBuffer(renderer.geometryBlocks, result.indexCapacity * sizeof(uint32), 16)
+    result.indexBlock = allocation.storage
+    result.indexBuffer = allocation.storage.buffer
+    result.indexOffset = VkDeviceSize(allocation.offset)
+    result.indexPtr = cast[pointer](cast[uint](allocation.storage.mapped) + allocation.offset.uint)
+
   if indices.len > 0:
     copyMem(result.indexPtr, unsafeAddr indices[0], indices.len * sizeof(uint32))
   result.geometryVersion = primitive.geometryVersion
@@ -1423,97 +1380,73 @@ proc ensurePrimitive(renderer: Renderer, primitive: Primitive): VkPrimitive =
 proc ensureMaterial(renderer: Renderer, material: Material): VkMaterial =
   if material == nil:
     return nil
-  if material.data != nil and material.data.materialVersion == material.materialVersion:
+  if material.data != nil and material.data.materialVersion == material.materialVersion and
+      material.data.ibl == renderer.frame.useIbl and material.data.environmentVersion == renderer.environmentVersion:
     return material.data
   if material.data != nil:
     renderer.releaseMaterial(material.data)
 
-  result = VkMaterial()
+  let inputs = material.textureInputs()
+  let bindingKey = materialBindingKey(inputs, renderer.frame.useIbl, renderer.environmentVersion, material.materialVersion)
+  var cached = renderer.materialBindings.getOrDefault(bindingKey)
+  if cached != nil and cached.descriptorPool.int64 != 0:
+    inc cached.references
+    result = VkMaterial(materialVersion: material.materialVersion, ibl: renderer.frame.useIbl,
+      environmentVersion: renderer.environmentVersion, binding: cached)
+    material.data = result
+    return
+  result = VkMaterial(ibl: renderer.frame.useIbl, environmentVersion: renderer.environmentVersion)
+  if renderer.defaultWhite == nil:
+    renderer.defaultWhite = renderer.uploadSolidImage(rgbx(255, 255, 255, 255))
+    renderer.defaultNormal = renderer.uploadSolidImage(rgbx(128, 128, 255, 255))
+  let layout = if renderer.frame.useIbl: IblLayout else: PixelLayout
+  var bound: seq[VkTexture]
+  for i, name in layout.textures:
+    var texture: VkTexture
+    for input in inputs:
+      if name == input.name & "Texture":
+        if input.image != nil:
+          if input.image.width == 1 and input.image.height == 1 and input.image.data[0] == rgbx(255, 255, 255, 255):
+            texture = renderer.defaultWhite
+          elif not input.srgb and input.image.width == 1 and input.image.height == 1 and input.image.data[0] == rgbx(128, 128, 255, 255):
+            texture = renderer.defaultNormal
+          else:
+            texture = renderer.uploadImage(input.image, renderer.frame.useIbl and input.srgb)
+        else:
+          texture = if input.name == "normal": renderer.defaultNormal else: renderer.defaultWhite
+        if texture != renderer.defaultWhite and texture != renderer.defaultNormal: result.textures.add(texture)
+        if texture != renderer.defaultWhite and texture != renderer.defaultNormal:
+          vkDestroySampler(renderer.ctx.device, texture.sampler, nil)
+          texture.sampler = renderer.materialSampler(input.sampler, texture.mipLevels,
+            anisotropic = renderer.frame.useIbl)
+        break
+    if texture == nil:
+      if renderer.frame.useIbl:
+        let asset = case name
+          of "diffuseEnvironment": "diffuse"
+          of "environmentMap": "specular"
+          of "ggxLut": "ggx-lut"
+          of "charlieEnvironment": "charlie"
+          of "charlieLut": "charlie-lut"
+          of "sheenEnergyLut": "sheen-energy-lut"
+          of "transmissionBuffer": ""
+          else: raise newException(ValueError, "Unbound IBL texture: " & name)
+        if asset.len > 0: texture = renderer.environment[asset]
+        else:
+          texture = renderer.transmission
+      else:
+        if name == "environmentMap": texture = renderer.uploadStudioCube()
+        elif name == "shadowMap":
+          texture = renderer.uploadShadowPlaceholder()
+        else: raise newException(ValueError, "Unbound shader texture: " & name)
+        result.textures.add(texture)
+    bound.add(texture)
+  renderer.bindTextures(result, bound)
+  result.references = 1
+  renderer.materialBindings[bindingKey] = result
+  result = VkMaterial(materialVersion: material.materialVersion, ibl: renderer.frame.useIbl,
+    environmentVersion: renderer.environmentVersion, binding: result)
   material.data = result
-
-  let
-    baseColor =
-      if material != nil and material.baseColor != nil:
-        renderer.uploadImage(material.baseColor)
-      else:
-        renderer.uploadSolidImage(rgbx(255, 255, 255, 255))
-    metallicRoughness =
-      if material != nil and material.metallicRoughness != nil:
-        renderer.uploadImage(material.metallicRoughness)
-      else:
-        renderer.uploadSolidImage(rgbx(255, 255, 255, 255))
-    occlusion =
-      if material != nil and material.occlusion != nil:
-        renderer.uploadImage(material.occlusion)
-      else:
-        renderer.uploadSolidImage(rgbx(255, 255, 255, 255))
-    emissive =
-      if material != nil and material.emissive != nil:
-        renderer.uploadImage(material.emissive)
-      else:
-        renderer.uploadSolidImage(rgbx(255, 255, 255, 255))
-    normal =
-      if material != nil and material.normal != nil:
-        renderer.uploadImage(material.normal)
-      else:
-        renderer.uploadSolidImage(rgbx(128, 128, 255, 255))
-    shadow = renderer.uploadShadowPlaceholder()
-    environment = renderer.uploadStudioCube()
-
-  result.textures = @[
-    baseColor,
-    metallicRoughness,
-    occlusion,
-    emissive,
-    normal,
-    environment,
-    shadow
-  ]
-
-  var poolSize = VkDescriptorPoolSize(
-    `type`: VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-    descriptorCount: TextureDescriptorCount.uint32
-  )
-  var poolInfo = VkDescriptorPoolCreateInfo(
-    sType: VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-    maxSets: 1,
-    poolSizeCount: 1,
-    pPoolSizes: poolSize.addr
-  )
-  checkVk(vkCreateDescriptorPool(renderer.ctx.device, poolInfo.addr, nil,
-    result.descriptorPool.addr),
-    "Creating Vulkan material descriptor pool")
-  var layout = renderer.materialSetLayout
-  var allocInfo = VkDescriptorSetAllocateInfo(
-    sType: VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-    descriptorPool: result.descriptorPool,
-    descriptorSetCount: 1,
-    pSetLayouts: layout.addr
-  )
-  checkVk(vkAllocateDescriptorSets(renderer.ctx.device, allocInfo.addr,
-    result.descriptorSet.addr),
-    "Allocating Vulkan material descriptor set")
-
-  var imageInfos: array[TextureDescriptorCount, VkDescriptorImageInfo]
-  var writes: array[TextureDescriptorCount, VkWriteDescriptorSet]
-  for i, texture in result.textures:
-    imageInfos[i] = VkDescriptorImageInfo(
-      sampler: texture.sampler,
-      imageView: texture.view,
-      imageLayout: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-    )
-    writes[i] = VkWriteDescriptorSet(
-      sType: VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-      dstSet: result.descriptorSet,
-      dstBinding: i.uint32,
-      dstArrayElement: 0,
-      descriptorCount: 1,
-      descriptorType: VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-      pImageInfo: imageInfos[i].addr
-    )
-  vkUpdateDescriptorSets(renderer.ctx.device, writes.len.uint32,
-    writes[0].addr, 0, nil)
-  result.materialVersion = material.materialVersion
 
 proc prepareNodeResources(renderer: Renderer, node: Node) =
   if node == nil:
@@ -1526,137 +1459,14 @@ proc prepareNodeResources(renderer: Renderer, node: Node) =
   for child in node.nodes:
     renderer.prepareNodeResources(child)
 
-proc putTextureTransform(
-  writer: var Std140Writer,
-  transform: TextureTransform
-) =
-  writer.putInt(transform.texCoord)
-  writer.putVec2(transform.offset)
-  writer.putVec2(transform.scale)
-  writer.putFloat(transform.rotation)
-
-proc shadyVertexConstants(
-  owner,
-  root: Node,
-  transform,
-  view,
-  proj: Mat4
-): seq[uint32] =
-  var writer: Std140Writer
-  let jointMatrices = root.skinMatrices(owner)
-  writer.putBool(jointMatrices.len > 0)
-  writer.putMat4Array(jointMatrices, 128)
-  writer.putMat4(transform)
-  writer.putMat3(transform.normalMatrix)
-  writer.putMat4(mat4())
-  writer.putMat4(proj)
-  writer.putMat4(view)
-  writer.finish()
-
-proc shadyPixelConstants(
-  primitive: Primitive,
-  tint: Color,
-  ambientLightColor: Color,
-  sunLightDirection: Vec3,
-  sunLightColor: Color,
-  rimLightDirection: Vec3,
-  rimLightColor: Color,
-  cameraPosition: Vec3,
-  fogColor: Color,
-  fogStart,
-  fogEnd,
-  fogDensity,
-  fogStrength,
-  environmentMapStrength: float32
-): seq[uint32] =
-  var writer: Std140Writer
-  let material = primitive.material
-  if material != nil:
-    writer.putTextureTransform(material.baseColorTransform)
-    writer.putTextureTransform(material.metallicRoughnessTransform)
-    writer.putTextureTransform(material.normalTransform)
-    writer.putTextureTransform(material.occlusionTransform)
-    writer.putTextureTransform(material.emissiveTransform)
-    writer.putColor(material.baseColorFactor)
-    writer.putFloat(
-      if material.alphaMode == MaskAlphaMode: material.alphaCutoff else: -1.0'f32
-    )
-    writer.putFloat(material.roughnessFactor)
-    writer.putFloat(material.metallicFactor)
-    writer.putFloat(material.transmissionFactor)
-    writer.putFloat(material.occlusionStrength)
-    writer.putVec3(vec3(
-      material.emissiveFactor.r,
-      material.emissiveFactor.g,
-      material.emissiveFactor.b
-    ))
-    writer.putFloat(material.normalScale)
-    writer.putBool(
-      material.hasNormalTexture and
-      primitive.normals.len > 0 and
-      primitive.tangents.len > 0
-    )
-  else:
-    let identityTransform = TextureTransform(
-      texCoord: 0,
-      offset: vec2(0, 0),
-      scale: vec2(1, 1),
-      rotation: 0.0'f32
-    )
-    writer.putTextureTransform(identityTransform)
-    writer.putTextureTransform(identityTransform)
-    writer.putTextureTransform(identityTransform)
-    writer.putTextureTransform(identityTransform)
-    writer.putTextureTransform(identityTransform)
-    writer.putColor(color(1, 1, 1, 1))
-    writer.putFloat(-1.0'f32)
-    writer.putFloat(1.0'f32)
-    writer.putFloat(1.0'f32)
-    writer.putFloat(0.0'f32)
-    writer.putFloat(1.0'f32)
-    writer.putVec3(vec3(0, 0, 0))
-    writer.putFloat(1.0'f32)
-    writer.putBool(false)
-
-  writer.putVec3(sunLightDirection)
-  writer.putVec3(rimLightDirection)
-  writer.putVec3(cameraPosition)
-  writer.putColor(sunLightColor)
-  writer.putColor(rimLightColor)
-  writer.putFloat(3.0'f32)
-  writer.putBool(false)
-  writer.putFloat(0.0005'f32)
-  writer.putVec2(vec2(1.0'f32 / 2048.0'f32, 1.0'f32 / 2048.0'f32))
-  writer.putInt(0)
-  writer.putColor(tint)
-  writer.putColor(ambientLightColor)
-  writer.putColor(fogColor)
-  writer.putFloat(fogStart)
-  writer.putFloat(fogEnd)
-  writer.putFloat(fogDensity)
-  writer.putFloat(fogStrength)
-  writer.putFloat(environmentMapStrength)
-  writer.finish()
-
 proc createFrameBufferWithData(
   renderer: Renderer,
   data: openArray[uint32]
 ): FrameBuffer =
-  let byteSize = VkDeviceSize(max(4, data.len * sizeof(uint32)))
-  createBuffer(renderer.ctx, byteSize,
-    VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT.uint32,
-    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT.uint32 or
-      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT.uint32,
-    result.buffer,
-    result.memory)
-  var mapped: pointer
-  checkVk(vkMapMemory(renderer.ctx.device, result.memory,
-    VkDeviceSize(0), byteSize, VkMemoryMapFlags(0), mapped.addr),
-    "Mapping Vulkan uniform buffer")
-  if data.len > 0:
-    copyMem(mapped, unsafeAddr data[0], data.len * sizeof(uint32))
-  vkUnmapMemory(renderer.ctx.device, result.memory)
-  renderer.frameBuffers.add(result)
+  let allocation = renderer.allocateBuffer(renderer.uniformBlocks, max(4, data.len * 4), renderer.uniformAlignment)
+  let mapped = cast[pointer](cast[uint](allocation.storage.mapped) + allocation.offset.uint)
+  if data.len > 0: copyMem(mapped, unsafeAddr data[0], data.len * 4)
+  FrameBuffer(buffer: allocation.storage.buffer, offset: VkDeviceSize(allocation.offset))
 
 proc createUniformDescriptorSet(
   renderer: Renderer,
@@ -1666,10 +1476,13 @@ proc createUniformDescriptorSet(
   let
     vertexBuffer = renderer.createFrameBufferWithData(vertexConstants)
     pixelBuffer = renderer.createFrameBufferWithData(pixelConstants)
+  let poolIndex = renderer.frameUniformSets div MaxFrameUniformSets
+  if poolIndex >= renderer.frameDescriptorPools.len: renderer.createFrameDescriptorPool()
+  inc renderer.frameUniformSets
   var layout = renderer.uniformSetLayout
   var allocInfo = VkDescriptorSetAllocateInfo(
     sType: VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-    descriptorPool: renderer.frameDescriptorPool,
+    descriptorPool: renderer.frameDescriptorPools[poolIndex],
     descriptorSetCount: 1,
     pSetLayouts: layout.addr
   )
@@ -1680,12 +1493,12 @@ proc createUniformDescriptorSet(
   var bufferInfos = [
     VkDescriptorBufferInfo(
       buffer: vertexBuffer.buffer,
-      offset: VkDeviceSize(0),
+      offset: vertexBuffer.offset,
       range: VkDeviceSize(vertexConstants.len * sizeof(uint32))
     ),
     VkDescriptorBufferInfo(
       buffer: pixelBuffer.buffer,
-      offset: VkDeviceSize(0),
+      offset: pixelBuffer.offset,
       range: VkDeviceSize(pixelConstants.len * sizeof(uint32))
     )
   ]
@@ -1721,7 +1534,8 @@ proc cmdImageBarrier(
   srcStage,
   dstStage: VkPipelineStageFlags2,
   srcAccess,
-  dstAccess: VkAccessFlags2
+  dstAccess: VkAccessFlags2,
+  mipLevel = 0
 ) =
   var barrier = VkImageMemoryBarrier2(
     sType: VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
@@ -1736,7 +1550,7 @@ proc cmdImageBarrier(
     image: image,
     subresourceRange: VkImageSubresourceRange(
       aspectMask: aspect,
-      baseMipLevel: 0,
+      baseMipLevel: mipLevel.uint32,
       levelCount: 1,
       baseArrayLayer: 0,
       layerCount: 1
@@ -1749,73 +1563,37 @@ proc cmdImageBarrier(
   )
   vkCmdPipelineBarrier2(commandBuffer, dependencyInfo.addr)
 
-proc drawPrimitive(
-  renderer: Renderer,
-  commandBuffer: VkCommandBuffer,
-  primitive: Primitive,
-  owner,
-  root: Node,
-  transform,
-  view,
-  proj: Mat4,
-  tint: Color,
-  ambientLightColor: Color,
-  sunLightDirection: Vec3,
-  sunLightColor: Color,
-  rimLightDirection: Vec3,
-  rimLightColor: Color,
-  cameraPosition: Vec3,
-  fogColor: Color,
-  fogStart,
-  fogEnd,
-  fogDensity,
-  fogStrength: float32,
-  environmentMapStrength: float32,
-  blendedPass: bool
-) =
+proc drawPrimitive(renderer: Renderer, commandBuffer: VkCommandBuffer, entry: SceneDraw, root: Node) =
+  let primitive = entry.primitive
+  let owner = entry.owner
+  let transform = entry.transform
+  let view = renderer.frame.view
+  let proj = renderer.frame.proj
   if primitive == nil or not primitive.hasGeometry():
     return
 
-  let isBlend =
-    primitive.material != nil and primitive.material.alphaMode == BlendAlphaMode
-  if isBlend != blendedPass:
-    return
+  let isBlend = entry.blended
 
   let vkPrimitive = renderer.ensurePrimitive(primitive)
   if vkPrimitive.indexCount == 0:
     return
-  let vkMaterial = renderer.ensureMaterial(primitive.material)
+  let vkMaterial = renderer.ensureMaterial(primitive.material).binding
   let key = PipelineKey(
     topology: vkPrimitive.topology.uint32,
     doubleSided: primitive.material != nil and primitive.material.doubleSided,
-    blended: isBlend
+    blended: isBlend, ibl: renderer.frame.useIbl, background: renderer.frame.transmissionBackground, mirrored: determinant(transform) < 0
   )
   let pipeline = renderer.getPipeline(key)
   let
-    vertexConstants = shadyVertexConstants(owner, root, transform, view, proj)
-    pixelConstants = shadyPixelConstants(
-      primitive,
-      tint,
-      ambientLightColor,
-      sunLightDirection,
-      sunLightColor,
-      rimLightDirection,
-      rimLightColor,
-      cameraPosition,
-      fogColor,
-      fogStart,
-      fogEnd,
-      fogDensity,
-      fogStrength,
-      environmentMapStrength
-    )
+    vertexConstants = vertexUniforms(VertexLayout, owner, root, transform, view, proj)
+    pixelConstants = pixelUniforms(if renderer.frame.useIbl: IblLayout else: PixelLayout, primitive, renderer.frame, transform)
     uniformSet = renderer.createUniformDescriptorSet(
       vertexConstants,
       pixelConstants
     )
   var descriptorSets = [vkMaterial.descriptorSet, uniformSet]
   var vertexBuffers = [vkPrimitive.vertexBuffer]
-  var offsets = [VkDeviceSize(0)]
+  var offsets = [vkPrimitive.vertexOffset]
 
   vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline)
   vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -1824,86 +1602,8 @@ proc drawPrimitive(
   vkCmdBindVertexBuffers(commandBuffer, 0, 1,
     vertexBuffers[0].addr, offsets[0].addr)
   vkCmdBindIndexBuffer(commandBuffer, vkPrimitive.indexBuffer,
-    VkDeviceSize(0), VK_INDEX_TYPE_UINT32)
+    vkPrimitive.indexOffset, VK_INDEX_TYPE_UINT32)
   vkCmdDrawIndexed(commandBuffer, vkPrimitive.indexCount.uint32, 1, 0, 0, 0)
-
-proc collectOrDrawNode(
-  renderer: Renderer,
-  commandBuffer: VkCommandBuffer,
-  node,
-  root: Node,
-  transform,
-  view,
-  proj: Mat4,
-  tint: Color,
-  ambientLightColor: Color,
-  sunLightDirection: Vec3,
-  sunLightColor: Color,
-  rimLightDirection: Vec3,
-  rimLightColor: Color,
-  cameraPosition: Vec3,
-  fogColor: Color,
-  fogStart,
-  fogEnd,
-  fogDensity,
-  fogStrength: float32,
-  environmentMapStrength: float32,
-  blended: var seq[BlendEntry]
-) =
-  if node == nil or not node.visible:
-    return
-  node.mat = transform * node.trs
-  if node.mesh != nil:
-    for primitive in node.mesh.primitives:
-      if primitive.material != nil and primitive.material.alphaMode == BlendAlphaMode:
-        blended.add(BlendEntry(node: node, primitive: primitive, transform: node.mat))
-      else:
-        renderer.drawPrimitive(
-          commandBuffer,
-          primitive,
-          node,
-          root,
-          node.mat,
-          view,
-          proj,
-          tint,
-          ambientLightColor,
-          sunLightDirection,
-          sunLightColor,
-          rimLightDirection,
-          rimLightColor,
-          cameraPosition,
-          fogColor,
-          fogStart,
-          fogEnd,
-          fogDensity,
-          fogStrength,
-          environmentMapStrength,
-          blendedPass = false
-        )
-  for child in node.nodes:
-    renderer.collectOrDrawNode(
-      commandBuffer,
-      child,
-      root,
-      node.mat,
-      view,
-      proj,
-      tint,
-      ambientLightColor,
-      sunLightDirection,
-      sunLightColor,
-      rimLightDirection,
-      rimLightColor,
-      cameraPosition,
-      fogColor,
-      fogStart,
-      fogEnd,
-      fogDensity,
-      fogStrength,
-      environmentMapStrength,
-      blended
-    )
 
 proc recordFrame(
   renderer: Renderer,
@@ -1934,6 +1634,18 @@ proc recordFrame(
   )
   checkVk(vkBeginCommandBuffer(commandBuffer, beginInfo.addr),
     "Beginning Vulkan draw command buffer")
+
+  if node != nil: node.updateTransforms(transform, true)
+  renderer.frame.updateLights(node)
+  let draws = renderer.frame.sceneDraws(node)
+  if renderer.frame.useIbl and draws.transmitted.len > 0:
+    renderer.beginTransmission(commandBuffer, clearColor)
+    renderer.frame.transmissionBackground = true
+    for entry in draws.opaque: renderer.drawPrimitive(commandBuffer, entry, node)
+    for entry in draws.blended: renderer.drawPrimitive(commandBuffer, entry, node)
+    vkCmdEndRendering(commandBuffer)
+    renderer.resolveTransmission(commandBuffer)
+    renderer.frame.transmissionBackground = false
 
   commandBuffer.cmdImageBarrier(
     renderer.ctx.swapChainImages[imageIndex],
@@ -2034,70 +1746,22 @@ proc recordFrame(
       extent: renderer.ctx.swapChainExtent
     )
 
+  var hdrAttachments: array[2, VkRenderingAttachmentInfo]
+  if renderer.frame.useIbl:
+    hdrAttachments = renderer.prepareHdr(commandBuffer, clearColor)
+    renderingInfo.colorAttachmentCount = 2
+    renderingInfo.pColorAttachments = addr hdrAttachments[0]
   vkCmdBeginRendering(commandBuffer, renderingInfo.addr)
   vkCmdSetViewport(commandBuffer, 0, 1, viewport.addr)
   vkCmdSetScissor(commandBuffer, 0, 1, scissor.addr)
 
-  if node != nil and node.visible:
-    node.updateTransforms(transform, true)
-    var blended: seq[BlendEntry]
-    renderer.collectOrDrawNode(
-      commandBuffer,
-      node,
-      node,
-      transform,
-      view,
-      proj,
-      tint,
-      ambientLightColor,
-      sunLightDirection,
-      sunLightColor,
-      rimLightDirection,
-      rimLightColor,
-      cameraPosition,
-      fogColor,
-      fogStart,
-      fogEnd,
-      fogDensity,
-      fogStrength,
-      environmentMapStrength,
-      blended
-    )
-    if blended.len > 0:
-      blended.sort(proc(a, b: BlendEntry): int =
-        let
-          pa = (a.transform * vec4(0, 0, 0, 1)).xyz
-          pb = (b.transform * vec4(0, 0, 0, 1)).xyz
-          da = (cameraPosition - pa).lengthSq
-          db = (cameraPosition - pb).lengthSq
-        if da > db: -1 elif da < db: 1 else: 0
-      )
-      for entry in blended:
-        renderer.drawPrimitive(
-          commandBuffer,
-          entry.primitive,
-          entry.node,
-          node,
-          entry.transform,
-          view,
-          proj,
-          tint,
-          ambientLightColor,
-          sunLightDirection,
-          sunLightColor,
-          rimLightDirection,
-          rimLightColor,
-          cameraPosition,
-          fogColor,
-          fogStart,
-          fogEnd,
-          fogDensity,
-          fogStrength,
-          environmentMapStrength,
-          blendedPass = true
-        )
+  for entry in draws.opaque: renderer.drawPrimitive(commandBuffer, entry, node)
+  for entry in draws.transmitted: renderer.drawPrimitive(commandBuffer, entry, node)
+  for entry in draws.blended: renderer.drawPrimitive(commandBuffer, entry, node)
 
   vkCmdEndRendering(commandBuffer)
+  if renderer.frame.useIbl:
+    renderer.presentHdr(commandBuffer, renderer.imageViews[imageIndex])
 
   commandBuffer.cmdImageBarrier(
     renderer.ctx.swapChainImages[imageIndex],
@@ -2148,6 +1812,7 @@ proc drawPbrFrame(
   ctx: PbrContext
 ) =
   ## Draws a full glTF PBR frame through Vulkan.
+  renderer.frame = PbrFrameUniforms(ctx[])
   let
     size = ctx.size
     clearColor = ctx.clearColor
@@ -2325,7 +1990,8 @@ proc shutdown*(renderer: Renderer) =
   if renderer == nil:
     return
   discard vkDeviceWaitIdle(renderer.ctx.device)
-  renderer.releaseFrameBuffers()
+  renderer.destroyBlocks(renderer.uniformBlocks)
+  renderer.destroyBlocks(renderer.geometryBlocks)
   renderer.destroySwapChainResources()
   if renderer.readbackBuffer.int64 != 0:
     vkDestroyBuffer(renderer.ctx.device, renderer.readbackBuffer, nil)
@@ -2333,9 +1999,9 @@ proc shutdown*(renderer: Renderer) =
   if renderer.readbackMemory.int64 != 0:
     vkFreeMemory(renderer.ctx.device, renderer.readbackMemory, nil)
     renderer.readbackMemory = VkDeviceMemory(0)
-  if renderer.frameDescriptorPool.int64 != 0:
-    vkDestroyDescriptorPool(renderer.ctx.device, renderer.frameDescriptorPool, nil)
-    renderer.frameDescriptorPool = VkDescriptorPool(0)
+  for pool in renderer.frameDescriptorPools:
+    vkDestroyDescriptorPool(renderer.ctx.device, pool, nil)
+  renderer.frameDescriptorPools.setLen(0)
   if renderer.pipelineLayout.int64 != 0:
     vkDestroyPipelineLayout(renderer.ctx.device, renderer.pipelineLayout, nil)
     renderer.pipelineLayout = VkPipelineLayout(0)
@@ -2345,6 +2011,7 @@ proc shutdown*(renderer: Renderer) =
   if renderer.materialSetLayout.int64 != 0:
     vkDestroyDescriptorSetLayout(renderer.ctx.device, renderer.materialSetLayout, nil)
     renderer.materialSetLayout = VkDescriptorSetLayout(0)
+  renderer.destroyIbl()
   cleanup(renderer.ctx)
 
 proc beginFrame*(renderer: Renderer; window: Window; size: IVec2) =

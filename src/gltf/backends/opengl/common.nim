@@ -18,10 +18,20 @@ type
   MaterialData* = ref object
     materialVersion*: uint64
     baseColorId*: GLuint
+    baseColorSrgbId*: GLuint
     metallicRoughnessId*: GLuint
     normalId*: GLuint
     occlusionId*: GLuint
     emissiveId*: GLuint
+    emissiveSrgbId*: GLuint
+    transmissionId*, thicknessId*: GLuint
+    diffuseTransmissionId*, diffuseTransmissionColorId*: GLuint
+    anisotropyId*: GLuint
+    specularId*, specularColorId*: GLuint
+    diffuseId*, specularGlossinessId*: GLuint
+    sheenColorId*, sheenRoughnessId*: GLuint
+    iridescenceId*, iridescenceThicknessId*: GLuint
+    clearcoatId*, clearcoatRoughnessId*, clearcoatNormalId*: GLuint
 
   GltfFileData* = ref object
     sceneVersion*: uint64

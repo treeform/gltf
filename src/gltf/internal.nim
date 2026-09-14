@@ -65,10 +65,44 @@ type
     occlusionTexture*: MaterialTexture
     emissiveTexture*: MaterialTexture
     emissiveFactor*: Color
+    hasEmissiveStrength*: bool
+    emissiveStrength*: float32
     alphaMode*: string
+    unlit*: bool
     alphaCutoff*: float32
     doubleSided*: bool
     transmissionFactor*: float32
+    hasDiffuseTransmission*: bool
+    diffuseTransmissionFactor*: float32
+    diffuseTransmissionColorFactor*: Vec3
+    diffuseTransmissionTexture*, diffuseTransmissionColorTexture*: MaterialTexture
+    hasTransmission*, hasVolume*, hasIor*: bool
+    transmissionTexture*, thicknessTexture*: MaterialTexture
+    thicknessFactor*, attenuationDistance*, ior*: float32
+    attenuationColor*: Vec3
+    hasSpecularGlossiness*: bool
+    diffuseFactor*: Color
+    specularGlossinessFactor*: Vec3
+    glossinessFactor*: float32
+    diffuseTexture*, specularGlossinessTexture*: MaterialTexture
+    hasSpecular*: bool
+    specularFactor*: float32
+    specularColorFactor*: Vec3
+    specularTexture*, specularColorTexture*: MaterialTexture
+    hasSheen*: bool
+    sheenColorTexture*, sheenRoughnessTexture*: MaterialTexture
+    sheenColorFactor*: Vec3
+    sheenRoughnessFactor*: float32
+    hasAnisotropy*: bool
+    anisotropyStrength*, anisotropyRotation*: float32
+    anisotropyTexture*: MaterialTexture
+    hasIridescence*: bool
+    iridescenceFactor*, iridescenceIor*: float32
+    iridescenceThicknessMinimum*, iridescenceThicknessMaximum*: float32
+    iridescenceTexture*, iridescenceThicknessTexture*: MaterialTexture
+    hasClearcoat*: bool
+    clearcoatFactor*, clearcoatRoughnessFactor*: float32
+    clearcoatTexture*, clearcoatRoughnessTexture*, clearcoatNormalTexture*: MaterialTexture
 
   MeshInfo* = object
     name*: string

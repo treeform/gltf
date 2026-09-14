@@ -71,6 +71,8 @@ jobs:
         with:
           path: ${{ github.workspace }}
       - run: nim check src/gltf.nim
+      - name: Verify the reference catalog
+        run: node --test tools/reference/test.mjs
       - run: nim check tests/draco/tests.nim
       - run: nim r -d:release tests/backend_shaders.nim
       - run: nim r -d:release tests/draco/tests.nim
@@ -87,12 +89,15 @@ jobs:
       - name: Run tests (Linux)
         if: runner.os == 'Linux'
         run: |
-          xvfb-run -s "-screen 0 1024x768x24" \
+          xvfb-run --auto-servernum -s "-screen 0 1024x768x24" \
             env LIBGL_ALWAYS_SOFTWARE=1 \
             nim r -d:release tests/tests.nim
-          xvfb-run -s "-screen 0 1024x768x24" \
+          xvfb-run --auto-servernum -s "-screen 0 1024x768x24" \
             env LIBGL_ALWAYS_SOFTWARE=1 \
             nim r -d:release tests/test_ktx2.nim
+          xvfb-run --auto-servernum -s "-screen 0 1024x768x24" \
+            env LIBGL_ALWAYS_SOFTWARE=1 \
+            nim r -d:release tests/unlit_pipeline.nim
       - name: Run tests (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -101,6 +106,8 @@ jobs:
           .\tests.exe
           nim c -d:release -o:test_ktx2.exe tests/test_ktx2.nim
           .\test_ktx2.exe
+          nim c -d:release -o:unlit_pipeline.exe tests/unlit_pipeline.nim
+          .\unlit_pipeline.exe
 
   backend-compile:
     strategy:

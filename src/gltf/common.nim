@@ -137,7 +137,22 @@ type
     baseMorphWeights*: seq[float32]
     skin*: Skin
     camera*: Camera
+    punctualLight*: PunctualLight
     nodes*: seq[Node]
+
+  PunctualLightKind* = enum
+    DirectionalLightKind, PointLightKind, SpotLightKind
+
+  PunctualLight* = ref object
+    ## KHR_lights_punctual; directional and spot lights emit along local -Z.
+    kind*: PunctualLightKind
+    name*: string
+    color*: Color
+    intensity*: float32
+    range*: float32 ## Zero means unlimited; independent of node scale.
+    innerConeAngle*, outerConeAngle*: float32
+
+  DirectionalLight* = PunctualLight
 
   Scene* = ref object
     name*: string
@@ -149,20 +164,53 @@ type
     inverseBindMatrices*: seq[Mat4]
     skeleton*: Node
 
+  MaterialTextureSlot* = enum
+    BaseColorTextureSlot,
+    MetallicRoughnessTextureSlot,
+    NormalTextureSlot,
+    OcclusionTextureSlot,
+    EmissiveTextureSlot,
+    TransmissionTextureSlot,
+    ThicknessTextureSlot,
+    DiffuseTransmissionTextureSlot,
+    DiffuseTransmissionColorTextureSlot,
+    AnisotropyTextureSlot,
+    ClearcoatTextureSlot,
+    ClearcoatRoughnessTextureSlot,
+    ClearcoatNormalTextureSlot,
+    IridescenceTextureSlot,
+    IridescenceThicknessTextureSlot,
+    SpecularTextureSlot,
+    SpecularColorTextureSlot,
+    SheenColorTextureSlot,
+    SheenRoughnessTextureSlot,
+    DiffuseTextureSlot,
+    SpecularGlossinessTextureSlot
+
   AnimPath* = enum
-    AnimTranslation, AnimRotation, AnimScale, AnimVisibility, AnimWeights
+    AnimTranslation, AnimRotation, AnimScale, AnimVisibility, AnimWeights,
+    AnimBaseColorFactor, AnimTextureOffset, AnimTextureScale, AnimTextureRotation
 
   AnimInterpolation* = enum
     aiStep, aiLinear, aiCubicSpline
 
   AnimationChannel* = ref object
     target*: Node
+    materialTargets*: seq[Material] # Runtime copies of the same glTF material.
+    baseColorFactor*: Color # Authored value restored when the clip is inactive.
+    textureSlot*: MaterialTextureSlot
+    textureComponent*: int # 0: entire property; 1/2: X/Y component.
+    baseTextureTransform*: TextureTransform
+    valuesVec2*, inTangentsVec2*, outTangentsVec2*: seq[Vec2]
     path*: AnimPath
     interpolation*: AnimInterpolation
     times*: seq[float32]
     valuesVec3*: seq[Vec3]
     inTangentsVec3*: seq[Vec3]
     outTangentsVec3*: seq[Vec3]
+    valuesVec4*: seq[Vec4]
+    inTangentsVec4*: seq[Vec4]
+    outTangentsVec4*: seq[Vec4]
     valuesQuat*: seq[Quat]
     inTangentsQuat*: seq[Quat]
     outTangentsQuat*: seq[Quat]
@@ -179,6 +227,8 @@ type
     channels*: seq[AnimationChannel]
 
   Material* = ref object
+    ## Texture Image buffers store straight RGBA, including RGB at zero alpha.
+    ## Load them with loadStraightAlphaImage; Pixie drawing images premultiply.
     ## Texture slots the source file left empty are filled with a 1x1
     ## constant image so renderers always have something to sample. Those
     ## fills are marked with the matching `*Placeholder` flag, since a 1x1
@@ -220,12 +270,80 @@ type
     emissiveTransform*: TextureTransform
     emissiveSampler*: TextureSampler
     emissiveFactor*: Color
+    hasEmissiveStrength*: bool
+    emissiveStrength*: float32
     emissivePlaceholder*: bool
 
     alphaMode*: AlphaMode
+    unlit*: bool
     alphaCutoff*: float32
     doubleSided*: bool
     transmissionFactor*: float32
+    hasDiffuseTransmission*: bool
+    diffuseTransmissionFactor*: float32
+    diffuseTransmissionColorFactor*: Vec3
+    diffuseTransmission*, diffuseTransmissionColor*: Image
+    diffuseTransmissionKtx2*, diffuseTransmissionName*: string
+    diffuseTransmissionColorKtx2*, diffuseTransmissionColorName*: string
+    diffuseTransmissionTransform*, diffuseTransmissionColorTransform*: TextureTransform
+    diffuseTransmissionSampler*, diffuseTransmissionColorSampler*: TextureSampler
+    hasTransmission*: bool
+    transmission*: Image
+    transmissionKtx2*, transmissionName*: string
+    transmissionTransform*: TextureTransform
+    transmissionSampler*: TextureSampler
+    hasVolume*: bool
+    thicknessFactor*: float32
+    thickness*: Image
+    thicknessKtx2*, thicknessName*: string
+    thicknessTransform*: TextureTransform
+    thicknessSampler*: TextureSampler
+    attenuationColor*: Vec3
+    attenuationDistance*: float32 ## Zero means infinite (no absorption).
+    hasIor*: bool
+    ior*: float32 ## Default 1.5. Explicit zero with hasIor means infinite IOR.
+    hasSpecularGlossiness*: bool
+    diffuseFactor*: Color
+    specularGlossinessFactor*: Vec3
+    glossinessFactor*: float32
+    diffuse*, specularGlossiness*: Image
+    diffuseKtx2*, diffuseName*, specularGlossinessKtx2*, specularGlossinessName*: string
+    diffuseTransform*, specularGlossinessTransform*: TextureTransform
+    diffuseSampler*, specularGlossinessSampler*: TextureSampler
+    hasSpecular*: bool
+    specularFactor*: float32
+    specularColorFactor*: Vec3
+    specular*, specularColor*: Image
+    specularKtx2*, specularName*, specularColorKtx2*, specularColorName*: string
+    specularTransform*, specularColorTransform*: TextureTransform
+    specularSampler*, specularColorSampler*: TextureSampler
+    hasSheen*: bool
+    sheenColor*, sheenRoughness*: Image
+    sheenColorKtx2*, sheenColorName*, sheenRoughnessKtx2*, sheenRoughnessName*: string
+    sheenColorTransform*, sheenRoughnessTransform*: TextureTransform
+    sheenColorSampler*, sheenRoughnessSampler*: TextureSampler
+    sheenColorFactor*: Vec3
+    sheenRoughnessFactor*: float32
+    hasAnisotropy*: bool
+    anisotropyStrength*, anisotropyRotation*: float32
+    anisotropy*: Image
+    anisotropyKtx2*, anisotropyName*: string
+    anisotropyTransform*: TextureTransform
+    anisotropySampler*: TextureSampler
+    hasIridescence*: bool
+    iridescenceFactor*, iridescenceIor*: float32
+    iridescenceThicknessMinimum*, iridescenceThicknessMaximum*: float32
+    iridescence*, iridescenceThickness*: Image
+    iridescenceKtx2*, iridescenceName*, iridescenceThicknessKtx2*, iridescenceThicknessName*: string
+    iridescenceTransform*, iridescenceThicknessTransform*: TextureTransform
+    iridescenceSampler*, iridescenceThicknessSampler*: TextureSampler
+    hasClearcoat*: bool
+    clearcoatFactor*, clearcoatRoughnessFactor*, clearcoatNormalScale*: float32
+    clearcoat*, clearcoatRoughness*, clearcoatNormal*: Image
+    clearcoatKtx2*, clearcoatName*, clearcoatRoughnessKtx2*, clearcoatRoughnessName*: string
+    clearcoatNormalKtx2*, clearcoatNormalName*: string
+    clearcoatTransform*, clearcoatRoughnessTransform*, clearcoatNormalTransform*: TextureTransform
+    clearcoatSampler*, clearcoatRoughnessSampler*, clearcoatNormalSampler*: TextureSampler
     materialVersion*: uint64
     data*: MaterialData
 
@@ -259,3 +377,76 @@ type
     dvAoBake,
     dvMetallic,
     dvSpecular
+
+const MaterialTexturePaths*: array[MaterialTextureSlot, string] = [
+  "pbrMetallicRoughness/baseColorTexture",
+  "pbrMetallicRoughness/metallicRoughnessTexture",
+  "normalTexture",
+  "occlusionTexture",
+  "emissiveTexture",
+  "extensions/KHR_materials_transmission/transmissionTexture",
+  "extensions/KHR_materials_volume/thicknessTexture",
+  "extensions/KHR_materials_diffuse_transmission/diffuseTransmissionTexture",
+  "extensions/KHR_materials_diffuse_transmission/diffuseTransmissionColorTexture",
+  "extensions/KHR_materials_anisotropy/anisotropyTexture",
+  "extensions/KHR_materials_clearcoat/clearcoatTexture",
+  "extensions/KHR_materials_clearcoat/clearcoatRoughnessTexture",
+  "extensions/KHR_materials_clearcoat/clearcoatNormalTexture",
+  "extensions/KHR_materials_iridescence/iridescenceTexture",
+  "extensions/KHR_materials_iridescence/iridescenceThicknessTexture",
+  "extensions/KHR_materials_specular/specularTexture",
+  "extensions/KHR_materials_specular/specularColorTexture",
+  "extensions/KHR_materials_sheen/sheenColorTexture",
+  "extensions/KHR_materials_sheen/sheenRoughnessTexture",
+  "extensions/KHR_materials_pbrSpecularGlossiness/diffuseTexture",
+  "extensions/KHR_materials_pbrSpecularGlossiness/specularGlossinessTexture"
+]
+
+proc textureTransform*(material: Material, slot: MaterialTextureSlot): var TextureTransform =
+  ## Select a texture transform without copying the material.
+  case slot
+  of BaseColorTextureSlot: return material.baseColorTransform
+  of MetallicRoughnessTextureSlot: return material.metallicRoughnessTransform
+  of NormalTextureSlot: return material.normalTransform
+  of OcclusionTextureSlot: return material.occlusionTransform
+  of EmissiveTextureSlot: return material.emissiveTransform
+  of TransmissionTextureSlot: return material.transmissionTransform
+  of ThicknessTextureSlot: return material.thicknessTransform
+  of DiffuseTransmissionTextureSlot: return material.diffuseTransmissionTransform
+  of DiffuseTransmissionColorTextureSlot: return material.diffuseTransmissionColorTransform
+  of AnisotropyTextureSlot: return material.anisotropyTransform
+  of ClearcoatTextureSlot: return material.clearcoatTransform
+  of ClearcoatRoughnessTextureSlot: return material.clearcoatRoughnessTransform
+  of ClearcoatNormalTextureSlot: return material.clearcoatNormalTransform
+  of IridescenceTextureSlot: return material.iridescenceTransform
+  of IridescenceThicknessTextureSlot: return material.iridescenceThicknessTransform
+  of SpecularTextureSlot: return material.specularTransform
+  of SpecularColorTextureSlot: return material.specularColorTransform
+  of SheenColorTextureSlot: return material.sheenColorTransform
+  of SheenRoughnessTextureSlot: return material.sheenRoughnessTransform
+  of DiffuseTextureSlot: return material.diffuseTransform
+  of SpecularGlossinessTextureSlot: return material.specularGlossinessTransform
+
+proc emissiveRadiance*(material: Material): Color =
+  ## Preserve the core default for older code constructing Material directly.
+  let strength = if material.hasEmissiveStrength or material.emissiveStrength > 0:
+    material.emissiveStrength else: 1.0'f
+  color(material.emissiveFactor.r * strength, material.emissiveFactor.g * strength,
+    material.emissiveFactor.b * strength, material.emissiveFactor.a)
+
+proc directionalLight*(node: Node): DirectionalLight =
+  ## Compatibility with the original directional-only API.
+  if node.punctualLight != nil and node.punctualLight.kind == DirectionalLightKind:
+    node.punctualLight
+  else: nil
+
+proc `directionalLight=`*(node: Node, light: DirectionalLight) =
+  node.punctualLight = light
+
+proc legacyAlphaMode*(material: Material): AlphaMode =
+  ## Keep the older renderers' transmission approximation at draw time,
+  ## without changing the material's authored coverage or its exported value.
+  if material == nil: OpaqueAlphaMode
+  elif material.alphaMode == OpaqueAlphaMode and material.transmissionFactor > 0:
+    BlendAlphaMode
+  else: material.alphaMode

@@ -1,17 +1,53 @@
 import
   std/math,
+  chroma,
   vmath,
   common,
   models
 
+proc setBaseColorFactor(channel: AnimationChannel, value: Color) =
+  ## Update every runtime material copy and invalidate cached shader uniforms.
+  for material in channel.materialTargets:
+    if material != nil and material.baseColorFactor != value:
+      material.baseColorFactor = value
+      material.markMaterialDirty()
+
+proc setTextureValue(channel: AnimationChannel, value: Vec2) =
+  for material in channel.materialTargets:
+    if material == nil: continue
+    let previous = material.textureTransform(channel.textureSlot)
+    template transform: untyped = material.textureTransform(channel.textureSlot)
+    case channel.path
+    of AnimTextureOffset:
+      if channel.textureComponent == 0: transform.offset = value
+      else: transform.offset[channel.textureComponent - 1] = value[channel.textureComponent - 1]
+    of AnimTextureScale:
+      if channel.textureComponent == 0: transform.scale = value
+      else: transform.scale[channel.textureComponent - 1] = value[channel.textureComponent - 1]
+    of AnimTextureRotation: transform.rotation = value.x
+    else: discard
+    if transform != previous: material.markMaterialDirty()
+
 proc resetToBase*(node: Node) =
-  ## Reset the node and its children to the original transform.
+  ## Reset the node tree and animated material properties to authored values.
   if node == nil:
     return
   node.visible = node.baseVisible
   node.pos = node.basePos
   node.rot = node.baseRot
   node.scale = node.baseScale
+  for clip in node.animations:
+    if clip == nil:
+      continue
+    for channel in clip.channels:
+      if channel.path == AnimBaseColorFactor:
+        channel.setBaseColorFactor(channel.baseColorFactor)
+      elif channel.path == AnimTextureOffset:
+        channel.setTextureValue(channel.baseTextureTransform.offset)
+      elif channel.path == AnimTextureScale:
+        channel.setTextureValue(channel.baseTextureTransform.scale)
+      elif channel.path == AnimTextureRotation:
+        channel.setTextureValue(vec2(channel.baseTextureTransform.rotation, 0))
   for child in node.nodes:
     child.resetToBase()
 
@@ -29,11 +65,11 @@ proc cubicSplineFloat(
   (-2 * u3 + 3 * u2) * v1 +
   (u3 - u2) * m1
 
-proc cubicSplineVec3(
-  v0, outTangent, v1, inTangent: Vec3,
+proc cubicSplineVector[T: Vec2 | Vec3 | Vec4](
+  v0, outTangent, v1, inTangent: T,
   u, dt: float32
-): Vec3 =
-  ## Evaluates one vec3 cubic spline segment.
+): T =
+  ## Evaluates one vector cubic spline segment without normalization.
   let
     u2 = u * u
     u3 = u2 * u
@@ -93,7 +129,8 @@ proc sampleSpan(times: seq[float32], t: float32): (int, int, float32) =
     let
       t0 = times[i]
       t1 = times[i + 1]
-    if t <= t1:
+    # At an interior keyframe, STEP must select the new value.
+    if t < t1:
       let u =
         if t1 > t0:
           (t - t0) / (t1 - t0)
@@ -130,18 +167,18 @@ proc sampleFloat(
       times[i1] - times[i0]
     )
 
-proc sampleVec3(
+proc sampleVector[T: Vec2 | Vec3 | Vec4](
   interpolation: AnimInterpolation,
   times: seq[float32],
-  values, inTangents, outTangents: seq[Vec3],
+  values, inTangents, outTangents: seq[T],
   t: float32
-): Vec3 =
-  ## Samples a vec3 animation track at a time.
+): T =
+  ## Samples a vector animation track at a time.
   if values.len == 0 or times.len == 0:
-    return vec3(0, 0, 0)
+    return default(T)
   let (i0, i1, u) = sampleSpan(times, t)
   if i0 < 0:
-    return vec3(0, 0, 0)
+    return default(T)
   if i0 == i1:
     return values[i0]
   case interpolation
@@ -150,7 +187,7 @@ proc sampleVec3(
   of aiLinear:
     values[i0] * (1 - u) + values[i1] * u
   of aiCubicSpline:
-    cubicSplineVec3(
+    cubicSplineVector(
       values[i0],
       outTangents[i0],
       values[i1],
@@ -280,7 +317,7 @@ proc applyClipAt*(clip: AnimationClip, time: float32) =
     case ch.path
     of AnimTranslation:
       if ch.valuesVec3.len > 0:
-        ch.target.pos = sampleVec3(
+        ch.target.pos = sampleVector(
           ch.interpolation,
           ch.times,
           ch.valuesVec3,
@@ -290,7 +327,7 @@ proc applyClipAt*(clip: AnimationClip, time: float32) =
         )
     of AnimScale:
       if ch.valuesVec3.len > 0:
-        ch.target.scale = sampleVec3(
+        ch.target.scale = sampleVector(
           ch.interpolation,
           ch.times,
           ch.valuesVec3,
@@ -328,18 +365,35 @@ proc applyClipAt*(clip: AnimationClip, time: float32) =
           ch.outTangentsWeights,
           t
         )
+    of AnimTextureOffset, AnimTextureScale, AnimTextureRotation:
+      if ch.valuesVec2.len > 0:
+        ch.setTextureValue(sampleVector(ch.interpolation, ch.times, ch.valuesVec2,
+          ch.inTangentsVec2, ch.outTangentsVec2, t))
+      elif ch.valuesFloat.len > 0:
+        ch.setTextureValue(vec2(sampleFloat(ch.interpolation, ch.times, ch.valuesFloat,
+          ch.inTangentsFloat, ch.outTangentsFloat, t)))
+    of AnimBaseColorFactor:
+      if ch.valuesVec4.len > 0:
+        let value = sampleVector(
+          ch.interpolation,
+          ch.times,
+          ch.valuesVec4,
+          ch.inTangentsVec4,
+          ch.outTangentsVec4,
+          t
+        )
+        ch.setBaseColorFactor(color(value.x, value.y, value.z, value.w))
 
 proc updateAnimation*(node: Node, dt: float32) =
-  ## Advances and applies active animation clips.
+  ## Advances active clips and applies morph weights, including static defaults.
   if node == nil:
     return
   node.resetToBase()
-  if node.animations.len == 0:
-    return
-
-  node.animTime += dt
-  if node.activeClips.len > 0:
-    for clipIdx in node.activeClips:
-      if clipIdx >= 0 and clipIdx < node.animations.len:
-        applyClipAt(node.animations[clipIdx], node.animTime)
+  if node.animations.len > 0:
+    node.animTime += dt
+    if node.activeClips.len > 0:
+      for clipIdx in node.activeClips:
+        if clipIdx >= 0 and clipIdx < node.animations.len:
+          applyClipAt(node.animations[clipIdx], node.animTime)
+  # Morph weights also define the rest pose of models with no animation clips.
   node.applyMorphs()

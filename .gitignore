@@ -9,6 +9,7 @@
 !.github/
 !.github/**
 !.gitignore
+!.gitattributes
 
 # Normal ignores.
 *.exe
@@ -23,6 +24,8 @@ dist/
 coverage/
 docs/htmldocs/
 tests/tmp/
+tools/reference/node_modules/
+tools/reference/.cache/
 tmp/
 examples/data/*.glb
 examples/emscripten/*.data

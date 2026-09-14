@@ -9,6 +9,10 @@ srcDir        = "src"
 # Dependencies
 
 requires "nim >= 1.6.0"
+# Shared HDR shader compiler fixes, tested at 703f21052849dc0e9e0e713c8c86d17c24d34528.
+requires "https://github.com/treeform/shady#gltf-backend-parity"
+# Opt-in Vulkan sampler anisotropy, tested at 0bd91f6a841dfca3cefcdbab4dd7efd0574b3329.
+requires "https://github.com/treeform/vk14#gltf-anisotropic-sampling"
 requires "vmath >= 3.0.0"
 requires "chroma >= 0.3.0"
 requires "pixie >= 5.0.0"
@@ -17,5 +21,4 @@ requires "opengl >= 1.2.3"
 requires "webby >= 0.2.1"
 requires "windy >= 0.4.4"
 requires "silky >= 0.0.2"
-requires "shady >= 0.0.2"
 requires "metal4 >= 0.1.0"

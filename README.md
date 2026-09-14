@@ -64,10 +64,10 @@ The table below reflects the current code, not the full glTF 2.0 spec.
 | Primitive modes | Yes | Yes | Yes | Points, lines, strips, fans, and triangles are read and rendered. |
 | Positions | Yes | Yes | Yes | `POSITION` is supported. |
 | Normals | Yes | Yes | Yes | `NORMAL` is supported. |
-| Tangents | Yes | Yes | No | Reads authored tangents and falls back to generated tangents when missing. |
+| Tangents | Yes | Yes | No | Preserves authored tangents; generates missing ones with MikkTSpace, including mirrored seams and morph attributes. |
 | UV set 0 | Yes | Yes | Yes | `TEXCOORD_0` is supported. |
-| UV set 1 | Yes | Yes | No | `TEXCOORD_1` is loaded and used by texture inputs with `texCoord: 1`. |
-| Vertex colors | Yes | Yes | Yes | `COLOR_0` is supported. |
+| UV set 1 | Yes | Yes | Yes | `TEXCOORD_1` is loaded, exported, and used by texture inputs with `texCoord: 1`. |
+| Vertex colors | Yes | Yes | Yes | `COLOR_0` supports RGB/RGBA floats and normalized unsigned 8-bit/16-bit components. Runtime colors use 8-bit RGBA. |
 | Indices | Yes | Yes | Yes | Reads `uint8`, `uint16`, and `uint32`. Writes `uint8`, `uint16`, and `uint32`. |
 | PBR base color | Yes | Yes | Yes | Reads texture and factor. Writes texture and factor. |
 | Metallic and roughness factors | Yes | Yes | Yes | Scalar factors are read and written. |
@@ -83,16 +83,26 @@ The table below reflects the current code, not the full glTF 2.0 spec.
 | Skins | Yes | Yes | No | `JOINTS_0` and `WEIGHTS_0` are supported with GPU skinning. |
 | Morph targets | Yes | Yes | No | Position, normal, and tangent targets are applied at runtime. |
 | Cameras | Yes | Yes | No | Perspective and orthographic cameras are loaded from glTF. |
-| `KHR_texture_transform` | Yes | Yes | No | Texture transforms and `texCoord` overrides are supported. |
-| `KHR_materials_transmission` | Partial | Partial | No | Transmission factors are read and rendered, but broader extension coverage is incomplete. |
+| `KHR_texture_transform` | Yes | Yes | Partial | Texture transforms and `texCoord` overrides are supported. Export preserves them on transmission and thickness maps. |
+| `KHR_materials_transmission` | Yes | Partial | Yes | OpenGL IBL renders a mipmapped scene background for refraction and rough glass; supports the factor and linear R-channel texture. Other lighting paths retain their approximation. |
+| `KHR_materials_volume` | Yes | Partial | Yes | OpenGL IBL supports thickness factor/G-channel texture, node scale, and color/distance absorption. |
+| `KHR_materials_diffuse_transmission` | Yes | Partial | Yes | OpenGL IBL supports opposite-hemisphere diffuse lighting, factor/alpha texture, sRGB color texture, UV transforms, and volume absorption. Volume scattering is a separate extension. |
+| `KHR_materials_ior` | Yes | Partial | Yes | OpenGL IBL uses authored IOR for refraction, roughness and dielectric reflections, including explicit zero's infinite-IOR mode. |
+| `KHR_materials_emissive_strength` | Yes | Yes | Yes | Multiplies linear emissive radiance, including HDR values before OpenGL IBL tone mapping. Textureless emissive colors also survive export. |
+| `KHR_materials_anisotropy` | Yes | Partial | Yes | OpenGL IBL uses anisotropic GGX for punctual lights and bent-normal environment reflections; supports strength, rotation and linear RG-direction/B-strength textures with UV transforms. |
+| `KHR_materials_clearcoat` | Yes | Partial | Yes | OpenGL IBL layers clearcoat over reflection, transmission, sheen and emission; supports strength/R, roughness/G and independent normal textures with UV transforms. |
+| `KHR_materials_iridescence` | Yes | Partial | Yes | OpenGL IBL evaluates thin-film interference for dielectric/metal reflection and transmission, with film IOR, thickness range and linear R-strength/G-thickness maps and UV transforms. |
 | `KHR_node_visibility` | Yes | Yes | No | Static visibility and visibility animation are supported. |
-| `KHR_animation_pointer` | Partial | Partial | No | Only the visibility target path is supported. |
+| `KHR_animation_pointer` | Partial | Partial | No | Node visibility, material `baseColorFactor` and all supported textures’ UV offset/scale/rotation targets are supported, including individual offset/scale components. Tracks support `STEP`, `LINEAR`, and `CUBICSPLINE`; clip indices and durations are preserved. |
 | `KHR_draco_mesh_compression` | No | No | No | Not supported yet. |
 | `KHR_mesh_quantization` | Yes | Yes | No | Integer mesh attributes are decoded with their declared normalization and stride. |
 | `EXT_meshopt_compression` | Yes | Yes | No | Compressed buffer views are decoded in pure Nim, including standard attribute filters. |
 | `KHR_texture_basisu` | Yes | Yes | Partial | KTX2 textures; see [KHR_texture_basisu and KTX2](#khr_texture_basisu-and-ktx2). The embedded KTX2 module can read and write supported KTX2 payloads directly, while glTF export paths that generate new encoded sidecars still use [KTX-Software](#writing-ktx2-with-ktx-software). |
-| `KHR_lights_punctual` | No | No | No | Not supported yet. |
-| `KHR_materials_unlit` | No | No | No | Not supported yet. |
+| `KHR_lights_punctual` | Yes | Partial | Yes | OpenGL IBL renders up to 32 directional/point/spot lights, with inverse-square/range/cone falloff and animated node transforms/visibility. Light-property animation remains unsupported. |
+| `KHR_materials_sheen` | Yes | Partial | Yes | OpenGL IBL layers Charlie sheen with energy compensation, sRGB color and linear alpha-roughness textures, including UV transforms and sampler settings. |
+| `KHR_materials_specular` | Yes | Partial | Yes | OpenGL IBL applies tinted dielectric reflections with linear alpha-strength and sRGB color textures, including UV transforms and sampler settings. |
+| `KHR_materials_pbrSpecularGlossiness` | Yes | Partial | Yes | OpenGL IBL supports the legacy diffuse/specular/glossiness workflow directly, with sRGB RGB/linear alpha textures, samplers and UV transforms. Preserves the core metallic/roughness fallback on export. |
+| `KHR_materials_unlit` | Yes | Yes | Yes | Base color, texture, vertex color, alpha modes and double-sided rendering; independent of lighting. The matched HDR path bypasses exposure and tone mapping. |
 | `EXT_texture_webp` | No | No | No | Not supported yet. |
 
 ## KHR_texture_basisu and KTX2
@@ -206,6 +216,19 @@ Current controls:
 - `experiments/` contains rendering experiments and shader work.
 
 ## Development
+
+The [reference-image tools](tools/reference/README.md) capture a pinned Treeform
+fork of the Khronos renderer and compare fixed camera/animation cases with the Nim
+renderer in an HTML Xray report. Run `npm run compare` in `tools/reference` for
+the full catalog, or add `-- --case=ModelName` for a focused comparison.
+
+glTF material texture `Image` buffers use **straight RGBA** bytes, including RGB
+where alpha is zero. Use `loadStraightAlphaImage(path)` or
+`decodeStraightAlphaImage(bytes)` when supplying a texture, and
+`encodeStraightAlphaPng(image)` when saving one. These helpers reuse Pixie's
+PNG/JPEG/WebP decoders before premultiplication. Use ordinary Pixie images for
+2D drawing and compositing; material texture buffers are for direct pixel
+access and GPU upload. glTF/GLB export preserves the straight texture bytes.
 
 The project includes standard build and docs workflows:
 

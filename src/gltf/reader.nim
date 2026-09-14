@@ -1,13 +1,25 @@
 import
   std/[base64, json, os, strformat, strutils],
   chroma, flatty/binny, pixie, vmath, webby,
-  common, draco, internal, meshopt, models
+  common, draco, internal, meshopt, models, tangents, texture_images
 
 export common
 
 const SupportedExtensions = [
   "KHR_texture_transform",
   "KHR_materials_transmission",
+  "KHR_materials_diffuse_transmission",
+  "KHR_lights_punctual",
+  "KHR_materials_emissive_strength",
+  "KHR_materials_anisotropy",
+  "KHR_materials_clearcoat",
+  "KHR_materials_iridescence",
+  "KHR_materials_specular",
+  "KHR_materials_sheen",
+  "KHR_materials_pbrSpecularGlossiness",
+  "KHR_materials_volume",
+  "KHR_materials_ior",
+  "KHR_materials_unlit",
   "KHR_node_visibility",
   "KHR_animation_pointer",
   "KHR_texture_basisu",
@@ -195,37 +207,14 @@ proc readAccessorFloats(
     view = bufferViews[accessor.bufferView]
     buffer = buffers[view.buffer]
     start = view.byteOffset + accessor.byteOffset
-    elemSize =
-      case accessor.componentType
-      of FloatComponent:
-        4
-      of UnsignedByteComponent:
-        1
-      of UnsignedShortComponent:
-        2
-      of UnsignedIntComponent:
-        4
-      else:
-        0
+    elemSize = accessor.componentType.componentSize()
     stride = if view.byteStride > 0: view.byteStride else: elemSize
   if accessor.kind != atSCALAR:
     raise newException(GltfError, "Unsupported scalar accessor kind")
-  if elemSize == 0:
-    raise newException(GltfError, "Unsupported scalar accessor component type")
   result.setLen(accessor.count)
   for i in 0 ..< accessor.count:
     let off = start + i * stride
-    case accessor.componentType
-    of FloatComponent:
-      result[i] = readFloat32(buffer, off)
-    of UnsignedByteComponent:
-      result[i] = buffer.readUint8(off).float32
-    of UnsignedShortComponent:
-      result[i] = buffer.readUint16(off).float32
-    of UnsignedIntComponent:
-      result[i] = buffer.readUint32(off).float32
-    else:
-      discard
+    result[i] = readAccessorComponent(accessor, buffer, off)
   if accessor.sparse.used:
     let
       indices = readSparseIndices(accessor, bufferViews, buffers)
@@ -235,17 +224,7 @@ proc readAccessorFloats(
       sparseStride = elemSize
     for i, dstIndex in indices:
       let off = sparseStart + i * sparseStride
-      case accessor.componentType
-      of FloatComponent:
-        result[dstIndex] = readFloat32(sparseBuffer, off)
-      of UnsignedByteComponent:
-        result[dstIndex] = sparseBuffer.readUint8(off).float32
-      of UnsignedShortComponent:
-        result[dstIndex] = sparseBuffer.readUint16(off).float32
-      of UnsignedIntComponent:
-        result[dstIndex] = sparseBuffer.readUint32(off).float32
-      else:
-        discard
+      result[dstIndex] = readAccessorComponent(accessor, sparseBuffer, off)
 
 proc readAccessorVec3(
   accessorIdx: int,
@@ -1305,6 +1284,7 @@ proc defaultRuntimeMaterial(): Material =
   result.emissive.fill(rgbx(255, 255, 255, 255))
   result.emissivePlaceholder = true
   result.emissiveFactor = color(0, 0, 0, 1)
+  result.emissiveStrength = 1
   result.emissiveTransform = TextureTransform(
     texCoord: 0,
     offset: vec2(0, 0),
@@ -1316,6 +1296,50 @@ proc defaultRuntimeMaterial(): Material =
   result.alphaCutoff = -1.0
   result.doubleSided = false
   result.transmissionFactor = 0.0
+  result.diffuseTransmissionColorFactor = vec3(1)
+  result.diffuseTransmissionSampler = defaultTextureSampler()
+  result.diffuseTransmissionColorSampler = defaultTextureSampler()
+  result.diffuseTransmissionTransform = TextureTransform(scale: vec2(1))
+  result.diffuseTransmissionColorTransform = TextureTransform(scale: vec2(1))
+  result.anisotropySampler = defaultTextureSampler()
+  result.anisotropyTransform = TextureTransform(scale: vec2(1))
+  result.sheenColorSampler = defaultTextureSampler()
+  result.sheenRoughnessSampler = defaultTextureSampler()
+  result.sheenColorTransform = TextureTransform(scale: vec2(1))
+  result.sheenRoughnessTransform = TextureTransform(scale: vec2(1))
+  result.diffuseFactor = color(1, 1, 1, 1)
+  result.specularGlossinessFactor = vec3(1)
+  result.glossinessFactor = 1
+  result.diffuseSampler = defaultTextureSampler()
+  result.specularGlossinessSampler = defaultTextureSampler()
+  result.diffuseTransform = TextureTransform(scale: vec2(1))
+  result.specularGlossinessTransform = TextureTransform(scale: vec2(1))
+  result.specularFactor = 1
+  result.specularColorFactor = vec3(1)
+  result.specularSampler = defaultTextureSampler()
+  result.specularColorSampler = defaultTextureSampler()
+  result.specularTransform = TextureTransform(scale: vec2(1))
+  result.specularColorTransform = TextureTransform(scale: vec2(1))
+  result.iridescenceIor = 1.3
+  result.iridescenceThicknessMinimum = 100
+  result.iridescenceThicknessMaximum = 400
+  result.iridescenceSampler = defaultTextureSampler()
+  result.iridescenceThicknessSampler = defaultTextureSampler()
+  result.iridescenceTransform = TextureTransform(scale: vec2(1))
+  result.iridescenceThicknessTransform = TextureTransform(scale: vec2(1))
+  result.clearcoatNormalScale = 1
+  result.clearcoatSampler = defaultTextureSampler()
+  result.clearcoatRoughnessSampler = defaultTextureSampler()
+  result.clearcoatNormalSampler = defaultTextureSampler()
+  result.clearcoatTransform = TextureTransform(scale: vec2(1))
+  result.clearcoatRoughnessTransform = TextureTransform(scale: vec2(1))
+  result.clearcoatNormalTransform = TextureTransform(scale: vec2(1))
+  result.ior = 1.5
+  result.attenuationColor = vec3(1)
+  result.transmissionSampler = defaultTextureSampler()
+  result.thicknessSampler = defaultTextureSampler()
+  result.transmissionTransform = TextureTransform(scale: vec2(1))
+  result.thicknessTransform = TextureTransform(scale: vec2(1))
 
 proc validateMeshAttribute(accessor: Accessor, semantic: string) =
   ## Checks core and KHR_mesh_quantization vertex attribute layouts.
@@ -1384,6 +1408,16 @@ proc parseInterpolation(name: string): AnimInterpolation =
   else:
     aiLinear
 
+proc splitCubicVec2(channel: var AnimationChannel) =
+  let triplets = channel.valuesVec2
+  channel.valuesVec2.setLen(channel.times.len)
+  channel.inTangentsVec2.setLen(channel.times.len)
+  channel.outTangentsVec2.setLen(channel.times.len)
+  for i in 0 ..< channel.times.len:
+    channel.inTangentsVec2[i] = triplets[i * 3]
+    channel.valuesVec2[i] = triplets[i * 3 + 1]
+    channel.outTangentsVec2[i] = triplets[i * 3 + 2]
+
 proc splitCubicVec3(channel: var AnimationChannel) =
   ## Splits vec3 cubic spline triplets into tangents and values.
   let triplets = channel.valuesVec3
@@ -1394,6 +1428,17 @@ proc splitCubicVec3(channel: var AnimationChannel) =
     channel.inTangentsVec3[i] = triplets[i * 3]
     channel.valuesVec3[i] = triplets[i * 3 + 1]
     channel.outTangentsVec3[i] = triplets[i * 3 + 2]
+
+proc splitCubicVec4(channel: var AnimationChannel) =
+  ## Splits vec4 cubic spline triplets without quaternion normalization.
+  let triplets = channel.valuesVec4
+  channel.valuesVec4.setLen(channel.times.len)
+  channel.inTangentsVec4.setLen(channel.times.len)
+  channel.outTangentsVec4.setLen(channel.times.len)
+  for i in 0 ..< channel.times.len:
+    channel.inTangentsVec4[i] = triplets[i * 3]
+    channel.valuesVec4[i] = triplets[i * 3 + 1]
+    channel.outTangentsVec4[i] = triplets[i * 3 + 2]
 
 proc splitCubicQuat(channel: var AnimationChannel) =
   ## Splits quaternion cubic spline triplets into tangents and values.
@@ -1449,11 +1494,13 @@ proc loadPrimitive(
   result.material = defaultRuntimeMaterial()
   if primInfo.material >= 0:
     let material = materials[primInfo.material]
+    result.material.unlit = material.unlit
 
     let pbr = material.pbrMetallicRoughness
     if pbr.baseColorTexture.index >= 0:
       let imageIndex = textures[pbr.baseColorTexture.index].source
       result.material.baseColor = images[imageIndex]
+      result.material.baseColorPlaceholder = false
       result.material.baseColorKtx2 = imageKtx2Data[imageIndex]
       result.material.baseColorName = imageNames[imageIndex]
       result.material.baseColorSampler =
@@ -1473,6 +1520,7 @@ proc loadPrimitive(
     if pbr.metallicRoughnessTexture.index >= 0:
       let imageIndex = textures[pbr.metallicRoughnessTexture.index].source
       result.material.metallicRoughness = images[imageIndex]
+      result.material.metallicRoughnessPlaceholder = false
       result.material.metallicRoughnessKtx2 = imageKtx2Data[imageIndex]
       result.material.metallicRoughnessName = imageNames[imageIndex]
       result.material.metallicRoughnessSampler =
@@ -1493,6 +1541,7 @@ proc loadPrimitive(
     if material.normalTexture.index >= 0:
       let imageIndex = textures[material.normalTexture.index].source
       result.material.normal = images[imageIndex]
+      result.material.normalPlaceholder = false
       result.material.normalKtx2 = imageKtx2Data[imageIndex]
       result.material.normalName = imageNames[imageIndex]
       result.material.normalSampler =
@@ -1515,6 +1564,7 @@ proc loadPrimitive(
     if material.occlusionTexture.index >= 0:
       let imageIndex = textures[material.occlusionTexture.index].source
       result.material.occlusion = images[imageIndex]
+      result.material.occlusionPlaceholder = false
       result.material.occlusionKtx2 = imageKtx2Data[imageIndex]
       result.material.occlusionName = imageNames[imageIndex]
       result.material.occlusionSampler =
@@ -1534,6 +1584,7 @@ proc loadPrimitive(
     if material.emissiveTexture.index >= 0:
       let imageIndex = textures[material.emissiveTexture.index].source
       result.material.emissive = images[imageIndex]
+      result.material.emissivePlaceholder = false
       result.material.emissiveKtx2 = imageKtx2Data[imageIndex]
       result.material.emissiveName = imageNames[imageIndex]
       result.material.emissiveSampler =
@@ -1549,14 +1600,71 @@ proc loadPrimitive(
       rotation: material.emissiveTexture.rotation
     )
     result.material.emissiveFactor = material.emissiveFactor
+    result.material.hasEmissiveStrength = material.hasEmissiveStrength
+    result.material.emissiveStrength = material.emissiveStrength
     result.material.transmissionFactor = material.transmissionFactor
+    result.material.hasTransmission = material.hasTransmission
+    result.material.hasVolume = material.hasVolume
+    result.material.thicknessFactor = material.thicknessFactor
+    result.material.attenuationColor = material.attenuationColor
+    result.material.attenuationDistance = material.attenuationDistance
+    result.material.ior = material.ior
+    result.material.hasIor = material.hasIor
+    template loadDataTexture(slot, info: untyped) =
+      if info.index >= 0:
+        let imageIndex = textures[info.index].source
+        result.material.slot = images[imageIndex]
+        result.material.`slot Ktx2` = imageKtx2Data[imageIndex]
+        result.material.`slot Name` = imageNames[imageIndex]
+        result.material.`slot Sampler` = getTextureSampler(info.index)
+      result.material.`slot Transform` = TextureTransform(
+        texCoord: info.texCoord, offset: info.offset,
+        scale: info.uvScale, rotation: info.rotation)
+    loadDataTexture(transmission, material.transmissionTexture)
+    loadDataTexture(thickness, material.thicknessTexture)
+    loadDataTexture(diffuseTransmission, material.diffuseTransmissionTexture)
+    loadDataTexture(diffuseTransmissionColor, material.diffuseTransmissionColorTexture)
+    loadDataTexture(anisotropy, material.anisotropyTexture)
+    loadDataTexture(diffuse, material.diffuseTexture)
+    loadDataTexture(specularGlossiness, material.specularGlossinessTexture)
+    result.material.hasSpecularGlossiness = material.hasSpecularGlossiness
+    result.material.diffuseFactor = material.diffuseFactor
+    result.material.specularGlossinessFactor = material.specularGlossinessFactor
+    result.material.glossinessFactor = material.glossinessFactor
+    loadDataTexture(sheenColor, material.sheenColorTexture)
+    loadDataTexture(sheenRoughness, material.sheenRoughnessTexture)
+    result.material.hasSheen = material.hasSheen
+    loadDataTexture(specular, material.specularTexture)
+    loadDataTexture(specularColor, material.specularColorTexture)
+    loadDataTexture(iridescence, material.iridescenceTexture)
+    loadDataTexture(iridescenceThickness, material.iridescenceThicknessTexture)
+    result.material.hasIridescence = material.hasIridescence
+    result.material.iridescenceFactor = material.iridescenceFactor
+    result.material.iridescenceIor = material.iridescenceIor
+    result.material.iridescenceThicknessMinimum = material.iridescenceThicknessMinimum
+    result.material.iridescenceThicknessMaximum = material.iridescenceThicknessMaximum
+    loadDataTexture(clearcoat, material.clearcoatTexture)
+    loadDataTexture(clearcoatRoughness, material.clearcoatRoughnessTexture)
+    loadDataTexture(clearcoatNormal, material.clearcoatNormalTexture)
+    result.material.hasClearcoat = material.hasClearcoat
+    result.material.clearcoatFactor = material.clearcoatFactor
+    result.material.clearcoatRoughnessFactor = material.clearcoatRoughnessFactor
+    result.material.clearcoatNormalScale = material.clearcoatNormalTexture.scale
+    result.material.hasAnisotropy = material.hasAnisotropy
+    result.material.anisotropyStrength = material.anisotropyStrength
+    result.material.anisotropyRotation = material.anisotropyRotation
+    result.material.hasDiffuseTransmission = material.hasDiffuseTransmission
+    result.material.diffuseTransmissionFactor = material.diffuseTransmissionFactor
+    result.material.diffuseTransmissionColorFactor = material.diffuseTransmissionColorFactor
+    result.material.hasSpecular = material.hasSpecular
+    result.material.specularFactor = material.specularFactor
+    result.material.specularColorFactor = material.specularColorFactor
+    result.material.sheenColorFactor = material.sheenColorFactor
+    result.material.sheenRoughnessFactor = material.sheenRoughnessFactor
 
     case material.alphaMode
     of "OPAQUE":
-      if result.material.transmissionFactor > 0:
-        result.material.alphaMode = BlendAlphaMode
-      else:
-        result.material.alphaMode = OpaqueAlphaMode
+      result.material.alphaMode = OpaqueAlphaMode
       result.material.alphaCutoff = -1.0
     of "MASK":
       result.material.alphaMode = MaskAlphaMode
@@ -1671,6 +1779,18 @@ proc loadPrimitive(
               buffer.readUint8(start + i * stride + 2),
               buffer.readUint8(start + i * stride + 3)
             )
+      elif accessor.componentType == UnsignedShortComponent:
+        result.colors.setLen(accessor.count)
+        let stride = if bufferView.byteStride == 0: 8 else: bufferView.byteStride
+        for i in 0 ..< accessor.count:
+          let base = start + i * stride
+          # Normalize 16-bit components into the runtime's straight RGBA bytes.
+          result.colors[i] = rgbx(
+            (buffer.readUint16(base) div 257).uint8,
+            (buffer.readUint16(base + 2) div 257).uint8,
+            (buffer.readUint16(base + 4) div 257).uint8,
+            (buffer.readUint16(base + 6) div 257).uint8
+          )
       else:
         raise newException(
           GltfError,
@@ -1790,59 +1910,10 @@ proc loadPrimitive(
       )
     result.morphTargets.add(morphTarget)
 
+  result.generateTangents()
   result.basePoints = result.points
   result.baseNormals = result.normals
   result.baseTangents = result.tangents
-
-  if result.tangents.len == 0 and
-    result.normals.len > 0 and
-    result.uvs.len > 0:
-    result.tangents.setLen(result.normals.len)
-
-    template computeTangents(idx: untyped) =
-      var counts = newSeq[int](result.normals.len)
-      var tmpTangents = newSeq[Vec3](result.normals.len)
-      for i in 0 ..< idx.len div 3:
-        let
-          i0 = idx[i * 3].int
-          i1 = idx[i * 3 + 1].int
-          i2 = idx[i * 3 + 2].int
-          v0 = result.points[i0]
-          v1 = result.points[i1]
-          v2 = result.points[i2]
-          uv0 = result.uvs[i0]
-          uv1 = result.uvs[i1]
-          uv2 = result.uvs[i2]
-          edge1 = v1 - v0
-          edge2 = v2 - v0
-          deltaUv1 = uv1 - uv0
-          deltaUv2 = uv2 - uv0
-          f = 1.0 / (deltaUv1.x * deltaUv2.y - deltaUv2.x * deltaUv1.y)
-          tangent = vec3(
-            f * (deltaUv2.y * edge1.x - deltaUv1.y * edge2.x),
-            f * (deltaUv2.y * edge1.y - deltaUv1.y * edge2.y),
-            f * (deltaUv2.y * edge1.z - deltaUv1.y * edge2.z)
-          )
-        tmpTangents[i0] += tangent
-        tmpTangents[i1] += tangent
-        tmpTangents[i2] += tangent
-        counts[i0] += 1
-        counts[i1] += 1
-        counts[i2] += 1
-
-      for i in 0 ..< result.tangents.len:
-        if counts[i] > 0:
-          let tangent = normalize(tmpTangents[i] / counts[i].float32)
-          let handedness = 1.0
-          result.tangents[i].x = tangent.x
-          result.tangents[i].y = tangent.y
-          result.tangents[i].z = tangent.z
-          result.tangents[i].w = handedness
-
-    if result.indices16.len > 0:
-      computeTangents(result.indices16)
-    if result.indices32.len > 0:
-      computeTangents(result.indices32)
 
 type
   LoadResult = object
@@ -2048,14 +2119,14 @@ proc loadModelJsonInternal(
         if uri.startsWith("data:image/png") or
            uri.startsWith("data:image/jpeg") or
            uri.startsWith("data:image/webp"):
-          image = decodeImage(decode(uri.split(',')[1]))
+          image = decodeStraightAlphaImage(decode(uri.split(',')[1]))
         elif uri.startsWith("data:image/ktx2"):
           ktx2Data = decode(uri.split(',')[1])
         elif uri.endsWith(".png") or
              uri.endsWith(".jpg") or
              uri.endsWith(".jpeg") or
              uri.endsWith(".webp"):
-          image = readImage(joinPath(modelDir, uri))
+          image = loadStraightAlphaImage(joinPath(modelDir, uri))
         elif uri.endsWith(".ktx2"):
           ktx2Data = readFile(joinPath(modelDir, uri))
         else:
@@ -2070,7 +2141,7 @@ proc loadModelJsonInternal(
         if mimeType == "image/ktx2":
           ktx2Data = imageData
         else:
-          image = decodeImage(imageData)
+          image = decodeStraightAlphaImage(imageData)
       else:
         raise newException(GltfError, "Unsupported image type")
       images.add(image)
@@ -2109,6 +2180,29 @@ proc loadModelJsonInternal(
       material.normalTexture = defaultMaterialTexture()
       material.occlusionTexture = defaultMaterialTexture()
       material.emissiveTexture = defaultMaterialTexture()
+      material.transmissionTexture = defaultMaterialTexture()
+      material.thicknessTexture = defaultMaterialTexture()
+      material.diffuseTransmissionTexture = defaultMaterialTexture()
+      material.diffuseTransmissionColorTexture = defaultMaterialTexture()
+      material.anisotropyTexture = defaultMaterialTexture()
+      material.diffuseTexture = defaultMaterialTexture()
+      material.specularGlossinessTexture = defaultMaterialTexture()
+      material.diffuseFactor = color(1, 1, 1, 1)
+      material.specularGlossinessFactor = vec3(1)
+      material.glossinessFactor = 1
+      material.sheenColorTexture = defaultMaterialTexture()
+      material.sheenRoughnessTexture = defaultMaterialTexture()
+      material.specularTexture = defaultMaterialTexture()
+      material.specularColorTexture = defaultMaterialTexture()
+      material.iridescenceTexture = defaultMaterialTexture()
+      material.iridescenceThicknessTexture = defaultMaterialTexture()
+      material.iridescenceIor = 1.3
+      material.iridescenceThicknessMinimum = 100
+      material.iridescenceThicknessMaximum = 400
+      material.clearcoatTexture = defaultMaterialTexture()
+      material.clearcoatRoughnessTexture = defaultMaterialTexture()
+      material.clearcoatNormalTexture = defaultMaterialTexture()
+      material.clearcoatNormalTexture.scale = 1
       if "name" in entry:
         material.name = entry["name"].getStr()
 
@@ -2223,13 +2317,139 @@ proc loadModelJsonInternal(
         material.doubleSided = false
 
       material.transmissionFactor = 0
+      material.emissiveStrength = 1
+      material.diffuseTransmissionColorFactor = vec3(1)
+      material.ior = 1.5
+      material.attenuationColor = vec3(1)
+      material.specularFactor = 1
+      material.specularColorFactor = vec3(1)
       if "extensions" in entry:
         let extensions = entry["extensions"]
+        if "KHR_materials_emissive_strength" in extensions:
+          material.hasEmissiveStrength = true
+          material.emissiveStrength = extensions["KHR_materials_emissive_strength"]{"emissiveStrength"}.getFloat(1).float32
+        if "KHR_materials_pbrSpecularGlossiness" in extensions:
+          let sg = extensions["KHR_materials_pbrSpecularGlossiness"]
+          material.hasSpecularGlossiness = true
+          material.glossinessFactor = sg{"glossinessFactor"}.getFloat(1).float32
+          if "diffuseFactor" in sg:
+            let c = sg["diffuseFactor"]
+            material.diffuseFactor = color(c[0].getFloat(), c[1].getFloat(), c[2].getFloat(), c[3].getFloat())
+          if "specularFactor" in sg:
+            let c = sg["specularFactor"]
+            material.specularGlossinessFactor = vec3(c[0].getFloat(), c[1].getFloat(), c[2].getFloat())
+          template readSpecGlossTexture(slot: untyped) =
+            if astToStr(slot) in sg:
+              let texture = sg[astToStr(slot)]
+              material.slot.index = texture["index"].getInt()
+              readTextureTransform(texture, material.slot)
+          readSpecGlossTexture(diffuseTexture)
+          readSpecGlossTexture(specularGlossinessTexture)
+        if "KHR_materials_specular" in extensions:
+          let specular = extensions["KHR_materials_specular"]
+          material.hasSpecular = true
+          material.specularFactor = specular{"specularFactor"}.getFloat(1).float32
+          if "specularColorFactor" in specular:
+            let c = specular["specularColorFactor"]
+            material.specularColorFactor = vec3(c[0].getFloat(), c[1].getFloat(), c[2].getFloat())
+          template readSpecularTexture(slot: untyped) =
+            if astToStr(slot) in specular:
+              let texture = specular[astToStr(slot)]
+              material.slot.index = texture["index"].getInt()
+              readTextureTransform(texture, material.slot)
+          readSpecularTexture(specularTexture)
+          readSpecularTexture(specularColorTexture)
+        if "KHR_materials_sheen" in extensions:
+          let sheen = extensions["KHR_materials_sheen"]
+          material.hasSheen = true
+          material.sheenRoughnessFactor = sheen{"sheenRoughnessFactor"}.getFloat().float32
+          if "sheenColorFactor" in sheen:
+            let c = sheen["sheenColorFactor"]
+            material.sheenColorFactor = vec3(c[0].getFloat(), c[1].getFloat(), c[2].getFloat())
+          template readSheenTexture(slot: untyped) =
+            if astToStr(slot) in sheen:
+              let texture = sheen[astToStr(slot)]
+              material.slot.index = texture["index"].getInt()
+              readTextureTransform(texture, material.slot)
+          readSheenTexture(sheenColorTexture)
+          readSheenTexture(sheenRoughnessTexture)
+        material.unlit = "KHR_materials_unlit" in extensions
+        if "KHR_materials_iridescence" in extensions:
+          let film = extensions["KHR_materials_iridescence"]
+          material.hasIridescence = true
+          material.iridescenceFactor = film{"iridescenceFactor"}.getFloat().float32
+          material.iridescenceIor = film{"iridescenceIor"}.getFloat(1.3).float32
+          material.iridescenceThicknessMinimum = film{"iridescenceThicknessMinimum"}.getFloat(100).float32
+          material.iridescenceThicknessMaximum = film{"iridescenceThicknessMaximum"}.getFloat(400).float32
+          template readFilmTexture(slot: untyped) =
+            if astToStr(slot) in film:
+              let texture = film[astToStr(slot)]
+              material.slot.index = texture["index"].getInt()
+              readTextureTransform(texture, material.slot)
+          readFilmTexture(iridescenceTexture)
+          readFilmTexture(iridescenceThicknessTexture)
+        if "KHR_materials_clearcoat" in extensions:
+          let coat = extensions["KHR_materials_clearcoat"]
+          material.hasClearcoat = true
+          material.clearcoatFactor = coat{"clearcoatFactor"}.getFloat().float32
+          material.clearcoatRoughnessFactor = coat{"clearcoatRoughnessFactor"}.getFloat().float32
+          template readCoatTexture(slot: untyped) =
+            if astToStr(slot) in coat:
+              let texture = coat[astToStr(slot)]
+              material.slot.index = texture["index"].getInt()
+              material.slot.scale = texture{"scale"}.getFloat(1).float32
+              readTextureTransform(texture, material.slot)
+          readCoatTexture(clearcoatTexture)
+          readCoatTexture(clearcoatRoughnessTexture)
+          readCoatTexture(clearcoatNormalTexture)
+        if "KHR_materials_anisotropy" in extensions:
+          let anisotropy = extensions["KHR_materials_anisotropy"]
+          material.hasAnisotropy = true
+          material.anisotropyStrength = anisotropy{"anisotropyStrength"}.getFloat().float32
+          material.anisotropyRotation = anisotropy{"anisotropyRotation"}.getFloat().float32
+          if "anisotropyTexture" in anisotropy:
+            let texture = anisotropy["anisotropyTexture"]
+            material.anisotropyTexture.index = texture["index"].getInt()
+            readTextureTransform(texture, material.anisotropyTexture)
+        if "KHR_materials_diffuse_transmission" in extensions:
+          let diffuse = extensions["KHR_materials_diffuse_transmission"]
+          material.hasDiffuseTransmission = true
+          material.diffuseTransmissionFactor = diffuse{"diffuseTransmissionFactor"}.getFloat().float32
+          if "diffuseTransmissionColorFactor" in diffuse:
+            let c = diffuse["diffuseTransmissionColorFactor"]
+            material.diffuseTransmissionColorFactor = vec3(c[0].getFloat(), c[1].getFloat(), c[2].getFloat())
+          template readDiffuseTexture(slot: untyped) =
+            if astToStr(slot) in diffuse:
+              let texture = diffuse[astToStr(slot)]
+              material.slot.index = texture["index"].getInt()
+              readTextureTransform(texture, material.slot)
+          readDiffuseTexture(diffuseTransmissionTexture)
+          readDiffuseTexture(diffuseTransmissionColorTexture)
         if "KHR_materials_transmission" in extensions:
           let transmission = extensions["KHR_materials_transmission"]
+          material.hasTransmission = true
           if "transmissionFactor" in transmission:
             material.transmissionFactor =
               transmission["transmissionFactor"].getFloat().float32
+          if "transmissionTexture" in transmission:
+            let texture = transmission["transmissionTexture"]
+            material.transmissionTexture.index = texture["index"].getInt()
+            readTextureTransform(texture, material.transmissionTexture)
+        if "KHR_materials_volume" in extensions:
+          let volume = extensions["KHR_materials_volume"]
+          material.hasVolume = true
+          material.thicknessFactor = volume{"thicknessFactor"}.getFloat().float32
+          material.attenuationDistance = volume{"attenuationDistance"}.getFloat().float32
+          if "attenuationColor" in volume:
+            let c = volume["attenuationColor"]
+            material.attenuationColor = vec3(c[0].getFloat(), c[1].getFloat(), c[2].getFloat())
+          if "thicknessTexture" in volume:
+            let texture = volume["thicknessTexture"]
+            material.thicknessTexture.index = texture["index"].getInt()
+            readTextureTransform(texture, material.thicknessTexture)
+        if "KHR_materials_ior" in extensions:
+          material.hasIor = true
+          material.ior = extensions["KHR_materials_ior"]{"ior"}.getFloat(1.5).float32
 
       materials.add(material)
 
@@ -2398,6 +2618,26 @@ proc loadModelJsonInternal(
     node.visible = true
     if "extensions" in entry:
       let extensions = entry["extensions"]
+      if "KHR_lights_punctual" in extensions:
+        let
+          index = extensions["KHR_lights_punctual"]["light"].getInt()
+          lights = jsonRoot{"extensions", "KHR_lights_punctual", "lights"}
+        assertRaise lights != nil and index >= 0 and index < lights.len,
+          "Invalid punctual light index"
+        let light = lights[index]
+        let kind = case light["type"].getStr()
+          of "directional": DirectionalLightKind
+          of "point": PointLightKind
+          of "spot": SpotLightKind
+          else: raise newException(GltfError, "Invalid punctual light type")
+        node.punctualLight = PunctualLight(kind: kind, name: light{"name"}.getStr(),
+          color: color(1, 1, 1, 1), intensity: light{"intensity"}.getFloat(1).float32,
+          range: light{"range"}.getFloat().float32,
+          innerConeAngle: light{"spot", "innerConeAngle"}.getFloat().float32,
+          outerConeAngle: light{"spot", "outerConeAngle"}.getFloat(0.7853981633974483).float32)
+        if "color" in light:
+          let c = light["color"]
+          node.punctualLight.color = color(c[0].getFloat(), c[1].getFloat(), c[2].getFloat(), 1)
       if "KHR_node_visibility" in extensions:
         let visibility = extensions["KHR_node_visibility"]
         if "visible" in visibility:
@@ -2561,6 +2801,7 @@ proc loadModelJsonInternal(
     skins.add(skin)
 
   var clips: seq[AnimationClip]
+  var materialChannels: seq[tuple[channel: AnimationChannel, materialIdx: int]]
   if "animations" in jsonRoot:
     for animEntry in jsonRoot["animations"]:
       var clip = AnimationClip()
@@ -2573,6 +2814,7 @@ proc loadModelJsonInternal(
         AnimSampler = object
           input, output: int
           interpolation: string
+          times: seq[float32]
 
       var samplers: seq[AnimSampler]
       if "samplers" in animEntry:
@@ -2584,6 +2826,8 @@ proc loadModelJsonInternal(
             sampler.interpolation = s["interpolation"].getStr()
           else:
             sampler.interpolation = "LINEAR"
+          if sampler.input >= 0 and sampler.input < accessors.len:
+            sampler.times = readAccessorFloats(sampler.input, accessors, bufferViews, buffers)
           samplers.add(sampler)
 
       if "channels" in animEntry:
@@ -2594,11 +2838,15 @@ proc loadModelJsonInternal(
           if samplerIdx < 0 or samplerIdx >= samplers.len:
             continue
           let sampler = samplers[samplerIdx]
+          if sampler.times.len > 0: clip.duration = max(clip.duration, sampler.times[^1])
           if not ("target" in ch):
             continue
           let target = ch["target"]
           var
             nodeIdx = -1
+            materialIdx = -1
+            textureSlot: MaterialTextureSlot
+            textureComponent = 0
             path: AnimPath
             isPath = true
 
@@ -2619,6 +2867,44 @@ proc loadModelJsonInternal(
                 path = AnimVisibility
               except ValueError:
                 isPath = false
+            elif pointer.startsWith("/materials/") and
+                 pointer.endsWith("/pbrMetallicRoughness/baseColorFactor"):
+              let suffix = "/pbrMetallicRoughness/baseColorFactor"
+              let remainder = pointer.substr(
+                "/materials/".len, pointer.len - suffix.len - 1
+              )
+              try:
+                materialIdx = parseInt(remainder)
+                path = AnimBaseColorFactor
+              except ValueError:
+                isPath = false
+            elif pointer.startsWith("/materials/"):
+              isPath = false
+              var parts = pointer.split('/')
+              # Component pointers target one element of offset or scale.
+              if parts.len > 2 and parts[^1] in ["0", "1"] and parts[^2] in ["offset", "scale"]:
+                textureComponent = parseInt(parts[^1]) + 1
+                parts.setLen(parts.len - 1)
+              if parts.len >= 7 and parts[^3] == "extensions" and parts[^2] == "KHR_texture_transform":
+                let texturePath = parts[3 .. ^4].join("/")
+                try:
+                  materialIdx = parseInt(parts[2])
+                  if materialIdx >= 0 and materialIdx < materials.len:
+                    # Defaults are valid targets only when their enclosing object exists.
+                    var parent = jsonRoot["materials"][materialIdx]
+                    for token in parts[3 .. ^2]:
+                      if parent.kind == JObject and token in parent: parent = parent[token]
+                      else: parent = newJNull()
+                    if parent.kind == JObject:
+                      for slot in MaterialTextureSlot:
+                        if texturePath == MaterialTexturePaths[slot]:
+                          textureSlot = slot
+                          case parts[^1]
+                          of "offset": path = AnimTextureOffset; isPath = true
+                          of "scale": path = AnimTextureScale; isPath = true
+                          of "rotation": path = AnimTextureRotation; isPath = true
+                          else: discard
+                except ValueError: discard
             else:
               isPath = false
           else:
@@ -2638,31 +2924,42 @@ proc loadModelJsonInternal(
             else:
               isPath = false
 
-          if nodeIdx < 0 or nodeIdx >= nodes.len:
-            continue
-
           if not isPath:
             echo "[gltf] skipping unsupported animation target"
             continue
+          if path in {AnimBaseColorFactor, AnimTextureOffset, AnimTextureScale, AnimTextureRotation}:
+            if materialIdx < 0 or materialIdx >= materials.len:
+              continue
+          elif nodeIdx < 0 or nodeIdx >= nodes.len:
+            continue
 
-          let times =
-            readAccessorFloats(
-              sampler.input,
-              accessors,
-              bufferViews,
-              buffers
-            )
+          let times = sampler.times
           if times.len == 0:
             echo "[gltf] animation sampler missing times"
             continue
 
           var channel = AnimationChannel()
-          channel.target = nodes[nodeIdx]
+          if path == AnimBaseColorFactor:
+            channel.baseColorFactor = materials[materialIdx].pbrMetallicRoughness.baseColorFactor
+          elif path in {AnimTextureOffset, AnimTextureScale, AnimTextureRotation}:
+            channel.textureSlot = textureSlot
+            channel.textureComponent = textureComponent
+          else:
+            channel.target = nodes[nodeIdx]
           channel.path = path
           channel.interpolation = parseInterpolation(sampler.interpolation)
           channel.times = times
 
           case path
+          of AnimTextureOffset, AnimTextureScale, AnimTextureRotation:
+            if path != AnimTextureRotation and textureComponent == 0:
+              channel.valuesVec2 = readAccessorVec2(sampler.output, accessors, bufferViews, buffers)
+            else:
+              channel.valuesFloat = readAccessorFloats(sampler.output, accessors, bufferViews, buffers)
+          of AnimBaseColorFactor:
+            channel.valuesVec4 = readAccessorVec4(
+              sampler.output, accessors, bufferViews, buffers
+            )
           of AnimTranslation, AnimScale:
             channel.valuesVec3 =
               readAccessorVec3(
@@ -2710,6 +3007,18 @@ proc loadModelJsonInternal(
             continue
           if channel.interpolation == aiCubicSpline:
             case path
+            of AnimTextureOffset, AnimTextureScale, AnimTextureRotation:
+              if path != AnimTextureRotation and textureComponent == 0:
+                if channel.valuesVec2.len != channel.times.len * 3: continue
+                splitCubicVec2(channel)
+              else:
+                if channel.valuesFloat.len != channel.times.len * 3: continue
+                splitCubicFloat(channel)
+            of AnimBaseColorFactor:
+              if channel.valuesVec4.len != channel.times.len * 3:
+                echo "[gltf] animation sampler length mismatch"
+                continue
+              splitCubicVec4(channel)
             of AnimTranslation, AnimScale:
               if channel.valuesVec3.len != channel.times.len * 3:
                 echo "[gltf] animation sampler length mismatch"
@@ -2737,7 +3046,9 @@ proc loadModelJsonInternal(
                 channel.inTangentsWeights[i] = triplets[i * 3]
                 channel.valuesWeights[i] = triplets[i * 3 + 1]
                 channel.outTangentsWeights[i] = triplets[i * 3 + 2]
-          elif channel.times.len != channel.valuesVec3.len and
+          elif channel.times.len != channel.valuesVec2.len and
+             channel.times.len != channel.valuesVec3.len and
+             channel.times.len != channel.valuesVec4.len and
              channel.times.len != channel.valuesQuat.len and
              channel.times.len != channel.valuesFloat.len and
              channel.times.len != channel.valuesWeights.len:
@@ -2747,9 +3058,11 @@ proc loadModelJsonInternal(
           if channel.times.len > 0:
             clip.duration = max(clip.duration, channel.times[^1])
           clip.channels.add(channel)
+          if path in {AnimBaseColorFactor, AnimTextureOffset, AnimTextureScale, AnimTextureRotation}:
+            materialChannels.add((channel, materialIdx))
 
-      if clip.channels.len > 0:
-        clips.add(clip)
+      # Keep source indices and timing even if every channel is unsupported.
+      clips.add(clip)
 
   var sceneRoots: seq[seq[int]]
   var scenes: seq[Scene]
@@ -2765,6 +3078,8 @@ proc loadModelJsonInternal(
       roots.add(n.getInt())
     scenes.add(scene)
     sceneRoots.add(roots)
+
+  var runtimeMaterials = newSeq[seq[Material]](materials.len)
 
   proc processNode(nodeId: int): Node =
     var n = nodes[nodeId]
@@ -2790,6 +3105,9 @@ proc loadModelJsonInternal(
           samplers,
           materials
         ))
+        let materialIdx = primitiveDefs[primitiveIndex].material
+        if materialIdx >= 0:
+          runtimeMaterials[materialIdx].add(runtimeMesh.primitives[^1].material)
       n.mesh = runtimeMesh
       n.morphWeights = meshInfo.weights
       n.baseMorphWeights = meshInfo.weights
@@ -2848,6 +3166,12 @@ proc loadModelJsonInternal(
   for i, scene in scenes:
     for nodeId in sceneRoots[i]:
       scene.nodes.add(processNode(nodeId))
+  # Primitives and mesh instances own separate runtime material copies.
+  for (channel, materialIdx) in materialChannels:
+    channel.materialTargets = runtimeMaterials[materialIdx]
+    if channel.path in {AnimTextureOffset, AnimTextureScale, AnimTextureRotation} and
+        channel.materialTargets.len > 0:
+      channel.baseTextureTransform = channel.materialTargets[0].textureTransform(channel.textureSlot)
   if scenes.len > 0:
     let selectedScene = max(0, min(sceneId, scenes.high))
     for sceneNode in scenes[selectedScene].nodes:

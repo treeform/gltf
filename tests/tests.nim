@@ -4,7 +4,27 @@ import
   pixie,
   vmath,
   test_meshopt,
-  test_mesh_quantization
+  test_mesh_quantization,
+  test_tangents,
+  test_morphs,
+  test_material_animation,
+  test_texture_animation,
+  test_vertex_colors,
+  test_ibl_materials,
+  test_transmission,
+  test_diffuse_transmission,
+  test_punctual_lights,
+  test_emissive_strength,
+  test_anisotropy,
+  test_clearcoat,
+  test_iridescence,
+  test_specular,
+  test_specular_glossiness,
+  test_sheen,
+  test_unlit,
+  test_texture_images
+import test_shader_layout
+import test_texture_mips
 
 proc writeBytes(path: string, bytes: openArray[byte]) =
   ## Writes raw bytes to a test fixture file.

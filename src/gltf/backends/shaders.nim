@@ -66,6 +66,8 @@ var
   useShadow*: Uniform[bool]
   useNormalTexture*: Uniform[bool]
   alphaCutoff*: Uniform[float32]
+  unlitMaterial*: Uniform[int]
+  opaqueMaterial*: Uniform[int]
 
   ambientLightColor*: Uniform[Vec4]
   sunLightDirection*: Uniform[Vec3]
@@ -115,6 +117,10 @@ func safeNormalize(v: Vec3): Vec3 =
   else:
     vec3(0.0'f, 0.0'f, 0.0'f)
 
+func srgbChannelToLinear(v: float32): float32 =
+  if v <= 0.04045'f: v / 12.92'f
+  else: pow((v + 0.055'f) / 1.055'f, 2.4'f)
+
 proc fogAmount(worldPos: Vec3): float32 =
   ## Returns the fog blend amount for one world position.
   let
@@ -131,7 +137,7 @@ proc fogAmount(worldPos: Vec3): float32 =
 
 proc applyFog(value, worldPos: Vec3): Vec3 =
   ## Applies the configured fog color to a shaded RGB value.
-  mix(value, fogColor.rgb, fogAmount(worldPos) * fogColor.a)
+  result = mix(value, fogColor.rgb, fogAmount(worldPos) * fogColor.a)
 
 proc gltfPbrVert*(
   vertexPosition: Vec3,
@@ -226,6 +232,8 @@ proc gltfPbrFrag*(
   fragColor = fragColor * color
   if fragColor.a < alphaCutoff:
     discardFragment()
+  if opaqueMaterial != 0 or alphaCutoff >= 0.0'f:
+    fragColor.a = 1.0'f
 
   let
     albedo: Vec3 = fragColor.rgb
@@ -408,6 +416,23 @@ proc gltfPbrFrag*(
     litColor = applyFog(litColor, worldPos)
     fragColor = vec4(litColor, fragColor.a) * tint
 
+  # The legacy backends sample color textures in their encoded format.
+  # Decode before multiplying the linear factors, then apply display transfer.
+  # Keep these uniforms last to preserve the shared constant-buffer layout.
+  if unlitMaterial != 0:
+    let sampled = texture(baseColorTexture, baseColorUv)
+    let linearColor = vec3(srgbChannelToLinear(sampled.r),
+      srgbChannelToLinear(sampled.g), srgbChannelToLinear(sampled.b)) *
+      baseColorFactor.rgb * color.rgb
+    let displayColor = vec3(
+      pow(max(linearColor.r, 0.0'f), 1.0'f / 2.2'f),
+      pow(max(linearColor.g, 0.0'f), 1.0'f / 2.2'f),
+      pow(max(linearColor.b, 0.0'f), 1.0'f / 2.2'f))
+    var alpha = sampled.a * baseColorFactor.a * color.a
+    if opaqueMaterial != 0 or alphaCutoff >= 0.0'f:
+      alpha = 1.0'f
+    fragColor = vec4(displayColor, alpha) * tint
+
 proc gltfSkyboxVert*(
   vertexPosition: Vec2,
   gl_Position: var Vec4,
@@ -463,6 +488,8 @@ proc gltfShadowDepthFrag*(fragmentUv: Vec2) =
     if texColor.a < alphaCutoff:
       discardFragment()
 
+include ./ibl_shaders
+
 const
   OpenGlShaderTarget =
     when defined(emscripten):
@@ -471,6 +498,9 @@ const
       glsl4Desktop
   PbrVertSrc* = toShader(gltfPbrVert, OpenGlShaderTarget, shaderVertex)
   PbrFragSrc* = toShader(gltfPbrFrag, OpenGlShaderTarget, shaderFragment)
+  IblFragSrc* = toShader(gltfIblFrag, OpenGlShaderTarget, shaderFragment)
+  HdrPostVertSrc* = toShader(hdrPostVert, OpenGlShaderTarget, shaderVertex)
+  HdrPostFragSrc* = toShader(hdrPostFrag, OpenGlShaderTarget, shaderFragment)
   SkyboxVertSrc* = toShader(gltfSkyboxVert, OpenGlShaderTarget, shaderVertex)
   SkyboxFragSrc* =
     toShader(gltfSkyboxFrag, OpenGlShaderTarget, shaderFragment)
@@ -481,6 +511,10 @@ const
 
   PbrVertHlsl* = toShader(gltfPbrVert, hlslDX12, shaderVertex)
   PbrFragHlsl* = toShader(gltfPbrFrag, hlslDX12, shaderFragment)
+  IblFragHlsl* = toShader(gltfIblFrag, hlslDX12, shaderFragment)
+  HdrPostVertHlsl* = toShader(hdrPostVert, hlslDX12, shaderVertex)
+  HdrPostFragHlsl* = toShader(hdrPostFrag, hlslDX12, shaderFragment)
+  MipDownsampleFragHlsl* = toShader(mipDownsampleFrag, hlslDX12, shaderFragment)
   SkyboxVertHlsl* = toShader(gltfSkyboxVert, hlslDX12, shaderVertex)
   SkyboxFragHlsl* = toShader(gltfSkyboxFrag, hlslDX12, shaderFragment)
   ShadowDepthVertHlsl* =
@@ -490,6 +524,10 @@ const
 
   PbrVertVulkan* = toShader(gltfPbrVert, vulkanGlsl450, shaderVertex)
   PbrFragVulkan* = toShader(gltfPbrFrag, vulkanGlsl450, shaderFragment)
+  IblFragVulkan* = toShader(gltfIblFrag, vulkanGlsl450, shaderFragment)
+  HdrPostVertVulkan* = toShader(hdrPostVert, vulkanGlsl450, shaderVertex)
+  HdrPostFragVulkan* = toShader(hdrPostFrag, vulkanGlsl450, shaderFragment)
+  MipDownsampleFragVulkan* = toShader(mipDownsampleFrag, vulkanGlsl450, shaderFragment)
   SkyboxVertVulkan* = toShader(gltfSkyboxVert, vulkanGlsl450, shaderVertex)
   SkyboxFragVulkan* = toShader(gltfSkyboxFrag, vulkanGlsl450, shaderFragment)
   ShadowDepthVertVulkan* =
@@ -499,6 +537,9 @@ const
 
   PbrVertMsl* = toShader(gltfPbrVert, metalMSL, shaderVertex)
   PbrFragMsl* = toShader(gltfPbrFrag, metalMSL, shaderFragment)
+  IblFragMsl* = toShader(gltfIblFrag, metalMSL, shaderFragment)
+  HdrPostVertMsl* = toShader(hdrPostVert, metalMSL, shaderVertex)
+  HdrPostFragMsl* = toShader(hdrPostFrag, metalMSL, shaderFragment)
   SkyboxVertMsl* = toShader(gltfSkyboxVert, metalMSL, shaderVertex)
   SkyboxFragMsl* = toShader(gltfSkyboxFrag, metalMSL, shaderFragment)
   ShadowDepthVertMsl* =
