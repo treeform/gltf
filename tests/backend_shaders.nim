@@ -20,9 +20,26 @@ require(PbrVertVulkan, "#version 450", "Vulkan version")
 require(PbrVertVulkan, "layout(set = 1, binding = 0, std140)", "Vulkan vertex uniforms")
 require(PbrVertVulkan, "layout(location = 0) in vec3 vertexPosition;", "Vulkan inputs")
 require(PbrFragVulkan, "layout(set = 0, binding =", "Vulkan descriptors")
+require(IblFragHlsl, "SV_TARGET1", "DirectX HDR tone flags")
+require(IblFragVulkan, "out uint toneMapFlag", "Vulkan HDR tone flags")
+require(HdrPostFragHlsl, "shadyTextureSize", "DirectX texture dimensions")
 
 require(PbrVertMsl, "vertex VertexOut vertexMain", "Metal vertex stub")
 require(PbrFragMsl, "fragment float4 fragmentMain", "Metal fragment stub")
 
 doAssert not PbrVertSrc.startsWith("\0")
 echo "glTF backend shader codegen tests passed"
+
+when defined(useDirectX):
+  import pkg/dx12, shady/backends/dx12
+  let sharedIbl = shareHlslSamplers(IblFragHlsl, newSeq[int](28))
+  for (source, entry, profile) in [
+      (PbrVertHlsl, "VSMain", "vs_5_0"),
+      (PbrFragHlsl, "PSMain", "ps_5_0"),
+      (sharedIbl, "PSMain", "ps_5_0"),
+      (HdrPostVertHlsl, "VSMain", "vs_5_0"),
+      (HdrPostFragHlsl, "PSMain", "ps_5_0"),
+      (MipDownsampleFragHlsl, "PSMain", "ps_5_0")]:
+    let bytecode = compileShader(source, entry, profile)
+    bytecode.release()
+  echo "DirectX compiler accepted all shared rendering shaders"

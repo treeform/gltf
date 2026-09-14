@@ -9,6 +9,8 @@ srcDir        = "src"
 # Dependencies
 
 requires "nim >= 1.6.0"
+# Shared HDR shader compiler fixes, tested at 647e11a5f7be255f88b9069bb538a1f063aacf8d.
+requires "https://github.com/treeform/shady#gltf-backend-parity"
 requires "vmath >= 3.0.0"
 requires "chroma >= 0.3.0"
 requires "pixie >= 5.0.0"
@@ -17,5 +19,4 @@ requires "opengl >= 1.2.3"
 requires "webby >= 0.2.1"
 requires "windy >= 0.4.4"
 requires "silky >= 0.0.2"
-requires "shady >= 0.0.2"
 requires "metal4 >= 0.1.0"

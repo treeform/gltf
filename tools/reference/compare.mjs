@@ -6,9 +6,11 @@ import { assetsDir, repoDir, defaultManifest, validateManifest, cacheDir, source
 
 const { values: args } = parseArgs({ options: {
   manifest: { type: 'string' }, out: { type: 'string' }, case: { type: 'string' }, baselines: { type: 'string' },
-  commit: { type: 'string' },
+  commit: { type: 'string' }, backend: { type: 'string', default: 'opengl' },
   'no-build': { type: 'boolean' }, strict: { type: 'boolean' }, legacy: { type: 'boolean' }
 } });
+const backendFlags = { opengl: '-d:useOpenGL', directx: '-d:useDirectX', vulkan: '-d:useVulkan' };
+if (!Object.hasOwn(backendFlags, args.backend)) throw new Error('--backend must be opengl, directx or vulkan');
 const manifest = path.resolve(args.manifest || defaultManifest);
 const spec = JSON.parse(await readFile(manifest, 'utf8'));
 validateManifest(spec);
@@ -32,11 +34,12 @@ if (!args.legacy) {
     if (sha256(bytes) !== texture.sha256) throw new Error(`Lighting checksum mismatch: ${texture.file}`);
   }
 }
-const outDir = path.resolve(args.out || path.join(repoDir, 'tests/tmp/reference'));
+const backendSuffix = args.backend === 'opengl' ? '' : `-${args.backend}`;
+const outDir = path.resolve(args.out || path.join(repoDir, `tests/tmp/reference${backendSuffix}`));
 await mkdir(outDir, { recursive: true });
-const executable = path.join(repoDir, 'tests/tmp/sample_assets_reference' + (process.platform === 'win32' ? '.exe' : ''));
+const executable = path.join(repoDir, `tests/tmp/sample_assets_reference${backendSuffix}` + (process.platform === 'win32' ? '.exe' : ''));
 if (!args['no-build']) {
-  const build = spawnSync('nim', ['c', '--hints:off', `--nimcache:${path.join(repoDir, 'tests/tmp/reference-nimcache')}`,
+  const build = spawnSync('nim', ['c', '--hints:off', backendFlags[args.backend], `--nimcache:${path.join(repoDir, `tests/tmp/reference${backendSuffix}-nimcache`)}`,
     `-o:${executable}`, path.join(repoDir, 'tests/sample_assets.nim')], { cwd: repoDir, stdio: 'inherit' });
   if (build.error) throw build.error;
   if (build.status !== 0) process.exit(build.status || 1);
@@ -52,6 +55,7 @@ await writeFile(path.join(outDir, 'nim-run.log'), (render.stdout || '') + (rende
 let metrics;
 try { metrics = JSON.parse(await readFile(path.join(outDir, 'metrics.json'), 'utf8')); }
 catch { console.error(render.stdout, render.stderr); process.exit(1); }
+if (metrics.some(m => m.backend !== args.backend)) throw new Error('The rendered backend differs from --backend. Rebuild the capture executable.');
 if (args.commit) {
   if (!/^[0-9a-f]{7,40}$/i.test(args.commit)) throw new Error('--commit must be a Git commit hash');
   const commit = git(repoDir, 'rev-parse', `${args.commit}^{commit}`);

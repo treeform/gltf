@@ -511,6 +511,10 @@ const
 
   PbrVertHlsl* = toShader(gltfPbrVert, hlslDX12, shaderVertex)
   PbrFragHlsl* = toShader(gltfPbrFrag, hlslDX12, shaderFragment)
+  IblFragHlsl* = toShader(gltfIblFrag, hlslDX12, shaderFragment)
+  HdrPostVertHlsl* = toShader(hdrPostVert, hlslDX12, shaderVertex)
+  HdrPostFragHlsl* = toShader(hdrPostFrag, hlslDX12, shaderFragment)
+  MipDownsampleFragHlsl* = toShader(mipDownsampleFrag, hlslDX12, shaderFragment)
   SkyboxVertHlsl* = toShader(gltfSkyboxVert, hlslDX12, shaderVertex)
   SkyboxFragHlsl* = toShader(gltfSkyboxFrag, hlslDX12, shaderFragment)
   ShadowDepthVertHlsl* =
@@ -520,6 +524,10 @@ const
 
   PbrVertVulkan* = toShader(gltfPbrVert, vulkanGlsl450, shaderVertex)
   PbrFragVulkan* = toShader(gltfPbrFrag, vulkanGlsl450, shaderFragment)
+  IblFragVulkan* = toShader(gltfIblFrag, vulkanGlsl450, shaderFragment)
+  HdrPostVertVulkan* = toShader(hdrPostVert, vulkanGlsl450, shaderVertex)
+  HdrPostFragVulkan* = toShader(hdrPostFrag, vulkanGlsl450, shaderFragment)
+  MipDownsampleFragVulkan* = toShader(mipDownsampleFrag, vulkanGlsl450, shaderFragment)
   SkyboxVertVulkan* = toShader(gltfSkyboxVert, vulkanGlsl450, shaderVertex)
   SkyboxFragVulkan* = toShader(gltfSkyboxFrag, vulkanGlsl450, shaderFragment)
   ShadowDepthVertVulkan* =
