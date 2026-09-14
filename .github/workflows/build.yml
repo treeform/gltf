@@ -87,13 +87,13 @@ jobs:
       - name: Run tests (Linux)
         if: runner.os == 'Linux'
         run: |
-          xvfb-run -s "-screen 0 1024x768x24" \
+          xvfb-run --auto-servernum -s "-screen 0 1024x768x24" \
             env LIBGL_ALWAYS_SOFTWARE=1 \
             nim r -d:release tests/tests.nim
-          xvfb-run -s "-screen 0 1024x768x24" \
+          xvfb-run --auto-servernum -s "-screen 0 1024x768x24" \
             env LIBGL_ALWAYS_SOFTWARE=1 \
             nim r -d:release tests/test_ktx2.nim
-          xvfb-run -s "-screen 0 1024x768x24" \
+          xvfb-run --auto-servernum -s "-screen 0 1024x768x24" \
             env LIBGL_ALWAYS_SOFTWARE=1 \
             nim r -d:release tests/unlit_pipeline.nim
       - name: Run tests (Windows)
