@@ -9,6 +9,7 @@
 !.github/
 !.github/**
 !.gitignore
+!.gitattributes
 
 # Normal ignores.
 *.exe
