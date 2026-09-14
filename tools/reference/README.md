@@ -166,7 +166,7 @@ coverage, not identical pixels or full glTF conformance.
 
 The Windows catalog passes 301/301 on OpenGL, DirectX and Vulkan, with worst
 Pixie scores of 0.8974%, 0.8953% and 0.9427%. macOS OpenGL and Metal each pass
-301/301 with a worst score of 0.9096%. See `docs/macos-parity.md` for Mac details.
+301/301 with a worst score of 0.9096%.
 
 All four backends share neutral HDR lighting, 90-degree environment rotation,
 exposure 1, linear material evaluation, GGX IBL and PBR Neutral tone mapping.
