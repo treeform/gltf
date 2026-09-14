@@ -1,17 +1,164 @@
 import std/[math, json, os], vmath, chroma,
   gltf/[common, reader, tangents, animations]
 
+const PatchTangents = [
+  vec4(0.51449573, 0, 0.8574929, -1),
+  vec4(0.5994515, 0, -0.8004111, -1),
+  vec4(0.9040572, 0, 0.42741153, -1),
+  vec4(0.993122, 0, 0.11708446, -1),
+  vec4(0.97987956, 0.09354092, -0.1763128, -1),
+  vec4(0.957183, 0.15017736, 0.24748248, -1),
+  vec4(0.5183045, 0, -0.8551961, -1),
+  vec4(0.60415673, 0.1841859, 0.7752872, -1),
+  vec4(0.83857596, 0.45460436, -0.30020875, -1)
+]
+
 proc triangle(): Primitive =
+  ## Create an unindexed triangle with a simple UV mapping.
   Primitive(mode: TrianglesMode,
     points: @[vec3(0, 0, 0), vec3(1, 0, 0), vec3(0, 1, 0)],
     normals: @[vec3(0, 0, 1), vec3(0, 0, 1), vec3(0, 0, 1)],
     uvs: @[vec2(0, 0), vec2(1, 0), vec2(0, 1)])
 
 proc checkFinite(primitive: Primitive) =
+  ## Require finite unit tangents after generation and deformation.
   for tangent in primitive.tangents:
     for component in [tangent.x, tangent.y, tangent.z, tangent.w]:
       doAssert classify(component) notin {fcNan, fcInf, fcNegInf}
     doAssert abs(length(tangent.xyz) - 1) < 0.00001'f
+
+proc curvedPatch(): Primitive =
+  ## Build a curved patch with nonuniform tangent directions and angles.
+  result = Primitive(mode: TrianglesMode)
+  for y in 0 ..< 3:
+    for x in 0 ..< 3:
+      let
+        u = x.float32 / 2
+        v = y.float32 / 2
+        height = sin(u * 5) * cos(v * 3)
+        normal = vec3(
+          -5 * cos(u * 5) * cos(v * 3) / 3,
+          3 * sin(u * 5) * sin(v * 3) / 2,
+          1
+        )
+      result.points.add(vec3(u * 3, v * 2, height))
+      result.normals.add(normalize(normal))
+      result.uvs.add(vec2(u, v))
+  for y in 0 ..< 2:
+    for x in 0 ..< 2:
+      let i = (y * 3 + x).uint32
+      result.indices32.add([i, i + 1, i + 3, i + 1, i + 4, i + 3])
+
+proc checkPatch(primitive: Primitive, vertices: seq[uint32]) =
+  ## Compare every corner with output captured from the original C version.
+  primitive.generateTangents()
+  for i, source in vertices:
+    let index =
+      if primitive.indices32.len > 0:
+        primitive.indices32[i].int
+      else:
+        i
+    let tangent = primitive.tangents[index]
+    doAssert length(tangent - PatchTangents[source]) < 0.00001'f
+  primitive.checkFinite()
+
+block curvedTangents:
+  # Golden values use MikkTSpace revision 3e895b49d05ea07e4c2133156cfa94369e19e409.
+  let mesh = curvedPatch()
+  mesh.checkPatch(mesh.indices32)
+
+block reorderedFaces:
+  let
+    mesh = curvedPatch()
+    original = mesh.indices32
+  for i in 0 ..< original.len div 3:
+    for j in 0 ..< 3:
+      mesh.indices32[i * 3 + j] = original[original.len - 3 - i * 3 +
+        (j + 1) mod 3]
+  mesh.checkPatch(mesh.indices32)
+
+block weldedCorners:
+  let
+    source = curvedPatch()
+    mesh = Primitive(mode: TrianglesMode)
+  for index in source.indices32:
+    var position = source.points[index]
+    if position.x == 0 and mesh.points.len mod 2 == 0:
+      position.x = -0.0'f
+    mesh.points.add(position)
+    mesh.normals.add(source.normals[index])
+    mesh.uvs.add(source.uvs[index])
+  mesh.checkPatch(source.indices32)
+
+block collapsedUvNeighbor:
+  let mesh = triangle()
+  mesh.points.add(vec3(1, 1, 0))
+  mesh.normals.add(vec3(0, 0, 1))
+  mesh.uvs.add(vec2(1, 0))
+  mesh.indices32 = @[0'u32, 1, 2, 1, 3, 2]
+  mesh.generateTangents()
+  for i in [0, 1, 2, 3, 5]:
+    doAssert mesh.tangents[mesh.indices32[i]] == vec4(1, 0, 0, -1)
+  doAssert mesh.tangents[mesh.indices32[4]] == vec4(1, 0, 0, 1)
+
+block collapsedGeometry:
+  let mesh = triangle()
+  mesh.indices32 = @[0'u32, 0, 1, 0, 1, 2, 2, 2, 1]
+  mesh.generateTangents()
+  for index in mesh.indices32:
+    doAssert mesh.tangents[index] == vec4(1, 0, 0, -1)
+
+block isolatedDegenerate:
+  let mesh = triangle()
+  mesh.points[1] = mesh.points[0]
+  mesh.generateTangents()
+  for tangent in mesh.tangents:
+    doAssert tangent == vec4(1, 0, 0, 1)
+
+block opposingTangents:
+  let mesh = triangle()
+  mesh.points.add(vec3(1, 0, 0))
+  mesh.normals.add(vec3(0, 0, 1))
+  mesh.uvs.add(vec2(-1, 0))
+  mesh.indices32 = @[0'u32, 1, 2, 0, 2, 3]
+  mesh.generateTangents()
+  doAssert mesh.points.len == 6
+  for i in 0 ..< 3:
+    doAssert mesh.tangents[mesh.indices32[i]] == vec4(1, 0, 0, -1)
+    doAssert mesh.tangents[mesh.indices32[i + 3]] == vec4(-1, 0, 0, -1)
+
+block hardNormals:
+  let mesh = triangle()
+  for i in 0 ..< 3:
+    mesh.points.add(mesh.points[i])
+    mesh.normals.add(normalize(vec3(1, 0, 1)))
+    mesh.uvs.add(mesh.uvs[i])
+  mesh.generateTangents()
+  for i in 0 ..< 3:
+    doAssert mesh.tangents[i] == vec4(1, 0, 0, -1)
+    doAssert length(mesh.tangents[i + 3].xyz -
+      normalize(vec3(1, 0, -1))) < 0.00001'f
+
+block nonmanifoldEdge:
+  # Four faces share one edge; pair opposite directions in face order.
+  let mesh = Primitive(
+    mode: TrianglesMode,
+    points: @[vec3(0, 1, 0), vec3(0.5, -1, 0), vec3(1, 2, 0),
+      vec3(-0.5, -1, 0), vec3(0, 0, 0), vec3(1, 0, 0)],
+    normals: @[vec3(0, 0, 1), vec3(0, 0, 1), vec3(0, 0, 1),
+      vec3(0, 0, 1), vec3(0, 0, 1), vec3(0, 0, 1)],
+    uvs: @[vec2(0, 1), vec2(0, -1), vec2(0, 1), vec2(0, -1),
+      vec2(0, 0), vec2(1, 1)],
+    indices32: @[0'u32, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3,
+      4, 5, 0, 5, 4, 1, 4, 5, 2, 5, 4, 3]
+  )
+  mesh.generateTangents()
+  for i in [12, 16]:
+    doAssert length(mesh.tangents[mesh.indices32[i]] -
+      vec4(0.7623611, -0.6471518, 0, -1)) < 0.00001'f
+  for i in [18, 22]:
+    doAssert length(mesh.tangents[mesh.indices32[i]] -
+      vec4(0.2968487, -0.9549246, 0, -1)) < 0.00001'f
 
 block nonIndexed:
   let mesh = triangle()
