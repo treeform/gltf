@@ -41,6 +41,26 @@ let gltfFile = GltfFile(
 doAssert gltfFile.path == "demo.glb"
 doAssert gltfFile.root != nil
 
+echo "Testing skeleton files without meshes or buffers."
+let rigOnly = loadModelJson(
+  %*{
+    "asset": {"version": "2.0"},
+    "nodes": [
+      {"name": "Hips", "children": [1]},
+      {"name": "Head", "translation": [0, 2, 0]}
+    ],
+    "scenes": [{"nodes": [0]}],
+    "scene": 0
+  },
+  "",
+  @[]
+)
+doAssert rigOnly.walkNodes().len == 3
+for node in rigOnly.walkNodes():
+  doAssert node.mesh == nil
+  if node.name == "Head":
+    doAssert node.pos == vec3(0, 2, 0)
+
 echo "Testing bounding sphere defaults."
 let bounds = gltfFile.root.getBoundingSphere()
 doAssert bounds.radius == 0

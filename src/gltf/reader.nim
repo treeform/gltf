@@ -1939,7 +1939,7 @@ proc loadModelJsonInternal(
 
   var meshoptTargetBuffers: seq[int]
   if "bufferViews" in jsonRoot:
-    for entry in jsonRoot["bufferViews"]:
+    for entry in jsonRoot{"bufferViews"}.getElems():
       if "extensions" in entry and
         "EXT_meshopt_compression" in entry["extensions"]:
           let bufferIndex = entry["buffer"].getInt()
@@ -1948,8 +1948,9 @@ proc loadModelJsonInternal(
 
   var buffers: seq[string]
   var bufferIndex = 0
-  for jsonBufferIndex in 0 ..< jsonRoot["buffers"].len:
-    let entry = jsonRoot["buffers"][jsonBufferIndex]
+  let jsonBuffers = jsonRoot{"buffers"}.getElems()
+  for jsonBufferIndex in 0 ..< jsonBuffers.len:
+    let entry = jsonBuffers[jsonBufferIndex]
     var data: string
     let declaredByteLength = entry["byteLength"].getInt()
     let explicitFallback =
@@ -1980,7 +1981,7 @@ proc loadModelJsonInternal(
     buffers.add(data)
 
   var bufferViews: seq[BufferView]
-  for entry in jsonRoot["bufferViews"]:
+  for entry in jsonRoot{"bufferViews"}.getElems():
     var bufferView = BufferView()
     bufferView.buffer = entry["buffer"].getInt()
     bufferView.byteOffset = entry{"byteOffset"}.getInt()
@@ -2035,7 +2036,7 @@ proc loadModelJsonInternal(
     bufferViews.add(bufferView)
 
   var accessors: seq[Accessor]
-  for entry in jsonRoot["accessors"]:
+  for entry in jsonRoot{"accessors"}.getElems():
     var accessor = Accessor()
     accessor.bufferView = -1
     if "bufferView" in entry:
@@ -2496,7 +2497,7 @@ proc loadModelJsonInternal(
   var
     meshDefs: seq[MeshInfo]
     primitiveDefs: seq[PrimitiveInfo]
-  for entry in jsonRoot["meshes"]:
+  for entry in jsonRoot{"meshes"}.getElems():
     var mesh = MeshInfo()
     if "name" in entry:
       mesh.name = entry["name"].getStr()
