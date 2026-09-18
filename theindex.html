@@ -28,7 +28,7 @@
     <label for="nav-toggle" id="nav-overlay"></label>
     <div class="container">
       <h1 class="title">Index</h1>
-      Modules: <a href="gltf.html">gltf</a>, <a href="gltf/animations.html">gltf/animations</a>, <a href="gltf/backends/opengl/common.html">gltf/backends/opengl/common</a>, <a href="gltf/backends/opengl/renderer.html">gltf/backends/opengl/renderer</a>, <a href="gltf/backends/shaders.html">gltf/backends/shaders</a>, <a href="gltf/common.html">gltf/common</a>, <a href="gltf/draco.html">gltf/draco</a>, <a href="gltf/draco/attributes.html">gltf/draco/attributes</a>, <a href="gltf/draco/bitstreams.html">gltf/draco/bitstreams</a>, <a href="gltf/draco/decoders.html">gltf/draco/decoders</a>, <a href="gltf/draco/entropy.html">gltf/draco/entropy</a>, <a href="gltf/draco/meshes.html">gltf/draco/meshes</a>, <a href="gltf/draco/types.html">gltf/draco/types</a>, <a href="gltf/internal.html">gltf/internal</a>, <a href="gltf/ktx2.html">gltf/ktx2</a>, <a href="gltf/meshopt.html">gltf/meshopt</a>, <a href="gltf/models.html">gltf/models</a>, <a href="gltf/pbr.html">gltf/pbr</a>, <a href="gltf/reader.html">gltf/reader</a>, <a href="gltf/shaders.html">gltf/shaders</a>, <a href="gltf/writer.html">gltf/writer</a>.<br/><p /><h2>API symbols</h2>
+      Modules: <a href="gltf.html">gltf</a>, <a href="gltf/animations.html">gltf/animations</a>, <a href="gltf/backends/materials.html">gltf/backends/materials</a>, <a href="gltf/backends/opengl/common.html">gltf/backends/opengl/common</a>, <a href="gltf/backends/opengl/ibl.html">gltf/backends/opengl/ibl</a>, <a href="gltf/backends/opengl/renderer.html">gltf/backends/opengl/renderer</a>, <a href="gltf/backends/opengl/transmission.html">gltf/backends/opengl/transmission</a>, <a href="gltf/backends/shaders.html">gltf/backends/shaders</a>, <a href="gltf/common.html">gltf/common</a>, <a href="gltf/draco.html">gltf/draco</a>, <a href="gltf/draco/attributes.html">gltf/draco/attributes</a>, <a href="gltf/draco/bitstreams.html">gltf/draco/bitstreams</a>, <a href="gltf/draco/decoders.html">gltf/draco/decoders</a>, <a href="gltf/draco/entropy.html">gltf/draco/entropy</a>, <a href="gltf/draco/meshes.html">gltf/draco/meshes</a>, <a href="gltf/draco/types.html">gltf/draco/types</a>, <a href="gltf/internal.html">gltf/internal</a>, <a href="gltf/ktx2.html">gltf/ktx2</a>, <a href="gltf/meshopt.html">gltf/meshopt</a>, <a href="gltf/models.html">gltf/models</a>, <a href="gltf/pbr.html">gltf/pbr</a>, <a href="gltf/reader.html">gltf/reader</a>, <a href="gltf/shaders.html">gltf/shaders</a>, <a href="gltf/straight_webp.html">gltf/straight_webp</a>, <a href="gltf/tangents.html">gltf/tangents</a>, <a href="gltf/texture_images.html">gltf/texture_images</a>, <a href="gltf/writer.html">gltf/writer</a>.<br/><p /><h2>API symbols</h2>
 <dl><dt><a name="%60%24%60" href="#%60%24%60"><span>`$`:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="models: proc `$`(sampler: TextureSampler): string" href="gltf/models.html#%24%2CTextureSampler">models: proc `$`(sampler: TextureSampler): string</a></li>
@@ -65,6 +65,10 @@
 <li><a class="reference external"
           data-doc-search-tag="common: AnimInterpolation.aiStep" href="gltf/common.html#aiStep">common: AnimInterpolation.aiStep</a></li>
           </ul></dd>
+<dt><a name="AlphaChunk" href="#AlphaChunk"><span>AlphaChunk:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="straight_webp: WebpChunkKind.AlphaChunk" href="gltf/straight_webp.html#AlphaChunk">straight_webp: WebpChunkKind.AlphaChunk</a></li>
+          </ul></dd>
 <dt><a name="alphaCutoff" href="#alphaCutoff"><span>alphaCutoff:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="shaders: var alphaCutoff" href="gltf/backends/shaders.html#alphaCutoff">shaders: var alphaCutoff</a></li>
@@ -85,6 +89,18 @@
 <li><a class="reference external"
           data-doc-search-tag="common: type AnimationClip" href="gltf/common.html#AnimationClip">common: type AnimationClip</a></li>
           </ul></dd>
+<dt><a name="AnimBaseColorFactor" href="#AnimBaseColorFactor"><span>AnimBaseColorFactor:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: AnimPath.AnimBaseColorFactor" href="gltf/common.html#AnimBaseColorFactor">common: AnimPath.AnimBaseColorFactor</a></li>
+          </ul></dd>
+<dt><a name="AnimChunk" href="#AnimChunk"><span>AnimChunk:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="straight_webp: WebpChunkKind.AnimChunk" href="gltf/straight_webp.html#AnimChunk">straight_webp: WebpChunkKind.AnimChunk</a></li>
+          </ul></dd>
+<dt><a name="AnimFrameChunk" href="#AnimFrameChunk"><span>AnimFrameChunk:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="straight_webp: WebpChunkKind.AnimFrameChunk" href="gltf/straight_webp.html#AnimFrameChunk">straight_webp: WebpChunkKind.AnimFrameChunk</a></li>
+          </ul></dd>
 <dt><a name="AnimInterpolation" href="#AnimInterpolation"><span>AnimInterpolation:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="common: enum AnimInterpolation" href="gltf/common.html#AnimInterpolation">common: enum AnimInterpolation</a></li>
@@ -101,6 +117,18 @@
 <li><a class="reference external"
           data-doc-search-tag="common: AnimPath.AnimScale" href="gltf/common.html#AnimScale">common: AnimPath.AnimScale</a></li>
           </ul></dd>
+<dt><a name="AnimTextureOffset" href="#AnimTextureOffset"><span>AnimTextureOffset:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: AnimPath.AnimTextureOffset" href="gltf/common.html#AnimTextureOffset">common: AnimPath.AnimTextureOffset</a></li>
+          </ul></dd>
+<dt><a name="AnimTextureRotation" href="#AnimTextureRotation"><span>AnimTextureRotation:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: AnimPath.AnimTextureRotation" href="gltf/common.html#AnimTextureRotation">common: AnimPath.AnimTextureRotation</a></li>
+          </ul></dd>
+<dt><a name="AnimTextureScale" href="#AnimTextureScale"><span>AnimTextureScale:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: AnimPath.AnimTextureScale" href="gltf/common.html#AnimTextureScale">common: AnimPath.AnimTextureScale</a></li>
+          </ul></dd>
 <dt><a name="AnimTranslation" href="#AnimTranslation"><span>AnimTranslation:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="common: AnimPath.AnimTranslation" href="gltf/common.html#AnimTranslation">common: AnimPath.AnimTranslation</a></li>
@@ -112,6 +140,38 @@
 <dt><a name="AnimWeights" href="#AnimWeights"><span>AnimWeights:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="common: AnimPath.AnimWeights" href="gltf/common.html#AnimWeights">common: AnimPath.AnimWeights</a></li>
+          </ul></dd>
+<dt><a name="anisotropyEnabled" href="#anisotropyEnabled"><span>anisotropyEnabled:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var anisotropyEnabled" href="gltf/backends/shaders.html#anisotropyEnabled">shaders: var anisotropyEnabled</a></li>
+          </ul></dd>
+<dt><a name="anisotropyParameters" href="#anisotropyParameters"><span>anisotropyParameters:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var anisotropyParameters" href="gltf/backends/shaders.html#anisotropyParameters">shaders: var anisotropyParameters</a></li>
+          </ul></dd>
+<dt><a name="anisotropyTexCoord" href="#anisotropyTexCoord"><span>anisotropyTexCoord:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var anisotropyTexCoord" href="gltf/backends/shaders.html#anisotropyTexCoord">shaders: var anisotropyTexCoord</a></li>
+          </ul></dd>
+<dt><a name="anisotropyTexture" href="#anisotropyTexture"><span>anisotropyTexture:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var anisotropyTexture" href="gltf/backends/shaders.html#anisotropyTexture">shaders: var anisotropyTexture</a></li>
+          </ul></dd>
+<dt><a name="AnisotropyTextureSlot" href="#AnisotropyTextureSlot"><span>AnisotropyTextureSlot:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: MaterialTextureSlot.AnisotropyTextureSlot" href="gltf/common.html#AnisotropyTextureSlot">common: MaterialTextureSlot.AnisotropyTextureSlot</a></li>
+          </ul></dd>
+<dt><a name="anisotropyUvOffset" href="#anisotropyUvOffset"><span>anisotropyUvOffset:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var anisotropyUvOffset" href="gltf/backends/shaders.html#anisotropyUvOffset">shaders: var anisotropyUvOffset</a></li>
+          </ul></dd>
+<dt><a name="anisotropyUvRotation" href="#anisotropyUvRotation"><span>anisotropyUvRotation:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var anisotropyUvRotation" href="gltf/backends/shaders.html#anisotropyUvRotation">shaders: var anisotropyUvRotation</a></li>
+          </ul></dd>
+<dt><a name="anisotropyUvScale" href="#anisotropyUvScale"><span>anisotropyUvScale:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var anisotropyUvScale" href="gltf/backends/shaders.html#anisotropyUvScale">shaders: var anisotropyUvScale</a></li>
           </ul></dd>
 <dt><a name="applyClipAt" href="#applyClipAt"><span>applyClipAt:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -149,6 +209,18 @@
                      owned = true)" href="gltf/backends/opengl/renderer.html#attachEnvironmentMap%2CPbrContext%2CEnvironmentMap">renderer: proc attachEnvironmentMap(ctx: PbrContext; environmentMap: EnvironmentMap;
                      owned = true)</a></li>
           </ul></dd>
+<dt><a name="attachIblEnvironment" href="#attachIblEnvironment"><span>attachIblEnvironment:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="renderer: proc attachIblEnvironment(ctx: PbrContext; environment: IblEnvironment; owned = true)" href="gltf/backends/opengl/renderer.html#attachIblEnvironment%2CPbrContext%2CIblEnvironment">renderer: proc attachIblEnvironment(ctx: PbrContext; environment: IblEnvironment; owned = true)</a></li>
+          </ul></dd>
+<dt><a name="attenuationColor" href="#attenuationColor"><span>attenuationColor:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var attenuationColor" href="gltf/backends/shaders.html#attenuationColor">shaders: var attenuationColor</a></li>
+          </ul></dd>
+<dt><a name="attenuationDistance" href="#attenuationDistance"><span>attenuationDistance:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var attenuationDistance" href="gltf/backends/shaders.html#attenuationDistance">shaders: var attenuationDistance</a></li>
+          </ul></dd>
 <dt><a name="AttributeCornerTable" href="#AttributeCornerTable"><span>AttributeCornerTable:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="meshes: object AttributeCornerTable" href="gltf/draco/meshes.html#AttributeCornerTable">meshes: object AttributeCornerTable</a></li>
@@ -181,6 +253,10 @@
 <li><a class="reference external"
           data-doc-search-tag="shaders: var baseColorTexture" href="gltf/backends/shaders.html#baseColorTexture">shaders: var baseColorTexture</a></li>
           </ul></dd>
+<dt><a name="BaseColorTextureSlot" href="#BaseColorTextureSlot"><span>BaseColorTextureSlot:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: MaterialTextureSlot.BaseColorTextureSlot" href="gltf/common.html#BaseColorTextureSlot">common: MaterialTextureSlot.BaseColorTextureSlot</a></li>
+          </ul></dd>
 <dt><a name="baseColorUvOffset" href="#baseColorUvOffset"><span>baseColorUvOffset:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="shaders: var baseColorUvOffset" href="gltf/backends/shaders.html#baseColorUvOffset">shaders: var baseColorUvOffset</a></li>
@@ -193,9 +269,21 @@
 <li><a class="reference external"
           data-doc-search-tag="shaders: var baseColorUvScale" href="gltf/backends/shaders.html#baseColorUvScale">shaders: var baseColorUvScale</a></li>
           </ul></dd>
+<dt><a name="beginBackground" href="#beginBackground"><span>beginBackground:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="transmission: proc beginBackground(target: var TransmissionTarget; background: Color)" href="gltf/backends/opengl/transmission.html#beginBackground%2CTransmissionTarget%2CColor">transmission: proc beginBackground(target: var TransmissionTarget; background: Color)</a></li>
+          </ul></dd>
 <dt><a name="beginFrame" href="#beginFrame"><span>beginFrame:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="renderer: proc beginFrame(renderer: Renderer; window: Window; size: IVec2)" href="gltf/backends/opengl/renderer.html#beginFrame%2CRenderer%2CWindow%2CIVec2">renderer: proc beginFrame(renderer: Renderer; window: Window; size: IVec2)</a></li>
+          </ul></dd>
+<dt><a name="beginHdr" href="#beginHdr"><span>beginHdr:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ibl: proc beginHdr(target: var HdrTarget; size: IVec2; background: Color)" href="gltf/backends/opengl/ibl.html#beginHdr%2CHdrTarget%2CIVec2%2CColor">ibl: proc beginHdr(target: var HdrTarget; size: IVec2; background: Color)</a></li>
+          </ul></dd>
+<dt><a name="beginIblFrame" href="#beginIblFrame"><span>beginIblFrame:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="renderer: proc beginIblFrame(ctx: PbrContext)" href="gltf/backends/opengl/renderer.html#beginIblFrame%2CPbrContext">renderer: proc beginIblFrame(ctx: PbrContext)</a></li>
           </ul></dd>
 <dt><a name="beginPass" href="#beginPass"><span>beginPass:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -245,9 +333,101 @@
 <li><a class="reference external"
           data-doc-search-tag="models: proc center(a: AABounds): Vec3" href="gltf/models.html#center%2CAABounds">models: proc center(a: AABounds): Vec3</a></li>
           </ul></dd>
+<dt><a name="charlieEnvironment" href="#charlieEnvironment"><span>charlieEnvironment:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var charlieEnvironment" href="gltf/backends/shaders.html#charlieEnvironment">shaders: var charlieEnvironment</a></li>
+          </ul></dd>
+<dt><a name="charlieLut" href="#charlieLut"><span>charlieLut:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var charlieLut" href="gltf/backends/shaders.html#charlieLut">shaders: var charlieLut</a></li>
+          </ul></dd>
 <dt><a name="ClampToEdgeWrap" href="#ClampToEdgeWrap"><span>ClampToEdgeWrap:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="common: TextureWrap.ClampToEdgeWrap" href="gltf/common.html#ClampToEdgeWrap">common: TextureWrap.ClampToEdgeWrap</a></li>
+          </ul></dd>
+<dt><a name="clearcoatFactor" href="#clearcoatFactor"><span>clearcoatFactor:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var clearcoatFactor" href="gltf/backends/shaders.html#clearcoatFactor">shaders: var clearcoatFactor</a></li>
+          </ul></dd>
+<dt><a name="clearcoatNormalScale" href="#clearcoatNormalScale"><span>clearcoatNormalScale:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var clearcoatNormalScale" href="gltf/backends/shaders.html#clearcoatNormalScale">shaders: var clearcoatNormalScale</a></li>
+          </ul></dd>
+<dt><a name="clearcoatNormalTexCoord" href="#clearcoatNormalTexCoord"><span>clearcoatNormalTexCoord:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var clearcoatNormalTexCoord" href="gltf/backends/shaders.html#clearcoatNormalTexCoord">shaders: var clearcoatNormalTexCoord</a></li>
+          </ul></dd>
+<dt><a name="clearcoatNormalTexture" href="#clearcoatNormalTexture"><span>clearcoatNormalTexture:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var clearcoatNormalTexture" href="gltf/backends/shaders.html#clearcoatNormalTexture">shaders: var clearcoatNormalTexture</a></li>
+          </ul></dd>
+<dt><a name="ClearcoatNormalTextureSlot" href="#ClearcoatNormalTextureSlot"><span>ClearcoatNormalTextureSlot:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: MaterialTextureSlot.ClearcoatNormalTextureSlot" href="gltf/common.html#ClearcoatNormalTextureSlot">common: MaterialTextureSlot.ClearcoatNormalTextureSlot</a></li>
+          </ul></dd>
+<dt><a name="clearcoatNormalUvOffset" href="#clearcoatNormalUvOffset"><span>clearcoatNormalUvOffset:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var clearcoatNormalUvOffset" href="gltf/backends/shaders.html#clearcoatNormalUvOffset">shaders: var clearcoatNormalUvOffset</a></li>
+          </ul></dd>
+<dt><a name="clearcoatNormalUvRotation" href="#clearcoatNormalUvRotation"><span>clearcoatNormalUvRotation:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var clearcoatNormalUvRotation" href="gltf/backends/shaders.html#clearcoatNormalUvRotation">shaders: var clearcoatNormalUvRotation</a></li>
+          </ul></dd>
+<dt><a name="clearcoatNormalUvScale" href="#clearcoatNormalUvScale"><span>clearcoatNormalUvScale:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var clearcoatNormalUvScale" href="gltf/backends/shaders.html#clearcoatNormalUvScale">shaders: var clearcoatNormalUvScale</a></li>
+          </ul></dd>
+<dt><a name="clearcoatRoughnessFactor" href="#clearcoatRoughnessFactor"><span>clearcoatRoughnessFactor:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var clearcoatRoughnessFactor" href="gltf/backends/shaders.html#clearcoatRoughnessFactor">shaders: var clearcoatRoughnessFactor</a></li>
+          </ul></dd>
+<dt><a name="clearcoatRoughnessTexCoord" href="#clearcoatRoughnessTexCoord"><span>clearcoatRoughnessTexCoord:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var clearcoatRoughnessTexCoord" href="gltf/backends/shaders.html#clearcoatRoughnessTexCoord">shaders: var clearcoatRoughnessTexCoord</a></li>
+          </ul></dd>
+<dt><a name="clearcoatRoughnessTexture" href="#clearcoatRoughnessTexture"><span>clearcoatRoughnessTexture:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var clearcoatRoughnessTexture" href="gltf/backends/shaders.html#clearcoatRoughnessTexture">shaders: var clearcoatRoughnessTexture</a></li>
+          </ul></dd>
+<dt><a name="ClearcoatRoughnessTextureSlot" href="#ClearcoatRoughnessTextureSlot"><span>ClearcoatRoughnessTextureSlot:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: MaterialTextureSlot.ClearcoatRoughnessTextureSlot" href="gltf/common.html#ClearcoatRoughnessTextureSlot">common: MaterialTextureSlot.ClearcoatRoughnessTextureSlot</a></li>
+          </ul></dd>
+<dt><a name="clearcoatRoughnessUvOffset" href="#clearcoatRoughnessUvOffset"><span>clearcoatRoughnessUvOffset:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var clearcoatRoughnessUvOffset" href="gltf/backends/shaders.html#clearcoatRoughnessUvOffset">shaders: var clearcoatRoughnessUvOffset</a></li>
+          </ul></dd>
+<dt><a name="clearcoatRoughnessUvRotation" href="#clearcoatRoughnessUvRotation"><span>clearcoatRoughnessUvRotation:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var clearcoatRoughnessUvRotation" href="gltf/backends/shaders.html#clearcoatRoughnessUvRotation">shaders: var clearcoatRoughnessUvRotation</a></li>
+          </ul></dd>
+<dt><a name="clearcoatRoughnessUvScale" href="#clearcoatRoughnessUvScale"><span>clearcoatRoughnessUvScale:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var clearcoatRoughnessUvScale" href="gltf/backends/shaders.html#clearcoatRoughnessUvScale">shaders: var clearcoatRoughnessUvScale</a></li>
+          </ul></dd>
+<dt><a name="clearcoatTexCoord" href="#clearcoatTexCoord"><span>clearcoatTexCoord:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var clearcoatTexCoord" href="gltf/backends/shaders.html#clearcoatTexCoord">shaders: var clearcoatTexCoord</a></li>
+          </ul></dd>
+<dt><a name="clearcoatTexture" href="#clearcoatTexture"><span>clearcoatTexture:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var clearcoatTexture" href="gltf/backends/shaders.html#clearcoatTexture">shaders: var clearcoatTexture</a></li>
+          </ul></dd>
+<dt><a name="ClearcoatTextureSlot" href="#ClearcoatTextureSlot"><span>ClearcoatTextureSlot:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: MaterialTextureSlot.ClearcoatTextureSlot" href="gltf/common.html#ClearcoatTextureSlot">common: MaterialTextureSlot.ClearcoatTextureSlot</a></li>
+          </ul></dd>
+<dt><a name="clearcoatUvOffset" href="#clearcoatUvOffset"><span>clearcoatUvOffset:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var clearcoatUvOffset" href="gltf/backends/shaders.html#clearcoatUvOffset">shaders: var clearcoatUvOffset</a></li>
+          </ul></dd>
+<dt><a name="clearcoatUvRotation" href="#clearcoatUvRotation"><span>clearcoatUvRotation:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var clearcoatUvRotation" href="gltf/backends/shaders.html#clearcoatUvRotation">shaders: var clearcoatUvRotation</a></li>
+          </ul></dd>
+<dt><a name="clearcoatUvScale" href="#clearcoatUvScale"><span>clearcoatUvScale:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var clearcoatUvScale" href="gltf/backends/shaders.html#clearcoatUvScale">shaders: var clearcoatUvScale</a></li>
           </ul></dd>
 <dt><a name="clearFromGpu" href="#clearFromGpu"><span>clearFromGpu:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -343,11 +523,35 @@
 <li><a class="reference external"
           data-doc-search-tag="meshes: proc decodeSequentialMesh(stream: var DracoStream): DracoMesh" href="gltf/draco/meshes.html#decodeSequentialMesh%2CDracoStream">meshes: proc decodeSequentialMesh(stream: var DracoStream): DracoMesh</a></li>
           </ul></dd>
+<dt><a name="decodeStraightAlphaImage" href="#decodeStraightAlphaImage"><span>decodeStraightAlphaImage:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="texture_images: proc decodeStraightAlphaImage(data: string): Image" href="gltf/texture_images.html#decodeStraightAlphaImage%2Cstring">texture_images: proc decodeStraightAlphaImage(data: string): Image</a></li>
+          </ul></dd>
+<dt><a name="decodeStraightWebp" href="#decodeStraightWebp"><span>decodeStraightWebp:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="straight_webp: proc decodeStraightWebp(data: string): Image" href="gltf/straight_webp.html#decodeStraightWebp%2Cstring">straight_webp: proc decodeStraightWebp(data: string): Image</a></li>
+          </ul></dd>
 <dt><a name="decodeSymbols" href="#decodeSymbols"><span>decodeSymbols:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="entropy: proc decodeSymbols(valueCount: int; componentCount: int; stream: var DracoStream): seq[
     uint32]" href="gltf/draco/entropy.html#decodeSymbols%2Cint%2Cint%2CDracoStream">entropy: proc decodeSymbols(valueCount: int; componentCount: int; stream: var DracoStream): seq[
     uint32]</a></li>
+          </ul></dd>
+<dt><a name="decodeWebp" href="#decodeWebp"><span>decodeWebp:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="straight_webp: proc decodeWebp(data: string): Image" href="gltf/straight_webp.html#decodeWebp%2Cstring">straight_webp: proc decodeWebp(data: string): Image</a></li>
+          </ul></dd>
+<dt><a name="decodeWebpDimensions" href="#decodeWebpDimensions"><span>decodeWebpDimensions:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="straight_webp: proc decodeWebpDimensions(data: pointer; len: int): ImageDimensions" href="gltf/straight_webp.html#decodeWebpDimensions%2Cpointer%2Cint">straight_webp: proc decodeWebpDimensions(data: pointer; len: int): ImageDimensions</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="straight_webp: proc decodeWebpDimensions(data: string): ImageDimensions" href="gltf/straight_webp.html#decodeWebpDimensions%2Cstring">straight_webp: proc decodeWebpDimensions(data: string): ImageDimensions</a></li>
+          </ul></dd>
+<dt><a name="decodeWebpInfo" href="#decodeWebpInfo"><span>decodeWebpInfo:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="straight_webp: proc decodeWebpInfo(data: pointer; len: int): WebpInfo" href="gltf/straight_webp.html#decodeWebpInfo%2Cpointer%2Cint">straight_webp: proc decodeWebpInfo(data: pointer; len: int): WebpInfo</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="straight_webp: proc decodeWebpInfo(data: string): WebpInfo" href="gltf/straight_webp.html#decodeWebpInfo%2Cstring">straight_webp: proc decodeWebpInfo(data: string): WebpInfo</a></li>
           </ul></dd>
 <dt><a name="defaultTextureSampler" href="#defaultTextureSampler"><span>defaultTextureSampler:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -355,9 +559,119 @@
           </ul></dd>
 <dt><a name="destroy" href="#destroy"><span>destroy:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
+          data-doc-search-tag="ibl: proc destroy(target: var HdrTarget)" href="gltf/backends/opengl/ibl.html#destroy%2CHdrTarget">ibl: proc destroy(target: var HdrTarget)</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="ibl: proc destroy(environment: var IblEnvironment)" href="gltf/backends/opengl/ibl.html#destroy%2CIblEnvironment">ibl: proc destroy(environment: var IblEnvironment)</a></li>
+          <li><a class="reference external"
           data-doc-search-tag="renderer: proc destroy(environmentMap: var EnvironmentMap)" href="gltf/backends/opengl/renderer.html#destroy%2CEnvironmentMap">renderer: proc destroy(environmentMap: var EnvironmentMap)</a></li>
           <li><a class="reference external"
           data-doc-search-tag="renderer: proc destroy(ctx: PbrContext)" href="gltf/backends/opengl/renderer.html#destroy%2CPbrContext">renderer: proc destroy(ctx: PbrContext)</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="transmission: proc destroy(target: var TransmissionTarget)" href="gltf/backends/opengl/transmission.html#destroy%2CTransmissionTarget">transmission: proc destroy(target: var TransmissionTarget)</a></li>
+          </ul></dd>
+<dt><a name="diffuseEnvironment" href="#diffuseEnvironment"><span>diffuseEnvironment:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var diffuseEnvironment" href="gltf/backends/shaders.html#diffuseEnvironment">shaders: var diffuseEnvironment</a></li>
+          </ul></dd>
+<dt><a name="diffuseFactor" href="#diffuseFactor"><span>diffuseFactor:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var diffuseFactor" href="gltf/backends/shaders.html#diffuseFactor">shaders: var diffuseFactor</a></li>
+          </ul></dd>
+<dt><a name="diffuseTexCoord" href="#diffuseTexCoord"><span>diffuseTexCoord:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var diffuseTexCoord" href="gltf/backends/shaders.html#diffuseTexCoord">shaders: var diffuseTexCoord</a></li>
+          </ul></dd>
+<dt><a name="diffuseTexture" href="#diffuseTexture"><span>diffuseTexture:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var diffuseTexture" href="gltf/backends/shaders.html#diffuseTexture">shaders: var diffuseTexture</a></li>
+          </ul></dd>
+<dt><a name="DiffuseTextureSlot" href="#DiffuseTextureSlot"><span>DiffuseTextureSlot:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: MaterialTextureSlot.DiffuseTextureSlot" href="gltf/common.html#DiffuseTextureSlot">common: MaterialTextureSlot.DiffuseTextureSlot</a></li>
+          </ul></dd>
+<dt><a name="diffuseTransmissionColorFactor" href="#diffuseTransmissionColorFactor"><span>diffuseTransmissionColorFactor:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var diffuseTransmissionColorFactor" href="gltf/backends/shaders.html#diffuseTransmissionColorFactor">shaders: var diffuseTransmissionColorFactor</a></li>
+          </ul></dd>
+<dt><a name="diffuseTransmissionColorTexCoord" href="#diffuseTransmissionColorTexCoord"><span>diffuseTransmissionColorTexCoord:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var diffuseTransmissionColorTexCoord" href="gltf/backends/shaders.html#diffuseTransmissionColorTexCoord">shaders: var diffuseTransmissionColorTexCoord</a></li>
+          </ul></dd>
+<dt><a name="diffuseTransmissionColorTexture" href="#diffuseTransmissionColorTexture"><span>diffuseTransmissionColorTexture:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var diffuseTransmissionColorTexture" href="gltf/backends/shaders.html#diffuseTransmissionColorTexture">shaders: var diffuseTransmissionColorTexture</a></li>
+          </ul></dd>
+<dt><a name="DiffuseTransmissionColorTextureSlot" href="#DiffuseTransmissionColorTextureSlot"><span>DiffuseTransmissionColorTextureSlot:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: MaterialTextureSlot.DiffuseTransmissionColorTextureSlot" href="gltf/common.html#DiffuseTransmissionColorTextureSlot">common: MaterialTextureSlot.DiffuseTransmissionColorTextureSlot</a></li>
+          </ul></dd>
+<dt><a name="diffuseTransmissionColorUvOffset" href="#diffuseTransmissionColorUvOffset"><span>diffuseTransmissionColorUvOffset:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var diffuseTransmissionColorUvOffset" href="gltf/backends/shaders.html#diffuseTransmissionColorUvOffset">shaders: var diffuseTransmissionColorUvOffset</a></li>
+          </ul></dd>
+<dt><a name="diffuseTransmissionColorUvRotation" href="#diffuseTransmissionColorUvRotation"><span>diffuseTransmissionColorUvRotation:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var diffuseTransmissionColorUvRotation" href="gltf/backends/shaders.html#diffuseTransmissionColorUvRotation">shaders: var diffuseTransmissionColorUvRotation</a></li>
+          </ul></dd>
+<dt><a name="diffuseTransmissionColorUvScale" href="#diffuseTransmissionColorUvScale"><span>diffuseTransmissionColorUvScale:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var diffuseTransmissionColorUvScale" href="gltf/backends/shaders.html#diffuseTransmissionColorUvScale">shaders: var diffuseTransmissionColorUvScale</a></li>
+          </ul></dd>
+<dt><a name="diffuseTransmissionFactor" href="#diffuseTransmissionFactor"><span>diffuseTransmissionFactor:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var diffuseTransmissionFactor" href="gltf/backends/shaders.html#diffuseTransmissionFactor">shaders: var diffuseTransmissionFactor</a></li>
+          </ul></dd>
+<dt><a name="diffuseTransmissionTexCoord" href="#diffuseTransmissionTexCoord"><span>diffuseTransmissionTexCoord:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var diffuseTransmissionTexCoord" href="gltf/backends/shaders.html#diffuseTransmissionTexCoord">shaders: var diffuseTransmissionTexCoord</a></li>
+          </ul></dd>
+<dt><a name="diffuseTransmissionTexture" href="#diffuseTransmissionTexture"><span>diffuseTransmissionTexture:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var diffuseTransmissionTexture" href="gltf/backends/shaders.html#diffuseTransmissionTexture">shaders: var diffuseTransmissionTexture</a></li>
+          </ul></dd>
+<dt><a name="DiffuseTransmissionTextureSlot" href="#DiffuseTransmissionTextureSlot"><span>DiffuseTransmissionTextureSlot:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: MaterialTextureSlot.DiffuseTransmissionTextureSlot" href="gltf/common.html#DiffuseTransmissionTextureSlot">common: MaterialTextureSlot.DiffuseTransmissionTextureSlot</a></li>
+          </ul></dd>
+<dt><a name="diffuseTransmissionUvOffset" href="#diffuseTransmissionUvOffset"><span>diffuseTransmissionUvOffset:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var diffuseTransmissionUvOffset" href="gltf/backends/shaders.html#diffuseTransmissionUvOffset">shaders: var diffuseTransmissionUvOffset</a></li>
+          </ul></dd>
+<dt><a name="diffuseTransmissionUvRotation" href="#diffuseTransmissionUvRotation"><span>diffuseTransmissionUvRotation:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var diffuseTransmissionUvRotation" href="gltf/backends/shaders.html#diffuseTransmissionUvRotation">shaders: var diffuseTransmissionUvRotation</a></li>
+          </ul></dd>
+<dt><a name="diffuseTransmissionUvScale" href="#diffuseTransmissionUvScale"><span>diffuseTransmissionUvScale:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var diffuseTransmissionUvScale" href="gltf/backends/shaders.html#diffuseTransmissionUvScale">shaders: var diffuseTransmissionUvScale</a></li>
+          </ul></dd>
+<dt><a name="diffuseUvOffset" href="#diffuseUvOffset"><span>diffuseUvOffset:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var diffuseUvOffset" href="gltf/backends/shaders.html#diffuseUvOffset">shaders: var diffuseUvOffset</a></li>
+          </ul></dd>
+<dt><a name="diffuseUvRotation" href="#diffuseUvRotation"><span>diffuseUvRotation:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var diffuseUvRotation" href="gltf/backends/shaders.html#diffuseUvRotation">shaders: var diffuseUvRotation</a></li>
+          </ul></dd>
+<dt><a name="diffuseUvScale" href="#diffuseUvScale"><span>diffuseUvScale:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var diffuseUvScale" href="gltf/backends/shaders.html#diffuseUvScale">shaders: var diffuseUvScale</a></li>
+          </ul></dd>
+<dt><a name="DirectionalLight" href="#DirectionalLight"><span>DirectionalLight:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: type DirectionalLight" href="gltf/common.html#DirectionalLight">common: type DirectionalLight</a></li>
+          </ul></dd>
+<dt><a name="directionalLight" href="#directionalLight"><span>directionalLight:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: proc directionalLight(node: Node): DirectionalLight" href="gltf/common.html#directionalLight%2CNode">common: proc directionalLight(node: Node): DirectionalLight</a></li>
+          </ul></dd>
+<dt><a name="directionalLight%3D" href="#directionalLight%3D"><span>directionalLight=:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: proc directionalLight=(node: Node; light: DirectionalLight)" href="gltf/common.html#directionalLight%3D%2CNode%2CDirectionalLight">common: proc directionalLight=(node: Node; light: DirectionalLight)</a></li>
+          </ul></dd>
+<dt><a name="DirectionalLightKind" href="#DirectionalLightKind"><span>DirectionalLightKind:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: PunctualLightKind.DirectionalLightKind" href="gltf/common.html#DirectionalLightKind">common: PunctualLightKind.DirectionalLightKind</a></li>
           </ul></dd>
 <dt><a name="DracoAttribute" href="#DracoAttribute"><span>DracoAttribute:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -451,6 +765,10 @@
 <li><a class="reference external"
           data-doc-search-tag="shaders: var emissiveFactor" href="gltf/backends/shaders.html#emissiveFactor">shaders: var emissiveFactor</a></li>
           </ul></dd>
+<dt><a name="emissiveRadiance" href="#emissiveRadiance"><span>emissiveRadiance:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: proc emissiveRadiance(material: Material): Color" href="gltf/common.html#emissiveRadiance%2CMaterial">common: proc emissiveRadiance(material: Material): Color</a></li>
+          </ul></dd>
 <dt><a name="emissiveTexCoord" href="#emissiveTexCoord"><span>emissiveTexCoord:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="shaders: var emissiveTexCoord" href="gltf/backends/shaders.html#emissiveTexCoord">shaders: var emissiveTexCoord</a></li>
@@ -458,6 +776,10 @@
 <dt><a name="emissiveTexture" href="#emissiveTexture"><span>emissiveTexture:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="shaders: var emissiveTexture" href="gltf/backends/shaders.html#emissiveTexture">shaders: var emissiveTexture</a></li>
+          </ul></dd>
+<dt><a name="EmissiveTextureSlot" href="#EmissiveTextureSlot"><span>EmissiveTextureSlot:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: MaterialTextureSlot.EmissiveTextureSlot" href="gltf/common.html#EmissiveTextureSlot">common: MaterialTextureSlot.EmissiveTextureSlot</a></li>
           </ul></dd>
 <dt><a name="emissiveUvOffset" href="#emissiveUvOffset"><span>emissiveUvOffset:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -477,15 +799,21 @@
           </ul></dd>
 <dt><a name="encodeKtx2Image" href="#encodeKtx2Image"><span>encodeKtx2Image:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="ktx2: proc encodeKtx2Image(image: Image; vkFormat: uint32; generateMipmaps = true): string" href="gltf/ktx2.html#encodeKtx2Image%2CImage%2Cuint32">ktx2: proc encodeKtx2Image(image: Image; vkFormat: uint32; generateMipmaps = true): string</a></li>
+          data-doc-search-tag="ktx2: proc encodeKtx2Image(image: Image; vkFormat: uint32; generateMipmaps = true;
+                straightAlpha = false): string" href="gltf/ktx2.html#encodeKtx2Image%2CImage%2Cuint32">ktx2: proc encodeKtx2Image(image: Image; vkFormat: uint32; generateMipmaps = true;
+                straightAlpha = false): string</a></li>
           </ul></dd>
 <dt><a name="encodeKtx2ImageLevel" href="#encodeKtx2ImageLevel"><span>encodeKtx2ImageLevel:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="ktx2: proc encodeKtx2ImageLevel(image: Image; vkFormat: uint32): string" href="gltf/ktx2.html#encodeKtx2ImageLevel%2CImage%2Cuint32">ktx2: proc encodeKtx2ImageLevel(image: Image; vkFormat: uint32): string</a></li>
+          data-doc-search-tag="ktx2: proc encodeKtx2ImageLevel(image: Image; vkFormat: uint32; straightAlpha = false): string" href="gltf/ktx2.html#encodeKtx2ImageLevel%2CImage%2Cuint32">ktx2: proc encodeKtx2ImageLevel(image: Image; vkFormat: uint32; straightAlpha = false): string</a></li>
           </ul></dd>
 <dt><a name="encodeKtx2R32Sfloat" href="#encodeKtx2R32Sfloat"><span>encodeKtx2R32Sfloat:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="ktx2: proc encodeKtx2R32Sfloat(width, height: int; values: openArray[float32]): string" href="gltf/ktx2.html#encodeKtx2R32Sfloat%2Cint%2Cint%2CopenArray%5Bfloat32%5D">ktx2: proc encodeKtx2R32Sfloat(width, height: int; values: openArray[float32]): string</a></li>
+          </ul></dd>
+<dt><a name="encodeStraightAlphaPng" href="#encodeStraightAlphaPng"><span>encodeStraightAlphaPng:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="texture_images: proc encodeStraightAlphaPng(image: Image): string" href="gltf/texture_images.html#encodeStraightAlphaPng%2CImage">texture_images: proc encodeStraightAlphaPng(image: Image): string</a></li>
           </ul></dd>
 <dt><a name="EncodingData" href="#EncodingData"><span>EncodingData:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -498,6 +826,14 @@
 <dt><a name="endFrame" href="#endFrame"><span>endFrame:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="renderer: proc endFrame(renderer: Renderer)" href="gltf/backends/opengl/renderer.html#endFrame%2CRenderer">renderer: proc endFrame(renderer: Renderer)</a></li>
+          </ul></dd>
+<dt><a name="endHdr" href="#endHdr"><span>endHdr:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ibl: proc endHdr(target: var HdrTarget; exposure: float32)" href="gltf/backends/opengl/ibl.html#endHdr%2CHdrTarget%2Cfloat32">ibl: proc endHdr(target: var HdrTarget; exposure: float32)</a></li>
+          </ul></dd>
+<dt><a name="endIblFrame" href="#endIblFrame"><span>endIblFrame:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="renderer: proc endIblFrame(ctx: PbrContext)" href="gltf/backends/opengl/renderer.html#endIblFrame%2CPbrContext">renderer: proc endIblFrame(ctx: PbrContext)</a></li>
           </ul></dd>
 <dt><a name="endPass" href="#endPass"><span>endPass:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -523,9 +859,21 @@
 <li><a class="reference external"
           data-doc-search-tag="shaders: var environmentMipCount" href="gltf/backends/shaders.html#environmentMipCount">shaders: var environmentMipCount</a></li>
           </ul></dd>
+<dt><a name="environmentRotation" href="#environmentRotation"><span>environmentRotation:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var environmentRotation" href="gltf/backends/shaders.html#environmentRotation">shaders: var environmentRotation</a></li>
+          </ul></dd>
 <dt><a name="envMapSize" href="#envMapSize"><span>envMapSize:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="renderer: const envMapSize" href="gltf/backends/opengl/renderer.html#envMapSize">renderer: const envMapSize</a></li>
+          </ul></dd>
+<dt><a name="ExifChunk" href="#ExifChunk"><span>ExifChunk:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="straight_webp: WebpChunkKind.ExifChunk" href="gltf/straight_webp.html#ExifChunk">straight_webp: WebpChunkKind.ExifChunk</a></li>
+          </ul></dd>
+<dt><a name="exposure" href="#exposure"><span>exposure:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var exposure" href="gltf/backends/shaders.html#exposure">shaders: var exposure</a></li>
           </ul></dd>
 <dt><a name="face" href="#face"><span>face:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -571,6 +919,10 @@
 <li><a class="reference external"
           data-doc-search-tag="renderer: const FragmentEntryPoint" href="gltf/backends/opengl/renderer.html#FragmentEntryPoint">renderer: const FragmentEntryPoint</a></li>
           </ul></dd>
+<dt><a name="framebufferYDown" href="#framebufferYDown"><span>framebufferYDown:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var framebufferYDown" href="gltf/backends/shaders.html#framebufferYDown">shaders: var framebufferYDown</a></li>
+          </ul></dd>
 <dt><a name="generateSequence" href="#generateSequence"><span>generateSequence:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="meshes: proc generateSequence(attr: AttributeCornerTable; base: CornerTable; mesh: DracoMesh;
@@ -584,6 +936,10 @@
           data-doc-search-tag="meshes: proc generateSequence(table: CornerTable; mesh: DracoMesh; data: var EncodingData;
                  traversalMethod: int): seq[int]" href="gltf/draco/meshes.html#generateSequence%2CCornerTable%2CDracoMesh%2CEncodingData%2Cint">meshes: proc generateSequence(table: CornerTable; mesh: DracoMesh; data: var EncodingData;
                  traversalMethod: int): seq[int]</a></li>
+          </ul></dd>
+<dt><a name="generateTangents" href="#generateTangents"><span>generateTangents:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="tangents: proc generateTangents(primitive: Primitive)" href="gltf/tangents.html#generateTangents%2CPrimitive">tangents: proc generateTangents(primitive: Primitive)</a></li>
           </ul></dd>
 <dt><a name="GenericAttribute" href="#GenericAttribute"><span>GenericAttribute:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -605,9 +961,17 @@
 <li><a class="reference external"
           data-doc-search-tag="models: proc getBoundingSphereNode(node: Node; trs = mat4()): BoundingSphere" href="gltf/models.html#getBoundingSphereNode%2CNode">models: proc getBoundingSphereNode(node: Node; trs = mat4()): BoundingSphere</a></li>
           </ul></dd>
+<dt><a name="ggxLut" href="#ggxLut"><span>ggxLut:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var ggxLut" href="gltf/backends/shaders.html#ggxLut">shaders: var ggxLut</a></li>
+          </ul></dd>
 <dt><a name="glInternalFormatForVkFormat" href="#glInternalFormatForVkFormat"><span>glInternalFormatForVkFormat:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="ktx2: proc glInternalFormatForVkFormat(vkFormat: uint32): GLenum" href="gltf/ktx2.html#glInternalFormatForVkFormat%2Cuint32">ktx2: proc glInternalFormatForVkFormat(vkFormat: uint32): GLenum</a></li>
+          </ul></dd>
+<dt><a name="glossinessFactor" href="#glossinessFactor"><span>glossinessFactor:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var glossinessFactor" href="gltf/backends/shaders.html#glossinessFactor">shaders: var glossinessFactor</a></li>
           </ul></dd>
 <dt><a name="GltfError" href="#GltfError"><span>GltfError:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -620,6 +984,14 @@
 <dt><a name="GltfFileData" href="#GltfFileData"><span>GltfFileData:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="common: type GltfFileData" href="gltf/backends/opengl/common.html#GltfFileData">common: type GltfFileData</a></li>
+          </ul></dd>
+<dt><a name="gltfIblFrag" href="#gltfIblFrag"><span>gltfIblFrag:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: proc gltfIblFrag(worldPos: Vec3; color: Vec4; normal: Vec3; uv: Vec2; uv1: Vec2;
+            tangent: Vec3; bitangent: Vec3; vPosLightSpace: Vec4;
+            fragColor: var Vec4; toneMapFlag: var uint32)" href="gltf/backends/shaders.html#gltfIblFrag%2CVec3%2CVec4%2CVec3%2CVec2%2CVec2%2CVec3%2CVec3%2CVec4%2CVec4%2Cuint32">shaders: proc gltfIblFrag(worldPos: Vec3; color: Vec4; normal: Vec3; uv: Vec2; uv1: Vec2;
+            tangent: Vec3; bitangent: Vec3; vPosLightSpace: Vec4;
+            fragColor: var Vec4; toneMapFlag: var uint32)</a></li>
           </ul></dd>
 <dt><a name="gltfPbrFrag" href="#gltfPbrFrag"><span>gltfPbrFrag:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -663,6 +1035,34 @@
 <li><a class="reference external"
           data-doc-search-tag="shaders: proc gltfSkyboxVert(vertexPosition: Vec2; gl_Position: var Vec4; rayDir: var Vec3)" href="gltf/backends/shaders.html#gltfSkyboxVert%2CVec2%2CVec4%2CVec3">shaders: proc gltfSkyboxVert(vertexPosition: Vec2; gl_Position: var Vec4; rayDir: var Vec3)</a></li>
           </ul></dd>
+<dt><a name="hasAnisotropyTexture" href="#hasAnisotropyTexture"><span>hasAnisotropyTexture:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var hasAnisotropyTexture" href="gltf/backends/shaders.html#hasAnisotropyTexture">shaders: var hasAnisotropyTexture</a></li>
+          </ul></dd>
+<dt><a name="hasClearcoatNormalTexture" href="#hasClearcoatNormalTexture"><span>hasClearcoatNormalTexture:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var hasClearcoatNormalTexture" href="gltf/backends/shaders.html#hasClearcoatNormalTexture">shaders: var hasClearcoatNormalTexture</a></li>
+          </ul></dd>
+<dt><a name="hasClearcoatRoughnessTexture" href="#hasClearcoatRoughnessTexture"><span>hasClearcoatRoughnessTexture:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var hasClearcoatRoughnessTexture" href="gltf/backends/shaders.html#hasClearcoatRoughnessTexture">shaders: var hasClearcoatRoughnessTexture</a></li>
+          </ul></dd>
+<dt><a name="hasClearcoatTexture" href="#hasClearcoatTexture"><span>hasClearcoatTexture:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var hasClearcoatTexture" href="gltf/backends/shaders.html#hasClearcoatTexture">shaders: var hasClearcoatTexture</a></li>
+          </ul></dd>
+<dt><a name="hasDiffuseTexture" href="#hasDiffuseTexture"><span>hasDiffuseTexture:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var hasDiffuseTexture" href="gltf/backends/shaders.html#hasDiffuseTexture">shaders: var hasDiffuseTexture</a></li>
+          </ul></dd>
+<dt><a name="hasDiffuseTransmissionColorTexture" href="#hasDiffuseTransmissionColorTexture"><span>hasDiffuseTransmissionColorTexture:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var hasDiffuseTransmissionColorTexture" href="gltf/backends/shaders.html#hasDiffuseTransmissionColorTexture">shaders: var hasDiffuseTransmissionColorTexture</a></li>
+          </ul></dd>
+<dt><a name="hasDiffuseTransmissionTexture" href="#hasDiffuseTransmissionTexture"><span>hasDiffuseTransmissionTexture:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var hasDiffuseTransmissionTexture" href="gltf/backends/shaders.html#hasDiffuseTransmissionTexture">shaders: var hasDiffuseTransmissionTexture</a></li>
+          </ul></dd>
 <dt><a name="hasGeometry" href="#hasGeometry"><span>hasGeometry:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="models: proc hasGeometry(mesh: Mesh): bool" href="gltf/models.html#hasGeometry%2CMesh">models: proc hasGeometry(mesh: Mesh): bool</a></li>
@@ -671,9 +1071,133 @@
           <li><a class="reference external"
           data-doc-search-tag="models: proc hasGeometry(primitive: Primitive): bool" href="gltf/models.html#hasGeometry%2CPrimitive">models: proc hasGeometry(primitive: Primitive): bool</a></li>
           </ul></dd>
+<dt><a name="hasIridescenceTexture" href="#hasIridescenceTexture"><span>hasIridescenceTexture:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var hasIridescenceTexture" href="gltf/backends/shaders.html#hasIridescenceTexture">shaders: var hasIridescenceTexture</a></li>
+          </ul></dd>
+<dt><a name="hasIridescenceThicknessTexture" href="#hasIridescenceThicknessTexture"><span>hasIridescenceThicknessTexture:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var hasIridescenceThicknessTexture" href="gltf/backends/shaders.html#hasIridescenceThicknessTexture">shaders: var hasIridescenceThicknessTexture</a></li>
+          </ul></dd>
+<dt><a name="hasSheenColorTexture" href="#hasSheenColorTexture"><span>hasSheenColorTexture:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var hasSheenColorTexture" href="gltf/backends/shaders.html#hasSheenColorTexture">shaders: var hasSheenColorTexture</a></li>
+          </ul></dd>
+<dt><a name="hasSheenRoughnessTexture" href="#hasSheenRoughnessTexture"><span>hasSheenRoughnessTexture:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var hasSheenRoughnessTexture" href="gltf/backends/shaders.html#hasSheenRoughnessTexture">shaders: var hasSheenRoughnessTexture</a></li>
+          </ul></dd>
+<dt><a name="hasSpecularColorTexture" href="#hasSpecularColorTexture"><span>hasSpecularColorTexture:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var hasSpecularColorTexture" href="gltf/backends/shaders.html#hasSpecularColorTexture">shaders: var hasSpecularColorTexture</a></li>
+          </ul></dd>
+<dt><a name="hasSpecularGlossinessTexture" href="#hasSpecularGlossinessTexture"><span>hasSpecularGlossinessTexture:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var hasSpecularGlossinessTexture" href="gltf/backends/shaders.html#hasSpecularGlossinessTexture">shaders: var hasSpecularGlossinessTexture</a></li>
+          </ul></dd>
+<dt><a name="hasSpecularTexture" href="#hasSpecularTexture"><span>hasSpecularTexture:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var hasSpecularTexture" href="gltf/backends/shaders.html#hasSpecularTexture">shaders: var hasSpecularTexture</a></li>
+          </ul></dd>
+<dt><a name="hasThicknessTexture" href="#hasThicknessTexture"><span>hasThicknessTexture:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var hasThicknessTexture" href="gltf/backends/shaders.html#hasThicknessTexture">shaders: var hasThicknessTexture</a></li>
+          </ul></dd>
+<dt><a name="hasTransmissionTexture" href="#hasTransmissionTexture"><span>hasTransmissionTexture:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var hasTransmissionTexture" href="gltf/backends/shaders.html#hasTransmissionTexture">shaders: var hasTransmissionTexture</a></li>
+          </ul></dd>
+<dt><a name="hasVertexTangent" href="#hasVertexTangent"><span>hasVertexTangent:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var hasVertexTangent" href="gltf/backends/shaders.html#hasVertexTangent">shaders: var hasVertexTangent</a></li>
+          </ul></dd>
+<dt><a name="hdrInput" href="#hdrInput"><span>hdrInput:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var hdrInput" href="gltf/backends/shaders.html#hdrInput">shaders: var hdrInput</a></li>
+          </ul></dd>
+<dt><a name="hdrPostFrag" href="#hdrPostFrag"><span>hdrPostFrag:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: proc hdrPostFrag(postUv: Vec2; fragColor: var Vec4)" href="gltf/backends/shaders.html#hdrPostFrag%2CVec2%2CVec4">shaders: proc hdrPostFrag(postUv: Vec2; fragColor: var Vec4)</a></li>
+          </ul></dd>
+<dt><a name="HdrPostFragHlsl" href="#HdrPostFragHlsl"><span>HdrPostFragHlsl:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: const HdrPostFragHlsl" href="gltf/backends/shaders.html#HdrPostFragHlsl">shaders: const HdrPostFragHlsl</a></li>
+          </ul></dd>
+<dt><a name="HdrPostFragMsl" href="#HdrPostFragMsl"><span>HdrPostFragMsl:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: const HdrPostFragMsl" href="gltf/backends/shaders.html#HdrPostFragMsl">shaders: const HdrPostFragMsl</a></li>
+          </ul></dd>
+<dt><a name="HdrPostFragSrc" href="#HdrPostFragSrc"><span>HdrPostFragSrc:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: const HdrPostFragSrc" href="gltf/backends/shaders.html#HdrPostFragSrc">shaders: const HdrPostFragSrc</a></li>
+          </ul></dd>
+<dt><a name="HdrPostFragVulkan" href="#HdrPostFragVulkan"><span>HdrPostFragVulkan:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: const HdrPostFragVulkan" href="gltf/backends/shaders.html#HdrPostFragVulkan">shaders: const HdrPostFragVulkan</a></li>
+          </ul></dd>
+<dt><a name="hdrPostVert" href="#hdrPostVert"><span>hdrPostVert:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: proc hdrPostVert(vertexPosition: Vec2; gl_Position: var Vec4; postUv: var Vec2)" href="gltf/backends/shaders.html#hdrPostVert%2CVec2%2CVec4%2CVec2">shaders: proc hdrPostVert(vertexPosition: Vec2; gl_Position: var Vec4; postUv: var Vec2)</a></li>
+          </ul></dd>
+<dt><a name="HdrPostVertHlsl" href="#HdrPostVertHlsl"><span>HdrPostVertHlsl:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: const HdrPostVertHlsl" href="gltf/backends/shaders.html#HdrPostVertHlsl">shaders: const HdrPostVertHlsl</a></li>
+          </ul></dd>
+<dt><a name="HdrPostVertMsl" href="#HdrPostVertMsl"><span>HdrPostVertMsl:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: const HdrPostVertMsl" href="gltf/backends/shaders.html#HdrPostVertMsl">shaders: const HdrPostVertMsl</a></li>
+          </ul></dd>
+<dt><a name="HdrPostVertSrc" href="#HdrPostVertSrc"><span>HdrPostVertSrc:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: const HdrPostVertSrc" href="gltf/backends/shaders.html#HdrPostVertSrc">shaders: const HdrPostVertSrc</a></li>
+          </ul></dd>
+<dt><a name="HdrPostVertVulkan" href="#HdrPostVertVulkan"><span>HdrPostVertVulkan:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: const HdrPostVertVulkan" href="gltf/backends/shaders.html#HdrPostVertVulkan">shaders: const HdrPostVertVulkan</a></li>
+          </ul></dd>
+<dt><a name="HdrTarget" href="#HdrTarget"><span>HdrTarget:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ibl: object HdrTarget" href="gltf/backends/opengl/ibl.html#HdrTarget">ibl: object HdrTarget</a></li>
+          </ul></dd>
+<dt><a name="IblEnvironment" href="#IblEnvironment"><span>IblEnvironment:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ibl: object IblEnvironment" href="gltf/backends/opengl/ibl.html#IblEnvironment">ibl: object IblEnvironment</a></li>
+          </ul></dd>
+<dt><a name="IblFragHlsl" href="#IblFragHlsl"><span>IblFragHlsl:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: const IblFragHlsl" href="gltf/backends/shaders.html#IblFragHlsl">shaders: const IblFragHlsl</a></li>
+          </ul></dd>
+<dt><a name="IblFragMsl" href="#IblFragMsl"><span>IblFragMsl:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: const IblFragMsl" href="gltf/backends/shaders.html#IblFragMsl">shaders: const IblFragMsl</a></li>
+          </ul></dd>
+<dt><a name="IblFragSrc" href="#IblFragSrc"><span>IblFragSrc:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: const IblFragSrc" href="gltf/backends/shaders.html#IblFragSrc">shaders: const IblFragSrc</a></li>
+          </ul></dd>
+<dt><a name="IblFragVulkan" href="#IblFragVulkan"><span>IblFragVulkan:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: const IblFragVulkan" href="gltf/backends/shaders.html#IblFragVulkan">shaders: const IblFragVulkan</a></li>
+          </ul></dd>
+<dt><a name="IblSamplerNames" href="#IblSamplerNames"><span>IblSamplerNames:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="materials: const IblSamplerNames" href="gltf/backends/materials.html#IblSamplerNames">materials: const IblSamplerNames</a></li>
+          </ul></dd>
+<dt><a name="IblTextureMask" href="#IblTextureMask"><span>IblTextureMask:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="materials: type IblTextureMask" href="gltf/backends/materials.html#IblTextureMask">materials: type IblTextureMask</a></li>
+          </ul></dd>
+<dt><a name="IccpChunk" href="#IccpChunk"><span>IccpChunk:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="straight_webp: WebpChunkKind.IccpChunk" href="gltf/straight_webp.html#IccpChunk">straight_webp: WebpChunkKind.IccpChunk</a></li>
+          </ul></dd>
 <dt><a name="ImageWriteMode" href="#ImageWriteMode"><span>ImageWriteMode:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="writer: enum ImageWriteMode" href="gltf/writer.html#ImageWriteMode">writer: enum ImageWriteMode</a></li>
+          </ul></dd>
+<dt><a name="includes" href="#includes"><span>includes:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="materials: proc includes(mask: IblTextureMask; unit: int): bool" href="gltf/backends/materials.html#includes%2CIblTextureMask%2Cint">materials: proc includes(mask: IblTextureMask; unit: int): bool</a></li>
           </ul></dd>
 <dt><a name="initDracoStream" href="#initDracoStream"><span>initDracoStream:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -719,6 +1243,66 @@
 <li><a class="reference external"
           data-doc-search-tag="shaders: var invView" href="gltf/backends/shaders.html#invView">shaders: var invView</a></li>
           </ul></dd>
+<dt><a name="iridescenceFactor" href="#iridescenceFactor"><span>iridescenceFactor:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var iridescenceFactor" href="gltf/backends/shaders.html#iridescenceFactor">shaders: var iridescenceFactor</a></li>
+          </ul></dd>
+<dt><a name="iridescenceIor" href="#iridescenceIor"><span>iridescenceIor:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var iridescenceIor" href="gltf/backends/shaders.html#iridescenceIor">shaders: var iridescenceIor</a></li>
+          </ul></dd>
+<dt><a name="iridescenceTexCoord" href="#iridescenceTexCoord"><span>iridescenceTexCoord:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var iridescenceTexCoord" href="gltf/backends/shaders.html#iridescenceTexCoord">shaders: var iridescenceTexCoord</a></li>
+          </ul></dd>
+<dt><a name="iridescenceTexture" href="#iridescenceTexture"><span>iridescenceTexture:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var iridescenceTexture" href="gltf/backends/shaders.html#iridescenceTexture">shaders: var iridescenceTexture</a></li>
+          </ul></dd>
+<dt><a name="IridescenceTextureSlot" href="#IridescenceTextureSlot"><span>IridescenceTextureSlot:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: MaterialTextureSlot.IridescenceTextureSlot" href="gltf/common.html#IridescenceTextureSlot">common: MaterialTextureSlot.IridescenceTextureSlot</a></li>
+          </ul></dd>
+<dt><a name="iridescenceThicknessRange" href="#iridescenceThicknessRange"><span>iridescenceThicknessRange:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var iridescenceThicknessRange" href="gltf/backends/shaders.html#iridescenceThicknessRange">shaders: var iridescenceThicknessRange</a></li>
+          </ul></dd>
+<dt><a name="iridescenceThicknessTexCoord" href="#iridescenceThicknessTexCoord"><span>iridescenceThicknessTexCoord:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var iridescenceThicknessTexCoord" href="gltf/backends/shaders.html#iridescenceThicknessTexCoord">shaders: var iridescenceThicknessTexCoord</a></li>
+          </ul></dd>
+<dt><a name="iridescenceThicknessTexture" href="#iridescenceThicknessTexture"><span>iridescenceThicknessTexture:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var iridescenceThicknessTexture" href="gltf/backends/shaders.html#iridescenceThicknessTexture">shaders: var iridescenceThicknessTexture</a></li>
+          </ul></dd>
+<dt><a name="IridescenceThicknessTextureSlot" href="#IridescenceThicknessTextureSlot"><span>IridescenceThicknessTextureSlot:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: MaterialTextureSlot.IridescenceThicknessTextureSlot" href="gltf/common.html#IridescenceThicknessTextureSlot">common: MaterialTextureSlot.IridescenceThicknessTextureSlot</a></li>
+          </ul></dd>
+<dt><a name="iridescenceThicknessUvOffset" href="#iridescenceThicknessUvOffset"><span>iridescenceThicknessUvOffset:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var iridescenceThicknessUvOffset" href="gltf/backends/shaders.html#iridescenceThicknessUvOffset">shaders: var iridescenceThicknessUvOffset</a></li>
+          </ul></dd>
+<dt><a name="iridescenceThicknessUvRotation" href="#iridescenceThicknessUvRotation"><span>iridescenceThicknessUvRotation:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var iridescenceThicknessUvRotation" href="gltf/backends/shaders.html#iridescenceThicknessUvRotation">shaders: var iridescenceThicknessUvRotation</a></li>
+          </ul></dd>
+<dt><a name="iridescenceThicknessUvScale" href="#iridescenceThicknessUvScale"><span>iridescenceThicknessUvScale:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var iridescenceThicknessUvScale" href="gltf/backends/shaders.html#iridescenceThicknessUvScale">shaders: var iridescenceThicknessUvScale</a></li>
+          </ul></dd>
+<dt><a name="iridescenceUvOffset" href="#iridescenceUvOffset"><span>iridescenceUvOffset:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var iridescenceUvOffset" href="gltf/backends/shaders.html#iridescenceUvOffset">shaders: var iridescenceUvOffset</a></li>
+          </ul></dd>
+<dt><a name="iridescenceUvRotation" href="#iridescenceUvRotation"><span>iridescenceUvRotation:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var iridescenceUvRotation" href="gltf/backends/shaders.html#iridescenceUvRotation">shaders: var iridescenceUvRotation</a></li>
+          </ul></dd>
+<dt><a name="iridescenceUvScale" href="#iridescenceUvScale"><span>iridescenceUvScale:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var iridescenceUvScale" href="gltf/backends/shaders.html#iridescenceUvScale">shaders: var iridescenceUvScale</a></li>
+          </ul></dd>
 <dt><a name="isCompressedVkFormat" href="#isCompressedVkFormat"><span>isCompressedVkFormat:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="ktx2: proc isCompressedVkFormat(vkFormat: uint32): bool" href="gltf/ktx2.html#isCompressedVkFormat%2Cuint32">ktx2: proc isCompressedVkFormat(vkFormat: uint32): bool</a></li>
@@ -758,6 +1342,10 @@
 <dt><a name="leftMostCorner" href="#leftMostCorner"><span>leftMostCorner:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="meshes: proc leftMostCorner(table: CornerTable; vertex: int): int" href="gltf/draco/meshes.html#leftMostCorner%2CCornerTable%2Cint">meshes: proc leftMostCorner(table: CornerTable; vertex: int): int</a></li>
+          </ul></dd>
+<dt><a name="legacyAlphaMode" href="#legacyAlphaMode"><span>legacyAlphaMode:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: proc legacyAlphaMode(material: Material): AlphaMode" href="gltf/common.html#legacyAlphaMode%2CMaterial">common: proc legacyAlphaMode(material: Material): AlphaMode</a></li>
           </ul></dd>
 <dt><a name="lightSpace" href="#lightSpace"><span>lightSpace:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -803,6 +1391,10 @@
 <li><a class="reference external"
           data-doc-search-tag="renderer: proc loadEnvironmentMap(cubeMapPath: string): EnvironmentMap" href="gltf/backends/opengl/renderer.html#loadEnvironmentMap%2Cstring">renderer: proc loadEnvironmentMap(cubeMapPath: string): EnvironmentMap</a></li>
           </ul></dd>
+<dt><a name="loadIblEnvironment" href="#loadIblEnvironment"><span>loadIblEnvironment:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ibl: proc loadIblEnvironment(directory: string): IblEnvironment" href="gltf/backends/opengl/ibl.html#loadIblEnvironment%2Cstring">ibl: proc loadIblEnvironment(directory: string): IblEnvironment</a></li>
+          </ul></dd>
 <dt><a name="loadKtx2Texture" href="#loadKtx2Texture"><span>loadKtx2Texture:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="ktx2: proc loadKtx2Texture(data: string; sampler = defaultKtx2Sampler()): GLuint" href="gltf/ktx2.html#loadKtx2Texture%2Cstring">ktx2: proc loadKtx2Texture(data: string; sampler = defaultKtx2Sampler()): GLuint</a></li>
@@ -831,9 +1423,21 @@
 <li><a class="reference external"
           data-doc-search-tag="renderer: proc loadSolidEnvironmentMap(color = rgbx(180, 190, 220, 255)): EnvironmentMap" href="gltf/backends/opengl/renderer.html#loadSolidEnvironmentMap">renderer: proc loadSolidEnvironmentMap(color = rgbx(180, 190, 220, 255)): EnvironmentMap</a></li>
           </ul></dd>
+<dt><a name="loadStraightAlphaImage" href="#loadStraightAlphaImage"><span>loadStraightAlphaImage:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="texture_images: proc loadStraightAlphaImage(path: string): Image" href="gltf/texture_images.html#loadStraightAlphaImage%2Cstring">texture_images: proc loadStraightAlphaImage(path: string): Image</a></li>
+          </ul></dd>
 <dt><a name="lod" href="#lod"><span>lod:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="shaders: var lod" href="gltf/backends/shaders.html#lod">shaders: var lod</a></li>
+          </ul></dd>
+<dt><a name="LosslessWebp" href="#LosslessWebp"><span>LosslessWebp:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="straight_webp: WebpCompression.LosslessWebp" href="gltf/straight_webp.html#LosslessWebp">straight_webp: WebpCompression.LosslessWebp</a></li>
+          </ul></dd>
+<dt><a name="LossyWebp" href="#LossyWebp"><span>LossyWebp:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="straight_webp: WebpCompression.LossyWebp" href="gltf/straight_webp.html#LossyWebp">straight_webp: WebpCompression.LossyWebp</a></li>
           </ul></dd>
 <dt><a name="markGeometryDirty" href="#markGeometryDirty"><span>markGeometryDirty:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -863,9 +1467,25 @@
 <li><a class="reference external"
           data-doc-search-tag="internal: object MaterialInfo" href="gltf/internal.html#MaterialInfo">internal: object MaterialInfo</a></li>
           </ul></dd>
+<dt><a name="materialIor" href="#materialIor"><span>materialIor:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var materialIor" href="gltf/backends/shaders.html#materialIor">shaders: var materialIor</a></li>
+          </ul></dd>
 <dt><a name="MaterialTexture" href="#MaterialTexture"><span>MaterialTexture:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="internal: object MaterialTexture" href="gltf/internal.html#MaterialTexture">internal: object MaterialTexture</a></li>
+          </ul></dd>
+<dt><a name="MaterialTexturePaths" href="#MaterialTexturePaths"><span>MaterialTexturePaths:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: const MaterialTexturePaths" href="gltf/common.html#MaterialTexturePaths">common: const MaterialTexturePaths</a></li>
+          </ul></dd>
+<dt><a name="MaterialTextureSlot" href="#MaterialTextureSlot"><span>MaterialTextureSlot:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: enum MaterialTextureSlot" href="gltf/common.html#MaterialTextureSlot">common: enum MaterialTextureSlot</a></li>
+          </ul></dd>
+<dt><a name="maxIblAnisotropy" href="#maxIblAnisotropy"><span>maxIblAnisotropy:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="ibl: proc maxIblAnisotropy(): float32" href="gltf/backends/opengl/ibl.html#maxIblAnisotropy">ibl: proc maxIblAnisotropy(): float32</a></li>
           </ul></dd>
 <dt><a name="merge" href="#merge"><span>merge:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -893,6 +1513,10 @@
 <li><a class="reference external"
           data-doc-search-tag="shaders: var metallicRoughnessTexture" href="gltf/backends/shaders.html#metallicRoughnessTexture">shaders: var metallicRoughnessTexture</a></li>
           </ul></dd>
+<dt><a name="MetallicRoughnessTextureSlot" href="#MetallicRoughnessTextureSlot"><span>MetallicRoughnessTextureSlot:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: MaterialTextureSlot.MetallicRoughnessTextureSlot" href="gltf/common.html#MetallicRoughnessTextureSlot">common: MaterialTextureSlot.MetallicRoughnessTextureSlot</a></li>
+          </ul></dd>
 <dt><a name="metallicRoughnessUvOffset" href="#metallicRoughnessUvOffset"><span>metallicRoughnessUvOffset:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="shaders: var metallicRoughnessUvOffset" href="gltf/backends/shaders.html#metallicRoughnessUvOffset">shaders: var metallicRoughnessUvOffset</a></li>
@@ -904,6 +1528,22 @@
 <dt><a name="metallicRoughnessUvScale" href="#metallicRoughnessUvScale"><span>metallicRoughnessUvScale:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="shaders: var metallicRoughnessUvScale" href="gltf/backends/shaders.html#metallicRoughnessUvScale">shaders: var metallicRoughnessUvScale</a></li>
+          </ul></dd>
+<dt><a name="mipDownsampleFrag" href="#mipDownsampleFrag"><span>mipDownsampleFrag:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: proc mipDownsampleFrag(postUv: Vec2; fragColor: var Vec4)" href="gltf/backends/shaders.html#mipDownsampleFrag%2CVec2%2CVec4">shaders: proc mipDownsampleFrag(postUv: Vec2; fragColor: var Vec4)</a></li>
+          </ul></dd>
+<dt><a name="MipDownsampleFragHlsl" href="#MipDownsampleFragHlsl"><span>MipDownsampleFragHlsl:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: const MipDownsampleFragHlsl" href="gltf/backends/shaders.html#MipDownsampleFragHlsl">shaders: const MipDownsampleFragHlsl</a></li>
+          </ul></dd>
+<dt><a name="MipDownsampleFragVulkan" href="#MipDownsampleFragVulkan"><span>MipDownsampleFragVulkan:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: const MipDownsampleFragVulkan" href="gltf/backends/shaders.html#MipDownsampleFragVulkan">shaders: const MipDownsampleFragVulkan</a></li>
+          </ul></dd>
+<dt><a name="mipInput" href="#mipInput"><span>mipInput:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var mipInput" href="gltf/backends/shaders.html#mipInput">shaders: var mipInput</a></li>
           </ul></dd>
 <dt><a name="MirroredRepeatWrap" href="#MirroredRepeatWrap"><span>MirroredRepeatWrap:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -981,6 +1621,10 @@
 <li><a class="reference external"
           data-doc-search-tag="shaders: var normalTexture" href="gltf/backends/shaders.html#normalTexture">shaders: var normalTexture</a></li>
           </ul></dd>
+<dt><a name="NormalTextureSlot" href="#NormalTextureSlot"><span>NormalTextureSlot:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: MaterialTextureSlot.NormalTextureSlot" href="gltf/common.html#NormalTextureSlot">common: MaterialTextureSlot.NormalTextureSlot</a></li>
+          </ul></dd>
 <dt><a name="normalUvOffset" href="#normalUvOffset"><span>normalUvOffset:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="shaders: var normalUvOffset" href="gltf/backends/shaders.html#normalUvOffset">shaders: var normalUvOffset</a></li>
@@ -1005,6 +1649,10 @@
 <li><a class="reference external"
           data-doc-search-tag="shaders: var occlusionTexture" href="gltf/backends/shaders.html#occlusionTexture">shaders: var occlusionTexture</a></li>
           </ul></dd>
+<dt><a name="OcclusionTextureSlot" href="#OcclusionTextureSlot"><span>OcclusionTextureSlot:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: MaterialTextureSlot.OcclusionTextureSlot" href="gltf/common.html#OcclusionTextureSlot">common: MaterialTextureSlot.OcclusionTextureSlot</a></li>
+          </ul></dd>
 <dt><a name="occlusionUvOffset" href="#occlusionUvOffset"><span>occlusionUvOffset:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="shaders: var occlusionUvOffset" href="gltf/backends/shaders.html#occlusionUvOffset">shaders: var occlusionUvOffset</a></li>
@@ -1020,6 +1668,10 @@
 <dt><a name="OpaqueAlphaMode" href="#OpaqueAlphaMode"><span>OpaqueAlphaMode:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="common: AlphaMode.OpaqueAlphaMode" href="gltf/common.html#OpaqueAlphaMode">common: AlphaMode.OpaqueAlphaMode</a></li>
+          </ul></dd>
+<dt><a name="opaqueMaterial" href="#opaqueMaterial"><span>opaqueMaterial:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var opaqueMaterial" href="gltf/backends/shaders.html#opaqueMaterial">shaders: var opaqueMaterial</a></li>
           </ul></dd>
 <dt><a name="opposite" href="#opposite"><span>opposite:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -1065,6 +1717,10 @@
 <li><a class="reference external"
           data-doc-search-tag="internal: object PbrMetallicRoughness" href="gltf/internal.html#PbrMetallicRoughness">internal: object PbrMetallicRoughness</a></li>
           </ul></dd>
+<dt><a name="pbrNeutral" href="#pbrNeutral"><span>pbrNeutral:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: proc pbrNeutral(radiance: Vec3): Vec3" href="gltf/backends/shaders.html#pbrNeutral%2CVec3">shaders: proc pbrNeutral(radiance: Vec3): Vec3</a></li>
+          </ul></dd>
 <dt><a name="PbrVertexShader" href="#PbrVertexShader"><span>PbrVertexShader:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="renderer: const PbrVertexShader" href="gltf/backends/opengl/renderer.html#PbrVertexShader">renderer: const PbrVertexShader</a></li>
@@ -1092,6 +1748,10 @@
 <dt><a name="PerspectiveLens" href="#PerspectiveLens"><span>PerspectiveLens:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="common: CameraKind.PerspectiveLens" href="gltf/common.html#PerspectiveLens">common: CameraKind.PerspectiveLens</a></li>
+          </ul></dd>
+<dt><a name="PointLightKind" href="#PointLightKind"><span>PointLightKind:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: PunctualLightKind.PointLightKind" href="gltf/common.html#PointLightKind">common: PunctualLightKind.PointLightKind</a></li>
           </ul></dd>
 <dt><a name="PointsMode" href="#PointsMode"><span>PointsMode:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -1132,6 +1792,34 @@
 <dt><a name="proj" href="#proj"><span>proj:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="shaders: var proj" href="gltf/backends/shaders.html#proj">shaders: var proj</a></li>
+          </ul></dd>
+<dt><a name="PunctualLight" href="#PunctualLight"><span>PunctualLight:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: type PunctualLight" href="gltf/common.html#PunctualLight">common: type PunctualLight</a></li>
+          </ul></dd>
+<dt><a name="punctualLightColors" href="#punctualLightColors"><span>punctualLightColors:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var punctualLightColors" href="gltf/backends/shaders.html#punctualLightColors">shaders: var punctualLightColors</a></li>
+          </ul></dd>
+<dt><a name="punctualLightCount" href="#punctualLightCount"><span>punctualLightCount:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var punctualLightCount" href="gltf/backends/shaders.html#punctualLightCount">shaders: var punctualLightCount</a></li>
+          </ul></dd>
+<dt><a name="punctualLightDirections" href="#punctualLightDirections"><span>punctualLightDirections:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var punctualLightDirections" href="gltf/backends/shaders.html#punctualLightDirections">shaders: var punctualLightDirections</a></li>
+          </ul></dd>
+<dt><a name="PunctualLightKind" href="#PunctualLightKind"><span>PunctualLightKind:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: enum PunctualLightKind" href="gltf/common.html#PunctualLightKind">common: enum PunctualLightKind</a></li>
+          </ul></dd>
+<dt><a name="punctualLightParameters" href="#punctualLightParameters"><span>punctualLightParameters:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var punctualLightParameters" href="gltf/backends/shaders.html#punctualLightParameters">shaders: var punctualLightParameters</a></li>
+          </ul></dd>
+<dt><a name="punctualLightPositions" href="#punctualLightPositions"><span>punctualLightPositions:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var punctualLightPositions" href="gltf/backends/shaders.html#punctualLightPositions">shaders: var punctualLightPositions</a></li>
           </ul></dd>
 <dt><a name="radius" href="#radius"><span>radius:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -1225,6 +1913,14 @@
 <li><a class="reference external"
           data-doc-search-tag="animations: proc resetToBase(node: Node)" href="gltf/animations.html#resetToBase%2CNode">animations: proc resetToBase(node: Node)</a></li>
           </ul></dd>
+<dt><a name="resolveBackground" href="#resolveBackground"><span>resolveBackground:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="transmission: proc resolveBackground(target: var TransmissionTarget)" href="gltf/backends/opengl/transmission.html#resolveBackground%2CTransmissionTarget">transmission: proc resolveBackground(target: var TransmissionTarget)</a></li>
+          </ul></dd>
+<dt><a name="restore" href="#restore"><span>restore:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="transmission: proc restore(target: var TransmissionTarget)" href="gltf/backends/opengl/transmission.html#restore%2CTransmissionTarget">transmission: proc restore(target: var TransmissionTarget)</a></li>
+          </ul></dd>
 <dt><a name="rimLightColor" href="#rimLightColor"><span>rimLightColor:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="shaders: var rimLightColor" href="gltf/backends/shaders.html#rimLightColor">shaders: var rimLightColor</a></li>
@@ -1305,6 +2001,70 @@
 <li><a class="reference external"
           data-doc-search-tag="models: proc shallowCopy(node: Node): Node" href="gltf/models.html#shallowCopy%2CNode">models: proc shallowCopy(node: Node): Node</a></li>
           </ul></dd>
+<dt><a name="sheenColorFactor" href="#sheenColorFactor"><span>sheenColorFactor:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var sheenColorFactor" href="gltf/backends/shaders.html#sheenColorFactor">shaders: var sheenColorFactor</a></li>
+          </ul></dd>
+<dt><a name="sheenColorTexCoord" href="#sheenColorTexCoord"><span>sheenColorTexCoord:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var sheenColorTexCoord" href="gltf/backends/shaders.html#sheenColorTexCoord">shaders: var sheenColorTexCoord</a></li>
+          </ul></dd>
+<dt><a name="sheenColorTexture" href="#sheenColorTexture"><span>sheenColorTexture:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var sheenColorTexture" href="gltf/backends/shaders.html#sheenColorTexture">shaders: var sheenColorTexture</a></li>
+          </ul></dd>
+<dt><a name="SheenColorTextureSlot" href="#SheenColorTextureSlot"><span>SheenColorTextureSlot:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: MaterialTextureSlot.SheenColorTextureSlot" href="gltf/common.html#SheenColorTextureSlot">common: MaterialTextureSlot.SheenColorTextureSlot</a></li>
+          </ul></dd>
+<dt><a name="sheenColorUvOffset" href="#sheenColorUvOffset"><span>sheenColorUvOffset:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var sheenColorUvOffset" href="gltf/backends/shaders.html#sheenColorUvOffset">shaders: var sheenColorUvOffset</a></li>
+          </ul></dd>
+<dt><a name="sheenColorUvRotation" href="#sheenColorUvRotation"><span>sheenColorUvRotation:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var sheenColorUvRotation" href="gltf/backends/shaders.html#sheenColorUvRotation">shaders: var sheenColorUvRotation</a></li>
+          </ul></dd>
+<dt><a name="sheenColorUvScale" href="#sheenColorUvScale"><span>sheenColorUvScale:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var sheenColorUvScale" href="gltf/backends/shaders.html#sheenColorUvScale">shaders: var sheenColorUvScale</a></li>
+          </ul></dd>
+<dt><a name="sheenEnabled" href="#sheenEnabled"><span>sheenEnabled:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var sheenEnabled" href="gltf/backends/shaders.html#sheenEnabled">shaders: var sheenEnabled</a></li>
+          </ul></dd>
+<dt><a name="sheenEnergyLut" href="#sheenEnergyLut"><span>sheenEnergyLut:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var sheenEnergyLut" href="gltf/backends/shaders.html#sheenEnergyLut">shaders: var sheenEnergyLut</a></li>
+          </ul></dd>
+<dt><a name="sheenRoughnessFactor" href="#sheenRoughnessFactor"><span>sheenRoughnessFactor:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var sheenRoughnessFactor" href="gltf/backends/shaders.html#sheenRoughnessFactor">shaders: var sheenRoughnessFactor</a></li>
+          </ul></dd>
+<dt><a name="sheenRoughnessTexCoord" href="#sheenRoughnessTexCoord"><span>sheenRoughnessTexCoord:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var sheenRoughnessTexCoord" href="gltf/backends/shaders.html#sheenRoughnessTexCoord">shaders: var sheenRoughnessTexCoord</a></li>
+          </ul></dd>
+<dt><a name="sheenRoughnessTexture" href="#sheenRoughnessTexture"><span>sheenRoughnessTexture:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var sheenRoughnessTexture" href="gltf/backends/shaders.html#sheenRoughnessTexture">shaders: var sheenRoughnessTexture</a></li>
+          </ul></dd>
+<dt><a name="SheenRoughnessTextureSlot" href="#SheenRoughnessTextureSlot"><span>SheenRoughnessTextureSlot:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: MaterialTextureSlot.SheenRoughnessTextureSlot" href="gltf/common.html#SheenRoughnessTextureSlot">common: MaterialTextureSlot.SheenRoughnessTextureSlot</a></li>
+          </ul></dd>
+<dt><a name="sheenRoughnessUvOffset" href="#sheenRoughnessUvOffset"><span>sheenRoughnessUvOffset:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var sheenRoughnessUvOffset" href="gltf/backends/shaders.html#sheenRoughnessUvOffset">shaders: var sheenRoughnessUvOffset</a></li>
+          </ul></dd>
+<dt><a name="sheenRoughnessUvRotation" href="#sheenRoughnessUvRotation"><span>sheenRoughnessUvRotation:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var sheenRoughnessUvRotation" href="gltf/backends/shaders.html#sheenRoughnessUvRotation">shaders: var sheenRoughnessUvRotation</a></li>
+          </ul></dd>
+<dt><a name="sheenRoughnessUvScale" href="#sheenRoughnessUvScale"><span>sheenRoughnessUvScale:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var sheenRoughnessUvScale" href="gltf/backends/shaders.html#sheenRoughnessUvScale">shaders: var sheenRoughnessUvScale</a></li>
+          </ul></dd>
 <dt><a name="ShortComponent" href="#ShortComponent"><span>ShortComponent:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="common: ComponentType.ShortComponent" href="gltf/common.html#ShortComponent">common: ComponentType.ShortComponent</a></li>
@@ -1381,6 +2141,102 @@
 <li><a class="reference external"
           data-doc-search-tag="internal: object SparseValues" href="gltf/internal.html#SparseValues">internal: object SparseValues</a></li>
           </ul></dd>
+<dt><a name="specializeIbl" href="#specializeIbl"><span>specializeIbl:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="materials: proc specializeIbl(source: string; mask: IblTextureMask): string" href="gltf/backends/materials.html#specializeIbl%2Cstring%2CIblTextureMask">materials: proc specializeIbl(source: string; mask: IblTextureMask): string</a></li>
+          </ul></dd>
+<dt><a name="specularColorFactor" href="#specularColorFactor"><span>specularColorFactor:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var specularColorFactor" href="gltf/backends/shaders.html#specularColorFactor">shaders: var specularColorFactor</a></li>
+          </ul></dd>
+<dt><a name="specularColorTexCoord" href="#specularColorTexCoord"><span>specularColorTexCoord:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var specularColorTexCoord" href="gltf/backends/shaders.html#specularColorTexCoord">shaders: var specularColorTexCoord</a></li>
+          </ul></dd>
+<dt><a name="specularColorTexture" href="#specularColorTexture"><span>specularColorTexture:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var specularColorTexture" href="gltf/backends/shaders.html#specularColorTexture">shaders: var specularColorTexture</a></li>
+          </ul></dd>
+<dt><a name="SpecularColorTextureSlot" href="#SpecularColorTextureSlot"><span>SpecularColorTextureSlot:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: MaterialTextureSlot.SpecularColorTextureSlot" href="gltf/common.html#SpecularColorTextureSlot">common: MaterialTextureSlot.SpecularColorTextureSlot</a></li>
+          </ul></dd>
+<dt><a name="specularColorUvOffset" href="#specularColorUvOffset"><span>specularColorUvOffset:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var specularColorUvOffset" href="gltf/backends/shaders.html#specularColorUvOffset">shaders: var specularColorUvOffset</a></li>
+          </ul></dd>
+<dt><a name="specularColorUvRotation" href="#specularColorUvRotation"><span>specularColorUvRotation:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var specularColorUvRotation" href="gltf/backends/shaders.html#specularColorUvRotation">shaders: var specularColorUvRotation</a></li>
+          </ul></dd>
+<dt><a name="specularColorUvScale" href="#specularColorUvScale"><span>specularColorUvScale:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var specularColorUvScale" href="gltf/backends/shaders.html#specularColorUvScale">shaders: var specularColorUvScale</a></li>
+          </ul></dd>
+<dt><a name="specularFactor" href="#specularFactor"><span>specularFactor:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var specularFactor" href="gltf/backends/shaders.html#specularFactor">shaders: var specularFactor</a></li>
+          </ul></dd>
+<dt><a name="specularGlossinessFactor" href="#specularGlossinessFactor"><span>specularGlossinessFactor:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var specularGlossinessFactor" href="gltf/backends/shaders.html#specularGlossinessFactor">shaders: var specularGlossinessFactor</a></li>
+          </ul></dd>
+<dt><a name="specularGlossinessMaterial" href="#specularGlossinessMaterial"><span>specularGlossinessMaterial:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var specularGlossinessMaterial" href="gltf/backends/shaders.html#specularGlossinessMaterial">shaders: var specularGlossinessMaterial</a></li>
+          </ul></dd>
+<dt><a name="specularGlossinessTexCoord" href="#specularGlossinessTexCoord"><span>specularGlossinessTexCoord:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var specularGlossinessTexCoord" href="gltf/backends/shaders.html#specularGlossinessTexCoord">shaders: var specularGlossinessTexCoord</a></li>
+          </ul></dd>
+<dt><a name="specularGlossinessTexture" href="#specularGlossinessTexture"><span>specularGlossinessTexture:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var specularGlossinessTexture" href="gltf/backends/shaders.html#specularGlossinessTexture">shaders: var specularGlossinessTexture</a></li>
+          </ul></dd>
+<dt><a name="SpecularGlossinessTextureSlot" href="#SpecularGlossinessTextureSlot"><span>SpecularGlossinessTextureSlot:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: MaterialTextureSlot.SpecularGlossinessTextureSlot" href="gltf/common.html#SpecularGlossinessTextureSlot">common: MaterialTextureSlot.SpecularGlossinessTextureSlot</a></li>
+          </ul></dd>
+<dt><a name="specularGlossinessUvOffset" href="#specularGlossinessUvOffset"><span>specularGlossinessUvOffset:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var specularGlossinessUvOffset" href="gltf/backends/shaders.html#specularGlossinessUvOffset">shaders: var specularGlossinessUvOffset</a></li>
+          </ul></dd>
+<dt><a name="specularGlossinessUvRotation" href="#specularGlossinessUvRotation"><span>specularGlossinessUvRotation:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var specularGlossinessUvRotation" href="gltf/backends/shaders.html#specularGlossinessUvRotation">shaders: var specularGlossinessUvRotation</a></li>
+          </ul></dd>
+<dt><a name="specularGlossinessUvScale" href="#specularGlossinessUvScale"><span>specularGlossinessUvScale:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var specularGlossinessUvScale" href="gltf/backends/shaders.html#specularGlossinessUvScale">shaders: var specularGlossinessUvScale</a></li>
+          </ul></dd>
+<dt><a name="specularTexCoord" href="#specularTexCoord"><span>specularTexCoord:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var specularTexCoord" href="gltf/backends/shaders.html#specularTexCoord">shaders: var specularTexCoord</a></li>
+          </ul></dd>
+<dt><a name="specularTexture" href="#specularTexture"><span>specularTexture:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var specularTexture" href="gltf/backends/shaders.html#specularTexture">shaders: var specularTexture</a></li>
+          </ul></dd>
+<dt><a name="SpecularTextureSlot" href="#SpecularTextureSlot"><span>SpecularTextureSlot:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: MaterialTextureSlot.SpecularTextureSlot" href="gltf/common.html#SpecularTextureSlot">common: MaterialTextureSlot.SpecularTextureSlot</a></li>
+          </ul></dd>
+<dt><a name="specularUvOffset" href="#specularUvOffset"><span>specularUvOffset:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var specularUvOffset" href="gltf/backends/shaders.html#specularUvOffset">shaders: var specularUvOffset</a></li>
+          </ul></dd>
+<dt><a name="specularUvRotation" href="#specularUvRotation"><span>specularUvRotation:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var specularUvRotation" href="gltf/backends/shaders.html#specularUvRotation">shaders: var specularUvRotation</a></li>
+          </ul></dd>
+<dt><a name="specularUvScale" href="#specularUvScale"><span>specularUvScale:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var specularUvScale" href="gltf/backends/shaders.html#specularUvScale">shaders: var specularUvScale</a></li>
+          </ul></dd>
+<dt><a name="SpotLightKind" href="#SpotLightKind"><span>SpotLightKind:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: PunctualLightKind.SpotLightKind" href="gltf/common.html#SpotLightKind">common: PunctualLightKind.SpotLightKind</a></li>
+          </ul></dd>
 <dt><a name="startBits" href="#startBits"><span>startBits:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="bitstreams: proc startBits(stream: var DracoStream; decodeSize: bool): uint32" href="gltf/draco/bitstreams.html#startBits%2CDracoStream%2Cbool">bitstreams: proc startBits(stream: var DracoStream; decodeSize: bool): uint32</a></li>
@@ -1421,6 +2277,10 @@
 <li><a class="reference external"
           data-doc-search-tag="common: enum TextureMagFilter" href="gltf/common.html#TextureMagFilter">common: enum TextureMagFilter</a></li>
           </ul></dd>
+<dt><a name="textureMask" href="#textureMask"><span>textureMask:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="materials: proc textureMask(material: Material): IblTextureMask" href="gltf/backends/materials.html#textureMask%2CMaterial">materials: proc textureMask(material: Material): IblTextureMask</a></li>
+          </ul></dd>
 <dt><a name="TextureMinFilter" href="#TextureMinFilter"><span>TextureMinFilter:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="common: enum TextureMinFilter" href="gltf/common.html#TextureMinFilter">common: enum TextureMinFilter</a></li>
@@ -1433,17 +2293,97 @@
 <li><a class="reference external"
           data-doc-search-tag="common: object TextureTransform" href="gltf/common.html#TextureTransform">common: object TextureTransform</a></li>
           </ul></dd>
+<dt><a name="textureTransform" href="#textureTransform"><span>textureTransform:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: proc textureTransform(material: Material; slot: MaterialTextureSlot): var TextureTransform" href="gltf/common.html#textureTransform%2CMaterial%2CMaterialTextureSlot">common: proc textureTransform(material: Material; slot: MaterialTextureSlot): var TextureTransform</a></li>
+          </ul></dd>
 <dt><a name="TextureWrap" href="#TextureWrap"><span>TextureWrap:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="common: enum TextureWrap" href="gltf/common.html#TextureWrap">common: enum TextureWrap</a></li>
+          </ul></dd>
+<dt><a name="thicknessFactor" href="#thicknessFactor"><span>thicknessFactor:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var thicknessFactor" href="gltf/backends/shaders.html#thicknessFactor">shaders: var thicknessFactor</a></li>
+          </ul></dd>
+<dt><a name="thicknessTexCoord" href="#thicknessTexCoord"><span>thicknessTexCoord:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var thicknessTexCoord" href="gltf/backends/shaders.html#thicknessTexCoord">shaders: var thicknessTexCoord</a></li>
+          </ul></dd>
+<dt><a name="thicknessTexture" href="#thicknessTexture"><span>thicknessTexture:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var thicknessTexture" href="gltf/backends/shaders.html#thicknessTexture">shaders: var thicknessTexture</a></li>
+          </ul></dd>
+<dt><a name="ThicknessTextureSlot" href="#ThicknessTextureSlot"><span>ThicknessTextureSlot:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: MaterialTextureSlot.ThicknessTextureSlot" href="gltf/common.html#ThicknessTextureSlot">common: MaterialTextureSlot.ThicknessTextureSlot</a></li>
+          </ul></dd>
+<dt><a name="thicknessUvOffset" href="#thicknessUvOffset"><span>thicknessUvOffset:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var thicknessUvOffset" href="gltf/backends/shaders.html#thicknessUvOffset">shaders: var thicknessUvOffset</a></li>
+          </ul></dd>
+<dt><a name="thicknessUvRotation" href="#thicknessUvRotation"><span>thicknessUvRotation:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var thicknessUvRotation" href="gltf/backends/shaders.html#thicknessUvRotation">shaders: var thicknessUvRotation</a></li>
+          </ul></dd>
+<dt><a name="thicknessUvScale" href="#thicknessUvScale"><span>thicknessUvScale:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var thicknessUvScale" href="gltf/backends/shaders.html#thicknessUvScale">shaders: var thicknessUvScale</a></li>
           </ul></dd>
 <dt><a name="tint" href="#tint"><span>tint:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="shaders: var tint" href="gltf/backends/shaders.html#tint">shaders: var tint</a></li>
           </ul></dd>
+<dt><a name="toneFlags" href="#toneFlags"><span>toneFlags:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var toneFlags" href="gltf/backends/shaders.html#toneFlags">shaders: var toneFlags</a></li>
+          </ul></dd>
+<dt><a name="transmissionBackground" href="#transmissionBackground"><span>transmissionBackground:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var transmissionBackground" href="gltf/backends/shaders.html#transmissionBackground">shaders: var transmissionBackground</a></li>
+          </ul></dd>
+<dt><a name="transmissionBuffer" href="#transmissionBuffer"><span>transmissionBuffer:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var transmissionBuffer" href="gltf/backends/shaders.html#transmissionBuffer">shaders: var transmissionBuffer</a></li>
+          </ul></dd>
+<dt><a name="transmissionBufferLod" href="#transmissionBufferLod"><span>transmissionBufferLod:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var transmissionBufferLod" href="gltf/backends/shaders.html#transmissionBufferLod">shaders: var transmissionBufferLod</a></li>
+          </ul></dd>
 <dt><a name="transmissionFactor" href="#transmissionFactor"><span>transmissionFactor:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="shaders: var transmissionFactor" href="gltf/backends/shaders.html#transmissionFactor">shaders: var transmissionFactor</a></li>
+          </ul></dd>
+<dt><a name="TransmissionSize" href="#TransmissionSize"><span>TransmissionSize:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="transmission: const TransmissionSize" href="gltf/backends/opengl/transmission.html#TransmissionSize">transmission: const TransmissionSize</a></li>
+          </ul></dd>
+<dt><a name="TransmissionTarget" href="#TransmissionTarget"><span>TransmissionTarget:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="transmission: object TransmissionTarget" href="gltf/backends/opengl/transmission.html#TransmissionTarget">transmission: object TransmissionTarget</a></li>
+          </ul></dd>
+<dt><a name="transmissionTexCoord" href="#transmissionTexCoord"><span>transmissionTexCoord:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var transmissionTexCoord" href="gltf/backends/shaders.html#transmissionTexCoord">shaders: var transmissionTexCoord</a></li>
+          </ul></dd>
+<dt><a name="transmissionTexture" href="#transmissionTexture"><span>transmissionTexture:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var transmissionTexture" href="gltf/backends/shaders.html#transmissionTexture">shaders: var transmissionTexture</a></li>
+          </ul></dd>
+<dt><a name="TransmissionTextureSlot" href="#TransmissionTextureSlot"><span>TransmissionTextureSlot:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="common: MaterialTextureSlot.TransmissionTextureSlot" href="gltf/common.html#TransmissionTextureSlot">common: MaterialTextureSlot.TransmissionTextureSlot</a></li>
+          </ul></dd>
+<dt><a name="transmissionUvOffset" href="#transmissionUvOffset"><span>transmissionUvOffset:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var transmissionUvOffset" href="gltf/backends/shaders.html#transmissionUvOffset">shaders: var transmissionUvOffset</a></li>
+          </ul></dd>
+<dt><a name="transmissionUvRotation" href="#transmissionUvRotation"><span>transmissionUvRotation:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var transmissionUvRotation" href="gltf/backends/shaders.html#transmissionUvRotation">shaders: var transmissionUvRotation</a></li>
+          </ul></dd>
+<dt><a name="transmissionUvScale" href="#transmissionUvScale"><span>transmissionUvScale:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var transmissionUvScale" href="gltf/backends/shaders.html#transmissionUvScale">shaders: var transmissionUvScale</a></li>
           </ul></dd>
 <dt><a name="TriangleFanMode" href="#TriangleFanMode"><span>TriangleFanMode:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -1480,6 +2420,18 @@
 <dt><a name="Uint8Type" href="#Uint8Type"><span>Uint8Type:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="types: DracoDataType.Uint8Type" href="gltf/draco/types.html#Uint8Type">types: DracoDataType.Uint8Type</a></li>
+          </ul></dd>
+<dt><a name="UnknownWebpChunk" href="#UnknownWebpChunk"><span>UnknownWebpChunk:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="straight_webp: WebpChunkKind.UnknownWebpChunk" href="gltf/straight_webp.html#UnknownWebpChunk">straight_webp: WebpChunkKind.UnknownWebpChunk</a></li>
+          </ul></dd>
+<dt><a name="UnknownWebpCompression" href="#UnknownWebpCompression"><span>UnknownWebpCompression:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="straight_webp: WebpCompression.UnknownWebpCompression" href="gltf/straight_webp.html#UnknownWebpCompression">straight_webp: WebpCompression.UnknownWebpCompression</a></li>
+          </ul></dd>
+<dt><a name="unlitMaterial" href="#unlitMaterial"><span>unlitMaterial:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var unlitMaterial" href="gltf/backends/shaders.html#unlitMaterial">shaders: var unlitMaterial</a></li>
           </ul></dd>
 <dt><a name="UnsignedByteComponent" href="#UnsignedByteComponent"><span>UnsignedByteComponent:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -1593,9 +2545,89 @@
 <li><a class="reference external"
           data-doc-search-tag="ktx2: const VkFormatR32Sfloat" href="gltf/ktx2.html#VkFormatR32Sfloat">ktx2: const VkFormatR32Sfloat</a></li>
           </ul></dd>
+<dt><a name="volumeScale" href="#volumeScale"><span>volumeScale:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="shaders: var volumeScale" href="gltf/backends/shaders.html#volumeScale">shaders: var volumeScale</a></li>
+          </ul></dd>
+<dt><a name="Vp8Chunk" href="#Vp8Chunk"><span>Vp8Chunk:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="straight_webp: WebpChunkKind.Vp8Chunk" href="gltf/straight_webp.html#Vp8Chunk">straight_webp: WebpChunkKind.Vp8Chunk</a></li>
+          </ul></dd>
+<dt><a name="Vp8LChunk" href="#Vp8LChunk"><span>Vp8LChunk:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="straight_webp: WebpChunkKind.Vp8LChunk" href="gltf/straight_webp.html#Vp8LChunk">straight_webp: WebpChunkKind.Vp8LChunk</a></li>
+          </ul></dd>
+<dt><a name="Vp8XChunk" href="#Vp8XChunk"><span>Vp8XChunk:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="straight_webp: WebpChunkKind.Vp8XChunk" href="gltf/straight_webp.html#Vp8XChunk">straight_webp: WebpChunkKind.Vp8XChunk</a></li>
+          </ul></dd>
 <dt><a name="walkNodes" href="#walkNodes"><span>walkNodes:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="models: proc walkNodes(node: Node): seq[Node]" href="gltf/models.html#walkNodes%2CNode">models: proc walkNodes(node: Node): seq[Node]</a></li>
+          </ul></dd>
+<dt><a name="WebpAlphaInfo" href="#WebpAlphaInfo"><span>WebpAlphaInfo:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="straight_webp: object WebpAlphaInfo" href="gltf/straight_webp.html#WebpAlphaInfo">straight_webp: object WebpAlphaInfo</a></li>
+          </ul></dd>
+<dt><a name="WebpAlphaSignature" href="#WebpAlphaSignature"><span>WebpAlphaSignature:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="straight_webp: const WebpAlphaSignature" href="gltf/straight_webp.html#WebpAlphaSignature">straight_webp: const WebpAlphaSignature</a></li>
+          </ul></dd>
+<dt><a name="WebpAnimFrameSignature" href="#WebpAnimFrameSignature"><span>WebpAnimFrameSignature:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="straight_webp: const WebpAnimFrameSignature" href="gltf/straight_webp.html#WebpAnimFrameSignature">straight_webp: const WebpAnimFrameSignature</a></li>
+          </ul></dd>
+<dt><a name="WebpAnimSignature" href="#WebpAnimSignature"><span>WebpAnimSignature:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="straight_webp: const WebpAnimSignature" href="gltf/straight_webp.html#WebpAnimSignature">straight_webp: const WebpAnimSignature</a></li>
+          </ul></dd>
+<dt><a name="WebpChunkInfo" href="#WebpChunkInfo"><span>WebpChunkInfo:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="straight_webp: object WebpChunkInfo" href="gltf/straight_webp.html#WebpChunkInfo">straight_webp: object WebpChunkInfo</a></li>
+          </ul></dd>
+<dt><a name="WebpChunkKind" href="#WebpChunkKind"><span>WebpChunkKind:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="straight_webp: enum WebpChunkKind" href="gltf/straight_webp.html#WebpChunkKind">straight_webp: enum WebpChunkKind</a></li>
+          </ul></dd>
+<dt><a name="WebpCompression" href="#WebpCompression"><span>WebpCompression:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="straight_webp: enum WebpCompression" href="gltf/straight_webp.html#WebpCompression">straight_webp: enum WebpCompression</a></li>
+          </ul></dd>
+<dt><a name="WebpExifSignature" href="#WebpExifSignature"><span>WebpExifSignature:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="straight_webp: const WebpExifSignature" href="gltf/straight_webp.html#WebpExifSignature">straight_webp: const WebpExifSignature</a></li>
+          </ul></dd>
+<dt><a name="WebpIccpSignature" href="#WebpIccpSignature"><span>WebpIccpSignature:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="straight_webp: const WebpIccpSignature" href="gltf/straight_webp.html#WebpIccpSignature">straight_webp: const WebpIccpSignature</a></li>
+          </ul></dd>
+<dt><a name="WebpInfo" href="#WebpInfo"><span>WebpInfo:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="straight_webp: type WebpInfo" href="gltf/straight_webp.html#WebpInfo">straight_webp: type WebpInfo</a></li>
+          </ul></dd>
+<dt><a name="WebpRiffSignature" href="#WebpRiffSignature"><span>WebpRiffSignature:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="straight_webp: const WebpRiffSignature" href="gltf/straight_webp.html#WebpRiffSignature">straight_webp: const WebpRiffSignature</a></li>
+          </ul></dd>
+<dt><a name="WebpSignature" href="#WebpSignature"><span>WebpSignature:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="straight_webp: const WebpSignature" href="gltf/straight_webp.html#WebpSignature">straight_webp: const WebpSignature</a></li>
+          </ul></dd>
+<dt><a name="WebpVp8LSignature" href="#WebpVp8LSignature"><span>WebpVp8LSignature:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="straight_webp: const WebpVp8LSignature" href="gltf/straight_webp.html#WebpVp8LSignature">straight_webp: const WebpVp8LSignature</a></li>
+          </ul></dd>
+<dt><a name="WebpVp8Signature" href="#WebpVp8Signature"><span>WebpVp8Signature:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="straight_webp: const WebpVp8Signature" href="gltf/straight_webp.html#WebpVp8Signature">straight_webp: const WebpVp8Signature</a></li>
+          </ul></dd>
+<dt><a name="WebpVp8XSignature" href="#WebpVp8XSignature"><span>WebpVp8XSignature:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="straight_webp: const WebpVp8XSignature" href="gltf/straight_webp.html#WebpVp8XSignature">straight_webp: const WebpVp8XSignature</a></li>
+          </ul></dd>
+<dt><a name="WebpXmpSignature" href="#WebpXmpSignature"><span>WebpXmpSignature:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="straight_webp: const WebpXmpSignature" href="gltf/straight_webp.html#WebpXmpSignature">straight_webp: const WebpXmpSignature</a></li>
           </ul></dd>
 <dt><a name="writeGLB" href="#writeGLB"><span>writeGLB:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -1610,8 +2642,8 @@
 <dt><a name="writeKtx2ImageFile" href="#writeKtx2ImageFile"><span>writeKtx2ImageFile:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="ktx2: proc writeKtx2ImageFile(file: string; image: Image; vkFormat: uint32;
-                   generateMipmaps = true)" href="gltf/ktx2.html#writeKtx2ImageFile%2Cstring%2CImage%2Cuint32">ktx2: proc writeKtx2ImageFile(file: string; image: Image; vkFormat: uint32;
-                   generateMipmaps = true)</a></li>
+                   generateMipmaps = true; straightAlpha = false)" href="gltf/ktx2.html#writeKtx2ImageFile%2Cstring%2CImage%2Cuint32">ktx2: proc writeKtx2ImageFile(file: string; image: Image; vkFormat: uint32;
+                   generateMipmaps = true; straightAlpha = false)</a></li>
           </ul></dd>
 <dt><a name="writeKtx2R32SfloatFile" href="#writeKtx2R32SfloatFile"><span>writeKtx2R32SfloatFile:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -1627,11 +2659,15 @@
                      vkFormat: uint32 = 0'u32; sourceFormat: GLenum = 0.GLenum;
                      sourceType: GLenum = 0.GLenum; levelCount = -1)</a></li>
           </ul></dd>
+<dt><a name="XmpChunk" href="#XmpChunk"><span>XmpChunk:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="straight_webp: WebpChunkKind.XmpChunk" href="gltf/straight_webp.html#XmpChunk">straight_webp: WebpChunkKind.XmpChunk</a></li>
+          </ul></dd>
 </dl>
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-09-11 23:38:33 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-09-18 02:45:30 UTC</small>
       </div>
     </div>
   </div>

@@ -1,35 +1,35 @@
 nimTitle	models	gltf/models.html	module gltf/models		0
 nim	trs	gltf/models.html#trs,Node	proc trs(node: Node): Mat4		6
 nim	shallowCopy	gltf/models.html#shallowCopy,Node	proc shallowCopy(node: Node): Node		8
-nim	defaultTextureSampler	gltf/models.html#defaultTextureSampler	proc defaultTextureSampler(): TextureSampler		32
-nim	`$`	gltf/models.html#$,TextureSampler	proc `$`(sampler: TextureSampler): string		71
-nim	primitiveModeName	gltf/models.html#primitiveModeName,PrimitiveMode	proc primitiveModeName(mode: PrimitiveMode): string		77
-nim	updateTransforms	gltf/models.html#updateTransforms,Node	proc updateTransforms(node: Node; transform = mat4(); applyTrs = true)		95
-nim	hasGeometry	gltf/models.html#hasGeometry,Primitive	proc hasGeometry(primitive: Primitive): bool		111
-nim	hasGeometry	gltf/models.html#hasGeometry,Mesh	proc hasGeometry(mesh: Mesh): bool		114
-nim	hasGeometry	gltf/models.html#hasGeometry,Node	proc hasGeometry(node: Node): bool		122
-nim	markGeometryDirty	gltf/models.html#markGeometryDirty,Primitive	proc markGeometryDirty(primitive: Primitive)		132
-nim	markMaterialDirty	gltf/models.html#markMaterialDirty,Material	proc markMaterialDirty(material: Material)		137
-nim	markSceneDirty	gltf/models.html#markSceneDirty,GltfFile	proc markSceneDirty(file: GltfFile)		142
-nim	computeSmoothNormals	gltf/models.html#computeSmoothNormals,Primitive	proc computeSmoothNormals(prim: Primitive)		147
-nim	ensureNormals	gltf/models.html#ensureNormals,Node	proc ensureNormals(node: Node)		186
-nim	linearMat3	gltf/models.html#linearMat3,Mat4	proc linearMat3(transform: Mat4): Mat3		202
-nim	normalMatrix	gltf/models.html#normalMatrix,Mat4	proc normalMatrix(transform: Mat4): Mat3		210
-nim	findTransform	gltf/models.html#findTransform,Node,Node,Mat4	proc findTransform(node, target: Node; transform = mat4(); world: var Mat4): bool		214
-nim	skinMatricesInto	gltf/models.html#skinMatricesInto,Node,Node,seq[Mat4]	proc skinMatricesInto(root, node: Node; matrices: var seq[Mat4])		231
-nim	skinMatrices	gltf/models.html#skinMatrices,Node,Node	proc skinMatrices(root, node: Node): seq[Mat4]		246
-nim	dumpTree	gltf/models.html#dumpTree,Node,string	proc dumpTree(node: Node; indent: string = "")		250
-nim	walkNodes	gltf/models.html#walkNodes,Node	proc walkNodes(node: Node): seq[Node]		325
-nim	center	gltf/models.html#center,AABounds	proc center(a: AABounds): Vec3		333
-nim	radius	gltf/models.html#radius,AABounds	proc radius(a: AABounds): float		337
-nim	merge	gltf/models.html#merge,AABounds,AABounds	proc merge(a, b: AABounds): AABounds		341
-nim	merge	gltf/models.html#merge,BoundingSphere,BoundingSphere	proc merge(a, b: BoundingSphere): BoundingSphere		346
-nim	getAABoundsNode	gltf/models.html#getAABoundsNode,Node	proc getAABoundsNode(node: Node; trs = mat4()): AABounds		356
-nim	getAABounds	gltf/models.html#getAABounds,Node	proc getAABounds(node: Node; trs = mat4()): AABounds		368
-nim	computeBounds	gltf/models.html#computeBounds,Node	proc computeBounds(node: Node; trs = mat4()): Bounds		375
-nim	getBoundingSphereNode	gltf/models.html#getBoundingSphereNode,Node	proc getBoundingSphereNode(node: Node; trs = mat4()): BoundingSphere		394
-nim	getBoundingSphere	gltf/models.html#getBoundingSphere,Node	proc getBoundingSphere(node: Node; trs = mat4()): BoundingSphere		413
-nim	triangles	gltf/models.html#triangles.i,Node	iterator triangles(node: Node): (Vec3, Vec3, Vec3)		420
-nim	`[]`	gltf/models.html#[],Node,string	proc `[]`(node: Node; name: string): Node		437
-nimgrp	hasgeometry	gltf/models.html#hasGeometry-procs-all	proc		111
-nimgrp	merge	gltf/models.html#merge-procs-all	proc		341
+nim	defaultTextureSampler	gltf/models.html#defaultTextureSampler	proc defaultTextureSampler(): TextureSampler		33
+nim	`$`	gltf/models.html#$,TextureSampler	proc `$`(sampler: TextureSampler): string		72
+nim	primitiveModeName	gltf/models.html#primitiveModeName,PrimitiveMode	proc primitiveModeName(mode: PrimitiveMode): string		78
+nim	updateTransforms	gltf/models.html#updateTransforms,Node	proc updateTransforms(node: Node; transform = mat4(); applyTrs = true)		96
+nim	hasGeometry	gltf/models.html#hasGeometry,Primitive	proc hasGeometry(primitive: Primitive): bool		112
+nim	hasGeometry	gltf/models.html#hasGeometry,Mesh	proc hasGeometry(mesh: Mesh): bool		115
+nim	hasGeometry	gltf/models.html#hasGeometry,Node	proc hasGeometry(node: Node): bool		123
+nim	markGeometryDirty	gltf/models.html#markGeometryDirty,Primitive	proc markGeometryDirty(primitive: Primitive)		133
+nim	markMaterialDirty	gltf/models.html#markMaterialDirty,Material	proc markMaterialDirty(material: Material)		138
+nim	markSceneDirty	gltf/models.html#markSceneDirty,GltfFile	proc markSceneDirty(file: GltfFile)		143
+nim	computeSmoothNormals	gltf/models.html#computeSmoothNormals,Primitive	proc computeSmoothNormals(prim: Primitive)		148
+nim	ensureNormals	gltf/models.html#ensureNormals,Node	proc ensureNormals(node: Node)		187
+nim	linearMat3	gltf/models.html#linearMat3,Mat4	proc linearMat3(transform: Mat4): Mat3		203
+nim	normalMatrix	gltf/models.html#normalMatrix,Mat4	proc normalMatrix(transform: Mat4): Mat3		211
+nim	findTransform	gltf/models.html#findTransform,Node,Node,Mat4	proc findTransform(node, target: Node; transform = mat4(); world: var Mat4): bool		215
+nim	skinMatricesInto	gltf/models.html#skinMatricesInto,Node,Node,seq[Mat4]	proc skinMatricesInto(root, node: Node; matrices: var seq[Mat4])		232
+nim	skinMatrices	gltf/models.html#skinMatrices,Node,Node	proc skinMatrices(root, node: Node): seq[Mat4]		247
+nim	dumpTree	gltf/models.html#dumpTree,Node,string	proc dumpTree(node: Node; indent: string = "")		251
+nim	walkNodes	gltf/models.html#walkNodes,Node	proc walkNodes(node: Node): seq[Node]		326
+nim	center	gltf/models.html#center,AABounds	proc center(a: AABounds): Vec3		334
+nim	radius	gltf/models.html#radius,AABounds	proc radius(a: AABounds): float		338
+nim	merge	gltf/models.html#merge,AABounds,AABounds	proc merge(a, b: AABounds): AABounds		342
+nim	merge	gltf/models.html#merge,BoundingSphere,BoundingSphere	proc merge(a, b: BoundingSphere): BoundingSphere		347
+nim	getAABoundsNode	gltf/models.html#getAABoundsNode,Node	proc getAABoundsNode(node: Node; trs = mat4()): AABounds		357
+nim	getAABounds	gltf/models.html#getAABounds,Node	proc getAABounds(node: Node; trs = mat4()): AABounds		369
+nim	computeBounds	gltf/models.html#computeBounds,Node	proc computeBounds(node: Node; trs = mat4()): Bounds		376
+nim	getBoundingSphereNode	gltf/models.html#getBoundingSphereNode,Node	proc getBoundingSphereNode(node: Node; trs = mat4()): BoundingSphere		395
+nim	getBoundingSphere	gltf/models.html#getBoundingSphere,Node	proc getBoundingSphere(node: Node; trs = mat4()): BoundingSphere		414
+nim	triangles	gltf/models.html#triangles.i,Node	iterator triangles(node: Node): (Vec3, Vec3, Vec3)		421
+nim	`[]`	gltf/models.html#[],Node,string	proc `[]`(node: Node; name: string): Node		438
+nimgrp	hasgeometry	gltf/models.html#hasGeometry-procs-all	proc		112
+nimgrp	merge	gltf/models.html#merge-procs-all	proc		342

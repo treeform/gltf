@@ -87,10 +87,44 @@
   occlusionTexture*: MaterialTexture
   emissiveTexture*: MaterialTexture
   emissiveFactor*: Color
+  hasEmissiveStrength*: bool
+  emissiveStrength*: float32
   alphaMode*: string
+  unlit*: bool
   alphaCutoff*: float32
   doubleSided*: bool
-  transmissionFactor*: float32">MaterialInfo</a></li>
+  transmissionFactor*: float32
+  hasDiffuseTransmission*: bool
+  diffuseTransmissionFactor*: float32
+  diffuseTransmissionColorFactor*: Vec3
+  diffuseTransmissionTexture*, diffuseTransmissionColorTexture*: MaterialTexture
+  hasTransmission*, hasVolume*, hasIor*: bool
+  transmissionTexture*, thicknessTexture*: MaterialTexture
+  thicknessFactor*, attenuationDistance*, ior*: float32
+  attenuationColor*: Vec3
+  hasSpecularGlossiness*: bool
+  diffuseFactor*: Color
+  specularGlossinessFactor*: Vec3
+  glossinessFactor*: float32
+  diffuseTexture*, specularGlossinessTexture*: MaterialTexture
+  hasSpecular*: bool
+  specularFactor*: float32
+  specularColorFactor*: Vec3
+  specularTexture*, specularColorTexture*: MaterialTexture
+  hasSheen*: bool
+  sheenColorTexture*, sheenRoughnessTexture*: MaterialTexture
+  sheenColorFactor*: Vec3
+  sheenRoughnessFactor*: float32
+  hasAnisotropy*: bool
+  anisotropyStrength*, anisotropyRotation*: float32
+  anisotropyTexture*: MaterialTexture
+  hasIridescence*: bool
+  iridescenceFactor*, iridescenceIor*: float32
+  iridescenceThicknessMinimum*, iridescenceThicknessMaximum*: float32
+  iridescenceTexture*, iridescenceThicknessTexture*: MaterialTexture
+  hasClearcoat*: bool
+  clearcoatFactor*, clearcoatRoughnessFactor*: float32
+  clearcoatTexture*, clearcoatRoughnessTexture*, clearcoatNormalTexture*: MaterialTexture">MaterialInfo</a></li>
 <li><a class="reference" href="#MaterialTexture" title="MaterialTexture = object
   index*: int
   texCoord*: int
@@ -215,8 +249,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/internal.nim#L83" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/internal.nim#L83" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/internal.nim#L117" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/internal.nim#L117" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -228,8 +262,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/internal.nim#L87" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/internal.nim#L87" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/internal.nim#L121" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/internal.nim#L121" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -241,10 +275,44 @@
   <span class="Identifier">occlusionTexture</span><span class="Operator">*</span><span class="Other">:</span> <a href="#MaterialTexture"><span class="Identifier">MaterialTexture</span></a>
   <span class="Identifier">emissiveTexture</span><span class="Operator">*</span><span class="Other">:</span> <a href="#MaterialTexture"><span class="Identifier">MaterialTexture</span></a>
   <span class="Identifier">emissiveFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Color</span>
+  <span class="Identifier">hasEmissiveStrength</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">emissiveStrength</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
   <span class="Identifier">alphaMode</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
+  <span class="Identifier">unlit</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
   <span class="Identifier">alphaCutoff</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
   <span class="Identifier">doubleSided</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
-  <span class="Identifier">transmissionFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span></pre></dt>
+  <span class="Identifier">transmissionFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">hasDiffuseTransmission</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">diffuseTransmissionFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">diffuseTransmissionColorFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec3</span>
+  <span class="Identifier">diffuseTransmissionTexture</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">diffuseTransmissionColorTexture</span><span class="Operator">*</span><span class="Other">:</span> <a href="#MaterialTexture"><span class="Identifier">MaterialTexture</span></a>
+  <span class="Identifier">hasTransmission</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">hasVolume</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">hasIor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">transmissionTexture</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">thicknessTexture</span><span class="Operator">*</span><span class="Other">:</span> <a href="#MaterialTexture"><span class="Identifier">MaterialTexture</span></a>
+  <span class="Identifier">thicknessFactor</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">attenuationDistance</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">ior</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">attenuationColor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec3</span>
+  <span class="Identifier">hasSpecularGlossiness</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">diffuseFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Color</span>
+  <span class="Identifier">specularGlossinessFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec3</span>
+  <span class="Identifier">glossinessFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">diffuseTexture</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">specularGlossinessTexture</span><span class="Operator">*</span><span class="Other">:</span> <a href="#MaterialTexture"><span class="Identifier">MaterialTexture</span></a>
+  <span class="Identifier">hasSpecular</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">specularFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">specularColorFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec3</span>
+  <span class="Identifier">specularTexture</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">specularColorTexture</span><span class="Operator">*</span><span class="Other">:</span> <a href="#MaterialTexture"><span class="Identifier">MaterialTexture</span></a>
+  <span class="Identifier">hasSheen</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">sheenColorTexture</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">sheenRoughnessTexture</span><span class="Operator">*</span><span class="Other">:</span> <a href="#MaterialTexture"><span class="Identifier">MaterialTexture</span></a>
+  <span class="Identifier">sheenColorFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec3</span>
+  <span class="Identifier">sheenRoughnessFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">hasAnisotropy</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">anisotropyStrength</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">anisotropyRotation</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">anisotropyTexture</span><span class="Operator">*</span><span class="Other">:</span> <a href="#MaterialTexture"><span class="Identifier">MaterialTexture</span></a>
+  <span class="Identifier">hasIridescence</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">iridescenceFactor</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">iridescenceIor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">iridescenceThicknessMinimum</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">iridescenceThicknessMaximum</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">iridescenceTexture</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">iridescenceThicknessTexture</span><span class="Operator">*</span><span class="Other">:</span> <a href="#MaterialTexture"><span class="Identifier">MaterialTexture</span></a>
+  <span class="Identifier">hasClearcoat</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">clearcoatFactor</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">clearcoatRoughnessFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">clearcoatTexture</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">clearcoatRoughnessTexture</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">clearcoatNormalTexture</span><span class="Operator">*</span><span class="Other">:</span> <a href="#MaterialTexture"><span class="Identifier">MaterialTexture</span></a></pre></dt>
   <dd>
     
     
@@ -279,8 +347,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/internal.nim#L73" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/internal.nim#L73" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/internal.nim#L107" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/internal.nim#L107" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -290,8 +358,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/internal.nim#L92" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/internal.nim#L92" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/internal.nim#L126" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/internal.nim#L126" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -317,8 +385,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/internal.nim#L79" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/internal.nim#L79" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/internal.nim#L113" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/internal.nim#L113" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -332,8 +400,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/internal.nim#L95" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/internal.nim#L95" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/internal.nim#L129" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/internal.nim#L129" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -359,8 +427,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/internal.nim#L102" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/internal.nim#L102" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/internal.nim#L136" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/internal.nim#L136" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -425,7 +493,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-09-11 23:38:32 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-09-18 02:45:29 UTC</small>
       </div>
     </div>
   </div>

@@ -1,0 +1,7 @@
+nimTitle	transmission	gltf/backends/opengl/transmission.html	module gltf/backends/opengl/transmission		0
+nim	TransmissionSize	gltf/backends/opengl/transmission.html#TransmissionSize	const TransmissionSize		5
+nim	TransmissionTarget	gltf/backends/opengl/transmission.html#TransmissionTarget	object TransmissionTarget		7
+nim	restore	gltf/backends/opengl/transmission.html#restore,TransmissionTarget	proc restore(target: var TransmissionTarget)		14
+nim	destroy	gltf/backends/opengl/transmission.html#destroy,TransmissionTarget	proc destroy(target: var TransmissionTarget)		22
+nim	beginBackground	gltf/backends/opengl/transmission.html#beginBackground,TransmissionTarget,Color	proc beginBackground(target: var TransmissionTarget; background: Color)		32
+nim	resolveBackground	gltf/backends/opengl/transmission.html#resolveBackground,TransmissionTarget	proc resolveBackground(target: var TransmissionTarget)		84

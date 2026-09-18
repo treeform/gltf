@@ -17,10 +17,10 @@ nim	Sampler	gltf/internal.html#Sampler	object Sampler		40
 nim	MaterialTexture	gltf/internal.html#MaterialTexture	object MaterialTexture		45
 nim	PbrMetallicRoughness	gltf/internal.html#PbrMetallicRoughness	object PbrMetallicRoughness		54
 nim	MaterialInfo	gltf/internal.html#MaterialInfo	object MaterialInfo		61
-nim	MeshInfo	gltf/internal.html#MeshInfo	object MeshInfo		73
-nim	PrimitiveAttributes	gltf/internal.html#PrimitiveAttributes	object PrimitiveAttributes		79
-nim	DracoAttributeInfo	gltf/internal.html#DracoAttributeInfo	object DracoAttributeInfo		83
-nim	DracoInfo	gltf/internal.html#DracoInfo	object DracoInfo		87
-nim	MorphTargetInfo	gltf/internal.html#MorphTargetInfo	object MorphTargetInfo		92
-nim	PrimitiveInfo	gltf/internal.html#PrimitiveInfo	object PrimitiveInfo		95
-nim	SkinInfo	gltf/internal.html#SkinInfo	object SkinInfo		102
+nim	MeshInfo	gltf/internal.html#MeshInfo	object MeshInfo		107
+nim	PrimitiveAttributes	gltf/internal.html#PrimitiveAttributes	object PrimitiveAttributes		113
+nim	DracoAttributeInfo	gltf/internal.html#DracoAttributeInfo	object DracoAttributeInfo		117
+nim	DracoInfo	gltf/internal.html#DracoInfo	object DracoInfo		121
+nim	MorphTargetInfo	gltf/internal.html#MorphTargetInfo	object MorphTargetInfo		126
+nim	PrimitiveInfo	gltf/internal.html#PrimitiveInfo	object PrimitiveInfo		129
+nim	SkinInfo	gltf/internal.html#SkinInfo	object SkinInfo		136

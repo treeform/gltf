@@ -1,4 +1,4 @@
 nimTitle	animations	gltf/animations.html	module gltf/animations		0
-nim	resetToBase	gltf/animations.html#resetToBase,Node	proc resetToBase(node: Node)		7
-nim	applyClipAt	gltf/animations.html#applyClipAt,AnimationClip,float32	proc applyClipAt(clip: AnimationClip; time: float32)		266
-nim	updateAnimation	gltf/animations.html#updateAnimation,Node,float32	proc updateAnimation(node: Node; dt: float32)		332
+nim	resetToBase	gltf/animations.html#resetToBase,Node	proc resetToBase(node: Node)		31
+nim	applyClipAt	gltf/animations.html#applyClipAt,AnimationClip,float32	proc applyClipAt(clip: AnimationClip; time: float32)		303
+nim	updateAnimation	gltf/animations.html#updateAnimation,Node,float32	proc updateAnimation(node: Node; dt: float32)		387

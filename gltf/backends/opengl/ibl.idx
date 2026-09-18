@@ -1,0 +1,10 @@
+nimTitle	ibl	gltf/backends/opengl/ibl.html	module gltf/backends/opengl/ibl		0
+nim	IblEnvironment	gltf/backends/opengl/ibl.html#IblEnvironment	object IblEnvironment		6
+nim	HdrTarget	gltf/backends/opengl/ibl.html#HdrTarget	object HdrTarget		11
+nim	maxIblAnisotropy	gltf/backends/opengl/ibl.html#maxIblAnisotropy	proc maxIblAnisotropy(): float32		18
+nim	destroy	gltf/backends/opengl/ibl.html#destroy,IblEnvironment	proc destroy(environment: var IblEnvironment)		28
+nim	loadIblEnvironment	gltf/backends/opengl/ibl.html#loadIblEnvironment,string	proc loadIblEnvironment(directory: string): IblEnvironment		35
+nim	destroy	gltf/backends/opengl/ibl.html#destroy,HdrTarget	proc destroy(target: var HdrTarget)		128
+nim	beginHdr	gltf/backends/opengl/ibl.html#beginHdr,HdrTarget,IVec2,Color	proc beginHdr(target: var HdrTarget; size: IVec2; background: Color)		135
+nim	endHdr	gltf/backends/opengl/ibl.html#endHdr,HdrTarget,float32	proc endHdr(target: var HdrTarget; exposure: float32)		186
+nimgrp	destroy	gltf/backends/opengl/ibl.html#destroy-procs-all	proc		28

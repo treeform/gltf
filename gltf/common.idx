@@ -46,29 +46,67 @@ nim	MorphTarget	gltf/common.html#MorphTarget	type MorphTarget		88
 nim	Primitive	gltf/common.html#Primitive	type Primitive		93
 nim	Mesh	gltf/common.html#Mesh	type Mesh		113
 nim	Node	gltf/common.html#Node	type Node		118
-nim	Scene	gltf/common.html#Scene	type Scene		142
-nim	Skin	gltf/common.html#Skin	type Skin		146
-nim	AnimTranslation	gltf/common.html#AnimTranslation	AnimPath.AnimTranslation		152
-nim	AnimRotation	gltf/common.html#AnimRotation	AnimPath.AnimRotation		152
-nim	AnimScale	gltf/common.html#AnimScale	AnimPath.AnimScale		152
-nim	AnimVisibility	gltf/common.html#AnimVisibility	AnimPath.AnimVisibility		152
-nim	AnimWeights	gltf/common.html#AnimWeights	AnimPath.AnimWeights		152
-nim	AnimPath	gltf/common.html#AnimPath	enum AnimPath		152
-nim	aiStep	gltf/common.html#aiStep	AnimInterpolation.aiStep		155
-nim	aiLinear	gltf/common.html#aiLinear	AnimInterpolation.aiLinear		155
-nim	aiCubicSpline	gltf/common.html#aiCubicSpline	AnimInterpolation.aiCubicSpline		155
-nim	AnimInterpolation	gltf/common.html#AnimInterpolation	enum AnimInterpolation		155
-nim	AnimationChannel	gltf/common.html#AnimationChannel	type AnimationChannel		158
-nim	AnimationClip	gltf/common.html#AnimationClip	type AnimationClip		176
-nim	Material	gltf/common.html#Material	type Material		181
-nim	AABounds	gltf/common.html#AABounds	object AABounds		232
-nim	Bounds	gltf/common.html#Bounds	object Bounds		235
-nim	BoundingSphere	gltf/common.html#BoundingSphere	object BoundingSphere		240
-nim	GltfFile	gltf/common.html#GltfFile	type GltfFile		244
-nim	dvLit	gltf/common.html#dvLit	DebugView.dvLit		255
-nim	dvUnlit	gltf/common.html#dvUnlit	DebugView.dvUnlit		255
-nim	dvNormals	gltf/common.html#dvNormals	DebugView.dvNormals		255
-nim	dvAoBake	gltf/common.html#dvAoBake	DebugView.dvAoBake		255
-nim	dvMetallic	gltf/common.html#dvMetallic	DebugView.dvMetallic		255
-nim	dvSpecular	gltf/common.html#dvSpecular	DebugView.dvSpecular		255
-nim	DebugView	gltf/common.html#DebugView	enum DebugView		255
+nim	DirectionalLightKind	gltf/common.html#DirectionalLightKind	PunctualLightKind.DirectionalLightKind		143
+nim	PointLightKind	gltf/common.html#PointLightKind	PunctualLightKind.PointLightKind		143
+nim	SpotLightKind	gltf/common.html#SpotLightKind	PunctualLightKind.SpotLightKind		143
+nim	PunctualLightKind	gltf/common.html#PunctualLightKind	enum PunctualLightKind		143
+nim	PunctualLight	gltf/common.html#PunctualLight	type PunctualLight		146
+nim	DirectionalLight	gltf/common.html#DirectionalLight	type DirectionalLight		155
+nim	Scene	gltf/common.html#Scene	type Scene		157
+nim	Skin	gltf/common.html#Skin	type Skin		161
+nim	BaseColorTextureSlot	gltf/common.html#BaseColorTextureSlot	MaterialTextureSlot.BaseColorTextureSlot		167
+nim	MetallicRoughnessTextureSlot	gltf/common.html#MetallicRoughnessTextureSlot	MaterialTextureSlot.MetallicRoughnessTextureSlot		167
+nim	NormalTextureSlot	gltf/common.html#NormalTextureSlot	MaterialTextureSlot.NormalTextureSlot		167
+nim	OcclusionTextureSlot	gltf/common.html#OcclusionTextureSlot	MaterialTextureSlot.OcclusionTextureSlot		167
+nim	EmissiveTextureSlot	gltf/common.html#EmissiveTextureSlot	MaterialTextureSlot.EmissiveTextureSlot		167
+nim	TransmissionTextureSlot	gltf/common.html#TransmissionTextureSlot	MaterialTextureSlot.TransmissionTextureSlot		167
+nim	ThicknessTextureSlot	gltf/common.html#ThicknessTextureSlot	MaterialTextureSlot.ThicknessTextureSlot		167
+nim	DiffuseTransmissionTextureSlot	gltf/common.html#DiffuseTransmissionTextureSlot	MaterialTextureSlot.DiffuseTransmissionTextureSlot		167
+nim	DiffuseTransmissionColorTextureSlot	gltf/common.html#DiffuseTransmissionColorTextureSlot	MaterialTextureSlot.DiffuseTransmissionColorTextureSlot		167
+nim	AnisotropyTextureSlot	gltf/common.html#AnisotropyTextureSlot	MaterialTextureSlot.AnisotropyTextureSlot		167
+nim	ClearcoatTextureSlot	gltf/common.html#ClearcoatTextureSlot	MaterialTextureSlot.ClearcoatTextureSlot		167
+nim	ClearcoatRoughnessTextureSlot	gltf/common.html#ClearcoatRoughnessTextureSlot	MaterialTextureSlot.ClearcoatRoughnessTextureSlot		167
+nim	ClearcoatNormalTextureSlot	gltf/common.html#ClearcoatNormalTextureSlot	MaterialTextureSlot.ClearcoatNormalTextureSlot		167
+nim	IridescenceTextureSlot	gltf/common.html#IridescenceTextureSlot	MaterialTextureSlot.IridescenceTextureSlot		167
+nim	IridescenceThicknessTextureSlot	gltf/common.html#IridescenceThicknessTextureSlot	MaterialTextureSlot.IridescenceThicknessTextureSlot		167
+nim	SpecularTextureSlot	gltf/common.html#SpecularTextureSlot	MaterialTextureSlot.SpecularTextureSlot		167
+nim	SpecularColorTextureSlot	gltf/common.html#SpecularColorTextureSlot	MaterialTextureSlot.SpecularColorTextureSlot		167
+nim	SheenColorTextureSlot	gltf/common.html#SheenColorTextureSlot	MaterialTextureSlot.SheenColorTextureSlot		167
+nim	SheenRoughnessTextureSlot	gltf/common.html#SheenRoughnessTextureSlot	MaterialTextureSlot.SheenRoughnessTextureSlot		167
+nim	DiffuseTextureSlot	gltf/common.html#DiffuseTextureSlot	MaterialTextureSlot.DiffuseTextureSlot		167
+nim	SpecularGlossinessTextureSlot	gltf/common.html#SpecularGlossinessTextureSlot	MaterialTextureSlot.SpecularGlossinessTextureSlot		167
+nim	MaterialTextureSlot	gltf/common.html#MaterialTextureSlot	enum MaterialTextureSlot		167
+nim	AnimTranslation	gltf/common.html#AnimTranslation	AnimPath.AnimTranslation		190
+nim	AnimRotation	gltf/common.html#AnimRotation	AnimPath.AnimRotation		190
+nim	AnimScale	gltf/common.html#AnimScale	AnimPath.AnimScale		190
+nim	AnimVisibility	gltf/common.html#AnimVisibility	AnimPath.AnimVisibility		190
+nim	AnimWeights	gltf/common.html#AnimWeights	AnimPath.AnimWeights		190
+nim	AnimBaseColorFactor	gltf/common.html#AnimBaseColorFactor	AnimPath.AnimBaseColorFactor		190
+nim	AnimTextureOffset	gltf/common.html#AnimTextureOffset	AnimPath.AnimTextureOffset		190
+nim	AnimTextureScale	gltf/common.html#AnimTextureScale	AnimPath.AnimTextureScale		190
+nim	AnimTextureRotation	gltf/common.html#AnimTextureRotation	AnimPath.AnimTextureRotation		190
+nim	AnimPath	gltf/common.html#AnimPath	enum AnimPath		190
+nim	aiStep	gltf/common.html#aiStep	AnimInterpolation.aiStep		194
+nim	aiLinear	gltf/common.html#aiLinear	AnimInterpolation.aiLinear		194
+nim	aiCubicSpline	gltf/common.html#aiCubicSpline	AnimInterpolation.aiCubicSpline		194
+nim	AnimInterpolation	gltf/common.html#AnimInterpolation	enum AnimInterpolation		194
+nim	AnimationChannel	gltf/common.html#AnimationChannel	type AnimationChannel		197
+nim	AnimationClip	gltf/common.html#AnimationClip	type AnimationClip		224
+nim	Material	gltf/common.html#Material	type Material		229
+nim	AABounds	gltf/common.html#AABounds	object AABounds		350
+nim	Bounds	gltf/common.html#Bounds	object Bounds		353
+nim	BoundingSphere	gltf/common.html#BoundingSphere	object BoundingSphere		358
+nim	GltfFile	gltf/common.html#GltfFile	type GltfFile		362
+nim	dvLit	gltf/common.html#dvLit	DebugView.dvLit		373
+nim	dvUnlit	gltf/common.html#dvUnlit	DebugView.dvUnlit		373
+nim	dvNormals	gltf/common.html#dvNormals	DebugView.dvNormals		373
+nim	dvAoBake	gltf/common.html#dvAoBake	DebugView.dvAoBake		373
+nim	dvMetallic	gltf/common.html#dvMetallic	DebugView.dvMetallic		373
+nim	dvSpecular	gltf/common.html#dvSpecular	DebugView.dvSpecular		373
+nim	DebugView	gltf/common.html#DebugView	enum DebugView		373
+nim	MaterialTexturePaths	gltf/common.html#MaterialTexturePaths	const MaterialTexturePaths		381
+nim	textureTransform	gltf/common.html#textureTransform,Material,MaterialTextureSlot	proc textureTransform(material: Material; slot: MaterialTextureSlot): var TextureTransform		405
+nim	emissiveRadiance	gltf/common.html#emissiveRadiance,Material	proc emissiveRadiance(material: Material): Color		430
+nim	directionalLight	gltf/common.html#directionalLight,Node	proc directionalLight(node: Node): DirectionalLight		437
+nim	directionalLight=	gltf/common.html#directionalLight=,Node,DirectionalLight	proc directionalLight=(node: Node; light: DirectionalLight)		443
+nim	legacyAlphaMode	gltf/common.html#legacyAlphaMode,Material	proc legacyAlphaMode(material: Material): AlphaMode		446

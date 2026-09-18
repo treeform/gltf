@@ -1,0 +1,4 @@
+nimTitle	texture_images	gltf/texture_images.html	module gltf/texture_images		0
+nim	decodeStraightAlphaImage	gltf/texture_images.html#decodeStraightAlphaImage,string	proc decodeStraightAlphaImage(data: string): Image		6
+nim	loadStraightAlphaImage	gltf/texture_images.html#loadStraightAlphaImage,string	proc loadStraightAlphaImage(path: string): Image		26
+nim	encodeStraightAlphaPng	gltf/texture_images.html#encodeStraightAlphaPng,Image	proc encodeStraightAlphaPng(image: Image): string		29

@@ -1,0 +1,6 @@
+nimTitle	materials	gltf/backends/materials.html	module gltf/backends/materials		0
+nim	IblSamplerNames	gltf/backends/materials.html#IblSamplerNames	const IblSamplerNames		6
+nim	IblTextureMask	gltf/backends/materials.html#IblTextureMask	type IblTextureMask		38
+nim	includes	gltf/backends/materials.html#includes,IblTextureMask,int	proc includes(mask: IblTextureMask; unit: int): bool		40
+nim	textureMask	gltf/backends/materials.html#textureMask,Material	proc textureMask(material: Material): IblTextureMask		49
+nim	specializeIbl	gltf/backends/materials.html#specializeIbl,string,IblTextureMask	proc specializeIbl(source: string; mask: IblTextureMask): string		114

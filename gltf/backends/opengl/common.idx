@@ -1,4 +1,4 @@
 nimTitle	common	gltf/backends/opengl/common.html	module gltf/backends/opengl/common		0
 nim	PrimitiveData	gltf/backends/opengl/common.html#PrimitiveData	type PrimitiveData		4
 nim	MaterialData	gltf/backends/opengl/common.html#MaterialData	type MaterialData		18
-nim	GltfFileData	gltf/backends/opengl/common.html#GltfFileData	type GltfFileData		26
+nim	GltfFileData	gltf/backends/opengl/common.html#GltfFileData	type GltfFileData		36

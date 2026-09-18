@@ -1,0 +1,2 @@
+nimTitle	tangents	gltf/tangents.html	module gltf/tangents		0
+nim	generateTangents	gltf/tangents.html#generateTangents,Primitive	proc generateTangents(primitive: Primitive)		371

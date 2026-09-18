@@ -63,10 +63,20 @@
 <li><a class="reference" href="#MaterialData" title="MaterialData = ref object
   materialVersion*: uint64
   baseColorId*: GLuint
+  baseColorSrgbId*: GLuint
   metallicRoughnessId*: GLuint
   normalId*: GLuint
   occlusionId*: GLuint
-  emissiveId*: GLuint">MaterialData</a></li>
+  emissiveId*: GLuint
+  emissiveSrgbId*: GLuint
+  transmissionId*, thicknessId*: GLuint
+  diffuseTransmissionId*, diffuseTransmissionColorId*: GLuint
+  anisotropyId*: GLuint
+  specularId*, specularColorId*: GLuint
+  diffuseId*, specularGlossinessId*: GLuint
+  sheenColorId*, sheenRoughnessId*: GLuint
+  iridescenceId*, iridescenceThicknessId*: GLuint
+  clearcoatId*, clearcoatRoughnessId*, clearcoatNormalId*: GLuint">MaterialData</a></li>
 <li><a class="reference" href="#PrimitiveData" title="PrimitiveData = ref object
   uploaded*: bool
   geometryVersion*: uint64
@@ -104,8 +114,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/common.nim#L26" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/common.nim#L26" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/backends/opengl/common.nim#L36" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/backends/opengl/common.nim#L36" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -113,10 +123,20 @@
   <dt><pre><a href="#MaterialData"><span class="Identifier">MaterialData</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
   <span class="Identifier">materialVersion</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint64</span>
   <span class="Identifier">baseColorId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
+  <span class="Identifier">baseColorSrgbId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
   <span class="Identifier">metallicRoughnessId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
   <span class="Identifier">normalId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
   <span class="Identifier">occlusionId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
-  <span class="Identifier">emissiveId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span></pre></dt>
+  <span class="Identifier">emissiveId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
+  <span class="Identifier">emissiveSrgbId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
+  <span class="Identifier">transmissionId</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">thicknessId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
+  <span class="Identifier">diffuseTransmissionId</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">diffuseTransmissionColorId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
+  <span class="Identifier">anisotropyId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
+  <span class="Identifier">specularId</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">specularColorId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
+  <span class="Identifier">diffuseId</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">specularGlossinessId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
+  <span class="Identifier">sheenColorId</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">sheenRoughnessId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
+  <span class="Identifier">iridescenceId</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">iridescenceThicknessId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span>
+  <span class="Identifier">clearcoatId</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">clearcoatRoughnessId</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">clearcoatNormalId</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">GLuint</span></pre></dt>
   <dd>
     
     
@@ -157,7 +177,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-09-11 23:38:30 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-09-18 02:45:26 UTC</small>
       </div>
     </div>
   </div>

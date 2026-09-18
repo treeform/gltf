@@ -67,12 +67,21 @@
   OpaqueAlphaMode, MaskAlphaMode, BlendAlphaMode">AlphaMode</a></li>
 <li><a class="reference" href="#AnimationChannel" title="AnimationChannel = ref object
   target*: Node
+  materialTargets*: seq[Material]
+  baseColorFactor*: Color
+  textureSlot*: MaterialTextureSlot
+  textureComponent*: int
+  baseTextureTransform*: TextureTransform
+  valuesVec2*, inTangentsVec2*, outTangentsVec2*: seq[Vec2]
   path*: AnimPath
   interpolation*: AnimInterpolation
   times*: seq[float32]
   valuesVec3*: seq[Vec3]
   inTangentsVec3*: seq[Vec3]
   outTangentsVec3*: seq[Vec3]
+  valuesVec4*: seq[Vec4]
+  inTangentsVec4*: seq[Vec4]
+  outTangentsVec4*: seq[Vec4]
   valuesQuat*: seq[Quat]
   inTangentsQuat*: seq[Quat]
   outTangentsQuat*: seq[Quat]
@@ -89,7 +98,8 @@
 <li><a class="reference" href="#AnimInterpolation" title="AnimInterpolation = enum
   aiStep, aiLinear, aiCubicSpline">AnimInterpolation</a></li>
 <li><a class="reference" href="#AnimPath" title="AnimPath = enum
-  AnimTranslation, AnimRotation, AnimScale, AnimVisibility, AnimWeights">AnimPath</a></li>
+  AnimTranslation, AnimRotation, AnimScale, AnimVisibility, AnimWeights,
+  AnimBaseColorFactor, AnimTextureOffset, AnimTextureScale, AnimTextureRotation">AnimPath</a></li>
 <li><a class="reference" href="#BoundingSphere" title="BoundingSphere = object
   center*: Vec3
   radius*: float">BoundingSphere</a></li>
@@ -110,6 +120,7 @@
   FloatComponent = 5126">ComponentType</a></li>
 <li><a class="reference" href="#DebugView" title="DebugView = enum
   dvLit, dvUnlit, dvNormals, dvAoBake, dvMetallic, dvSpecular">DebugView</a></li>
+<li><a class="reference" href="#DirectionalLight" title="DirectionalLight = PunctualLight">DirectionalLight</a></li>
 <li><a class="reference" href="#GltfError" title="GltfError = object of CatchableError">GltfError</a></li>
 <li><a class="reference" href="#GltfFile" title="GltfFile = ref object
   path*: string
@@ -160,13 +171,93 @@
   emissiveTransform*: TextureTransform
   emissiveSampler*: TextureSampler
   emissiveFactor*: Color
+  hasEmissiveStrength*: bool
+  emissiveStrength*: float32
   emissivePlaceholder*: bool
   alphaMode*: AlphaMode
+  unlit*: bool
   alphaCutoff*: float32
   doubleSided*: bool
   transmissionFactor*: float32
+  hasDiffuseTransmission*: bool
+  diffuseTransmissionFactor*: float32
+  diffuseTransmissionColorFactor*: Vec3
+  diffuseTransmission*, diffuseTransmissionColor*: Image
+  diffuseTransmissionKtx2*, diffuseTransmissionName*: string
+  diffuseTransmissionColorKtx2*, diffuseTransmissionColorName*: string
+  diffuseTransmissionTransform*, diffuseTransmissionColorTransform*: TextureTransform
+  diffuseTransmissionSampler*, diffuseTransmissionColorSampler*: TextureSampler
+  hasTransmission*: bool
+  transmission*: Image
+  transmissionKtx2*, transmissionName*: string
+  transmissionTransform*: TextureTransform
+  transmissionSampler*: TextureSampler
+  hasVolume*: bool
+  thicknessFactor*: float32
+  thickness*: Image
+  thicknessKtx2*, thicknessName*: string
+  thicknessTransform*: TextureTransform
+  thicknessSampler*: TextureSampler
+  attenuationColor*: Vec3
+  attenuationDistance*: float32 ## Zero means infinite (no absorption).
+  hasIor*: bool
+  ior*: float32              ## Default 1.5. Explicit zero with hasIor means infinite IOR.
+  hasSpecularGlossiness*: bool
+  diffuseFactor*: Color
+  specularGlossinessFactor*: Vec3
+  glossinessFactor*: float32
+  diffuse*, specularGlossiness*: Image
+  diffuseKtx2*, diffuseName*, specularGlossinessKtx2*, specularGlossinessName*: string
+  diffuseTransform*, specularGlossinessTransform*: TextureTransform
+  diffuseSampler*, specularGlossinessSampler*: TextureSampler
+  hasSpecular*: bool
+  specularFactor*: float32
+  specularColorFactor*: Vec3
+  specular*, specularColor*: Image
+  specularKtx2*, specularName*, specularColorKtx2*, specularColorName*: string
+  specularTransform*, specularColorTransform*: TextureTransform
+  specularSampler*, specularColorSampler*: TextureSampler
+  hasSheen*: bool
+  sheenColor*, sheenRoughness*: Image
+  sheenColorKtx2*, sheenColorName*, sheenRoughnessKtx2*, sheenRoughnessName*: string
+  sheenColorTransform*, sheenRoughnessTransform*: TextureTransform
+  sheenColorSampler*, sheenRoughnessSampler*: TextureSampler
+  sheenColorFactor*: Vec3
+  sheenRoughnessFactor*: float32
+  hasAnisotropy*: bool
+  anisotropyStrength*, anisotropyRotation*: float32
+  anisotropy*: Image
+  anisotropyKtx2*, anisotropyName*: string
+  anisotropyTransform*: TextureTransform
+  anisotropySampler*: TextureSampler
+  hasIridescence*: bool
+  iridescenceFactor*, iridescenceIor*: float32
+  iridescenceThicknessMinimum*, iridescenceThicknessMaximum*: float32
+  iridescence*, iridescenceThickness*: Image
+  iridescenceKtx2*, iridescenceName*, iridescenceThicknessKtx2*,
+  iridescenceThicknessName*: string
+  iridescenceTransform*, iridescenceThicknessTransform*: TextureTransform
+  iridescenceSampler*, iridescenceThicknessSampler*: TextureSampler
+  hasClearcoat*: bool
+  clearcoatFactor*, clearcoatRoughnessFactor*, clearcoatNormalScale*: float32
+  clearcoat*, clearcoatRoughness*, clearcoatNormal*: Image
+  clearcoatKtx2*, clearcoatName*, clearcoatRoughnessKtx2*,
+  clearcoatRoughnessName*: string
+  clearcoatNormalKtx2*, clearcoatNormalName*: string
+  clearcoatTransform*, clearcoatRoughnessTransform*, clearcoatNormalTransform*: TextureTransform
+  clearcoatSampler*, clearcoatRoughnessSampler*, clearcoatNormalSampler*: TextureSampler
   materialVersion*: uint64
   data*: MaterialData">Material</a></li>
+<li><a class="reference" href="#MaterialTextureSlot" title="MaterialTextureSlot = enum
+  BaseColorTextureSlot, MetallicRoughnessTextureSlot, NormalTextureSlot,
+  OcclusionTextureSlot, EmissiveTextureSlot, TransmissionTextureSlot,
+  ThicknessTextureSlot, DiffuseTransmissionTextureSlot,
+  DiffuseTransmissionColorTextureSlot, AnisotropyTextureSlot,
+  ClearcoatTextureSlot, ClearcoatRoughnessTextureSlot,
+  ClearcoatNormalTextureSlot, IridescenceTextureSlot,
+  IridescenceThicknessTextureSlot, SpecularTextureSlot,
+  SpecularColorTextureSlot, SheenColorTextureSlot, SheenRoughnessTextureSlot,
+  DiffuseTextureSlot, SpecularGlossinessTextureSlot">MaterialTextureSlot</a></li>
 <li><a class="reference" href="#Mesh" title="Mesh = ref object
   name*: string
   primitives*: seq[Primitive]
@@ -194,6 +285,7 @@
   baseMorphWeights*: seq[float32]
   skin*: Skin
   camera*: Camera
+  punctualLight*: PunctualLight
   nodes*: seq[Node]">Node</a></li>
 <li><a class="reference" href="#OrthographicCamera" title="OrthographicCamera = object
   xmag*: float32
@@ -227,6 +319,15 @@
 <li><a class="reference" href="#PrimitiveMode" title="PrimitiveMode = enum
   PointsMode = 0, LinesMode = 1, LineLoopMode = 2, LineStripMode = 3,
   TrianglesMode = 4, TriangleStripMode = 5, TriangleFanMode = 6">PrimitiveMode</a></li>
+<li><a class="reference" href="#PunctualLight" title="PunctualLight = ref object
+  kind*: PunctualLightKind
+  name*: string
+  color*: Color
+  intensity*: float32
+  range*: float32            ## Zero means unlimited; independent of node scale.
+  innerConeAngle*, outerConeAngle*: float32">PunctualLight</a></li>
+<li><a class="reference" href="#PunctualLightKind" title="PunctualLightKind = enum
+  DirectionalLightKind, PointLightKind, SpotLightKind">PunctualLightKind</a></li>
 <li><a class="reference" href="#Scene" title="Scene = ref object
   name*: string
   nodes*: seq[Node]">Scene</a></li>
@@ -257,6 +358,61 @@
     </ul>
   </details>
 </li>
+<li>
+  <details open>
+    <summary><a class="reference reference-toplevel" href="#10" id="60">Consts</a></summary>
+    <ul class="simple simple-toc-section">
+      <li><a class="reference" href="#MaterialTexturePaths" title="MaterialTexturePaths: array[MaterialTextureSlot, string] = [
+    &quot;pbrMetallicRoughness/baseColorTexture&quot;,
+    &quot;pbrMetallicRoughness/metallicRoughnessTexture&quot;, &quot;normalTexture&quot;,
+    &quot;occlusionTexture&quot;, &quot;emissiveTexture&quot;,
+    &quot;extensions/KHR_materials_transmission/transmissionTexture&quot;,
+    &quot;extensions/KHR_materials_volume/thicknessTexture&quot;,
+    &quot;extensions/KHR_materials_diffuse_transmission/diffuseTransmissionTexture&quot;, &quot;extensions/KHR_materials_diffuse_transmission/diffuseTransmissionColorTexture&quot;,
+    &quot;extensions/KHR_materials_anisotropy/anisotropyTexture&quot;,
+    &quot;extensions/KHR_materials_clearcoat/clearcoatTexture&quot;,
+    &quot;extensions/KHR_materials_clearcoat/clearcoatRoughnessTexture&quot;,
+    &quot;extensions/KHR_materials_clearcoat/clearcoatNormalTexture&quot;,
+    &quot;extensions/KHR_materials_iridescence/iridescenceTexture&quot;,
+    &quot;extensions/KHR_materials_iridescence/iridescenceThicknessTexture&quot;,
+    &quot;extensions/KHR_materials_specular/specularTexture&quot;,
+    &quot;extensions/KHR_materials_specular/specularColorTexture&quot;,
+    &quot;extensions/KHR_materials_sheen/sheenColorTexture&quot;,
+    &quot;extensions/KHR_materials_sheen/sheenRoughnessTexture&quot;,
+    &quot;extensions/KHR_materials_pbrSpecularGlossiness/diffuseTexture&quot;,
+    &quot;extensions/KHR_materials_pbrSpecularGlossiness/specularGlossinessTexture&quot;]">MaterialTexturePaths</a></li>
+
+    </ul>
+  </details>
+</li>
+<li>
+  <details open>
+    <summary><a class="reference reference-toplevel" href="#12" id="62">Procs</a></summary>
+    <ul class="simple simple-toc-section">
+      <ul class="simple nested-toc-section">directionalLight
+  <li><a class="reference" href="#directionalLight%2CNode" title="directionalLight(node: Node): DirectionalLight">directionalLight(node: Node): DirectionalLight</a></li>
+
+</ul>
+<ul class="simple nested-toc-section">directionalLight=
+  <li><a class="reference" href="#directionalLight%3D%2CNode%2CDirectionalLight" title="directionalLight=(node: Node; light: DirectionalLight)">directionalLight=(node: Node; light: DirectionalLight)</a></li>
+
+</ul>
+<ul class="simple nested-toc-section">emissiveRadiance
+  <li><a class="reference" href="#emissiveRadiance%2CMaterial" title="emissiveRadiance(material: Material): Color">emissiveRadiance(material: Material): Color</a></li>
+
+</ul>
+<ul class="simple nested-toc-section">legacyAlphaMode
+  <li><a class="reference" href="#legacyAlphaMode%2CMaterial" title="legacyAlphaMode(material: Material): AlphaMode">legacyAlphaMode(material: Material): AlphaMode</a></li>
+
+</ul>
+<ul class="simple nested-toc-section">textureTransform
+  <li><a class="reference" href="#textureTransform%2CMaterial%2CMaterialTextureSlot" title="textureTransform(material: Material; slot: MaterialTextureSlot): var TextureTransform">textureTransform(material: Material; slot: MaterialTextureSlot): var TextureTransform</a></li>
+
+</ul>
+
+    </ul>
+  </details>
+</li>
 
 </ul>
 
@@ -283,8 +439,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L232" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L232" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L350" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L350" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -302,12 +458,21 @@
 <div id="AnimationChannel">
   <dt><pre><a href="#AnimationChannel"><span class="Identifier">AnimationChannel</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
   <span class="Identifier">target</span><span class="Operator">*</span><span class="Other">:</span> <a href="#Node"><span class="Identifier">Node</span></a>
+  <span class="Identifier">materialTargets</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="#Material"><span class="Identifier">Material</span></a><span class="Other">]</span>
+  <span class="Identifier">baseColorFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Color</span>
+  <span class="Identifier">textureSlot</span><span class="Operator">*</span><span class="Other">:</span> <a href="#MaterialTextureSlot"><span class="Identifier">MaterialTextureSlot</span></a>
+  <span class="Identifier">textureComponent</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>
+  <span class="Identifier">baseTextureTransform</span><span class="Operator">*</span><span class="Other">:</span> <a href="#TextureTransform"><span class="Identifier">TextureTransform</span></a>
+  <span class="Identifier">valuesVec2</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">inTangentsVec2</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">outTangentsVec2</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">Vec2</span><span class="Other">]</span>
   <span class="Identifier">path</span><span class="Operator">*</span><span class="Other">:</span> <a href="#AnimPath"><span class="Identifier">AnimPath</span></a>
   <span class="Identifier">interpolation</span><span class="Operator">*</span><span class="Other">:</span> <a href="#AnimInterpolation"><span class="Identifier">AnimInterpolation</span></a>
   <span class="Identifier">times</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">float32</span><span class="Other">]</span>
   <span class="Identifier">valuesVec3</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">Vec3</span><span class="Other">]</span>
   <span class="Identifier">inTangentsVec3</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">Vec3</span><span class="Other">]</span>
   <span class="Identifier">outTangentsVec3</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">Vec3</span><span class="Other">]</span>
+  <span class="Identifier">valuesVec4</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">Vec4</span><span class="Other">]</span>
+  <span class="Identifier">inTangentsVec4</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">Vec4</span><span class="Other">]</span>
+  <span class="Identifier">outTangentsVec4</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">Vec4</span><span class="Other">]</span>
   <span class="Identifier">valuesQuat</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">Quat</span><span class="Other">]</span>
   <span class="Identifier">inTangentsQuat</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">Quat</span><span class="Other">]</span>
   <span class="Identifier">outTangentsQuat</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">Quat</span><span class="Other">]</span>
@@ -320,8 +485,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L158" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L158" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L197" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L197" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -333,8 +498,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L176" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L176" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L224" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L224" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -344,19 +509,20 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L155" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L155" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L194" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L194" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
 <div id="AnimPath">
   <dt><pre><a href="#AnimPath"><span class="Identifier">AnimPath</span></a> <span class="Other">=</span> <span class="Keyword">enum</span>
-  <span class="Identifier">AnimTranslation</span><span class="Other">,</span> <span class="Identifier">AnimRotation</span><span class="Other">,</span> <span class="Identifier">AnimScale</span><span class="Other">,</span> <span class="Identifier">AnimVisibility</span><span class="Other">,</span> <span class="Identifier">AnimWeights</span></pre></dt>
+  <span class="Identifier">AnimTranslation</span><span class="Other">,</span> <span class="Identifier">AnimRotation</span><span class="Other">,</span> <span class="Identifier">AnimScale</span><span class="Other">,</span> <span class="Identifier">AnimVisibility</span><span class="Other">,</span> <span class="Identifier">AnimWeights</span><span class="Other">,</span>
+  <span class="Identifier">AnimBaseColorFactor</span><span class="Other">,</span> <span class="Identifier">AnimTextureOffset</span><span class="Other">,</span> <span class="Identifier">AnimTextureScale</span><span class="Other">,</span> <span class="Identifier">AnimTextureRotation</span></pre></dt>
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L152" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L152" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L190" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L190" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -367,8 +533,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L240" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L240" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L358" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L358" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -380,8 +546,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L235" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L235" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L353" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L353" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -429,8 +595,18 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L255" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L255" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L373" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L373" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="DirectionalLight">
+  <dt><pre><a href="#DirectionalLight"><span class="Identifier">DirectionalLight</span></a> <span class="Other">=</span> <a href="#PunctualLight"><span class="Identifier">PunctualLight</span></a></pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L155" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L155" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -458,8 +634,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L244" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L244" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L362" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L362" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -512,18 +688,107 @@
   <span class="Identifier">emissiveTransform</span><span class="Operator">*</span><span class="Other">:</span> <a href="#TextureTransform"><span class="Identifier">TextureTransform</span></a>
   <span class="Identifier">emissiveSampler</span><span class="Operator">*</span><span class="Other">:</span> <a href="#TextureSampler"><span class="Identifier">TextureSampler</span></a>
   <span class="Identifier">emissiveFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Color</span>
+  <span class="Identifier">hasEmissiveStrength</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">emissiveStrength</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
   <span class="Identifier">emissivePlaceholder</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
   <span class="Identifier">alphaMode</span><span class="Operator">*</span><span class="Other">:</span> <a href="#AlphaMode"><span class="Identifier">AlphaMode</span></a>
+  <span class="Identifier">unlit</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
   <span class="Identifier">alphaCutoff</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
   <span class="Identifier">doubleSided</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
   <span class="Identifier">transmissionFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">hasDiffuseTransmission</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">diffuseTransmissionFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">diffuseTransmissionColorFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec3</span>
+  <span class="Identifier">diffuseTransmission</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">diffuseTransmissionColor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Image</span>
+  <span class="Identifier">diffuseTransmissionKtx2</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">diffuseTransmissionName</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
+  <span class="Identifier">diffuseTransmissionColorKtx2</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">diffuseTransmissionColorName</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
+  <span class="Identifier">diffuseTransmissionTransform</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">diffuseTransmissionColorTransform</span><span class="Operator">*</span><span class="Other">:</span> <a href="#TextureTransform"><span class="Identifier">TextureTransform</span></a>
+  <span class="Identifier">diffuseTransmissionSampler</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">diffuseTransmissionColorSampler</span><span class="Operator">*</span><span class="Other">:</span> <a href="#TextureSampler"><span class="Identifier">TextureSampler</span></a>
+  <span class="Identifier">hasTransmission</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">transmission</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Image</span>
+  <span class="Identifier">transmissionKtx2</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">transmissionName</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
+  <span class="Identifier">transmissionTransform</span><span class="Operator">*</span><span class="Other">:</span> <a href="#TextureTransform"><span class="Identifier">TextureTransform</span></a>
+  <span class="Identifier">transmissionSampler</span><span class="Operator">*</span><span class="Other">:</span> <a href="#TextureSampler"><span class="Identifier">TextureSampler</span></a>
+  <span class="Identifier">hasVolume</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">thicknessFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">thickness</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Image</span>
+  <span class="Identifier">thicknessKtx2</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">thicknessName</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
+  <span class="Identifier">thicknessTransform</span><span class="Operator">*</span><span class="Other">:</span> <a href="#TextureTransform"><span class="Identifier">TextureTransform</span></a>
+  <span class="Identifier">thicknessSampler</span><span class="Operator">*</span><span class="Other">:</span> <a href="#TextureSampler"><span class="Identifier">TextureSampler</span></a>
+  <span class="Identifier">attenuationColor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec3</span>
+  <span class="Identifier">attenuationDistance</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span> <span class="Comment">## Zero means infinite (no absorption).</span>
+  <span class="Identifier">hasIor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">ior</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>              <span class="Comment">## Default 1.5. Explicit zero with hasIor means infinite IOR.</span>
+  <span class="Identifier">hasSpecularGlossiness</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">diffuseFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Color</span>
+  <span class="Identifier">specularGlossinessFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec3</span>
+  <span class="Identifier">glossinessFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">diffuse</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">specularGlossiness</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Image</span>
+  <span class="Identifier">diffuseKtx2</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">diffuseName</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">specularGlossinessKtx2</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">specularGlossinessName</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
+  <span class="Identifier">diffuseTransform</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">specularGlossinessTransform</span><span class="Operator">*</span><span class="Other">:</span> <a href="#TextureTransform"><span class="Identifier">TextureTransform</span></a>
+  <span class="Identifier">diffuseSampler</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">specularGlossinessSampler</span><span class="Operator">*</span><span class="Other">:</span> <a href="#TextureSampler"><span class="Identifier">TextureSampler</span></a>
+  <span class="Identifier">hasSpecular</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">specularFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">specularColorFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec3</span>
+  <span class="Identifier">specular</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">specularColor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Image</span>
+  <span class="Identifier">specularKtx2</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">specularName</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">specularColorKtx2</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">specularColorName</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
+  <span class="Identifier">specularTransform</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">specularColorTransform</span><span class="Operator">*</span><span class="Other">:</span> <a href="#TextureTransform"><span class="Identifier">TextureTransform</span></a>
+  <span class="Identifier">specularSampler</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">specularColorSampler</span><span class="Operator">*</span><span class="Other">:</span> <a href="#TextureSampler"><span class="Identifier">TextureSampler</span></a>
+  <span class="Identifier">hasSheen</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">sheenColor</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">sheenRoughness</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Image</span>
+  <span class="Identifier">sheenColorKtx2</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">sheenColorName</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">sheenRoughnessKtx2</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">sheenRoughnessName</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
+  <span class="Identifier">sheenColorTransform</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">sheenRoughnessTransform</span><span class="Operator">*</span><span class="Other">:</span> <a href="#TextureTransform"><span class="Identifier">TextureTransform</span></a>
+  <span class="Identifier">sheenColorSampler</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">sheenRoughnessSampler</span><span class="Operator">*</span><span class="Other">:</span> <a href="#TextureSampler"><span class="Identifier">TextureSampler</span></a>
+  <span class="Identifier">sheenColorFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Vec3</span>
+  <span class="Identifier">sheenRoughnessFactor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">hasAnisotropy</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">anisotropyStrength</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">anisotropyRotation</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">anisotropy</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Image</span>
+  <span class="Identifier">anisotropyKtx2</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">anisotropyName</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
+  <span class="Identifier">anisotropyTransform</span><span class="Operator">*</span><span class="Other">:</span> <a href="#TextureTransform"><span class="Identifier">TextureTransform</span></a>
+  <span class="Identifier">anisotropySampler</span><span class="Operator">*</span><span class="Other">:</span> <a href="#TextureSampler"><span class="Identifier">TextureSampler</span></a>
+  <span class="Identifier">hasIridescence</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">iridescenceFactor</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">iridescenceIor</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">iridescenceThicknessMinimum</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">iridescenceThicknessMaximum</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">iridescence</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">iridescenceThickness</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Image</span>
+  <span class="Identifier">iridescenceKtx2</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">iridescenceName</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">iridescenceThicknessKtx2</span><span class="Operator">*</span><span class="Other">,</span>
+  <span class="Identifier">iridescenceThicknessName</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
+  <span class="Identifier">iridescenceTransform</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">iridescenceThicknessTransform</span><span class="Operator">*</span><span class="Other">:</span> <a href="#TextureTransform"><span class="Identifier">TextureTransform</span></a>
+  <span class="Identifier">iridescenceSampler</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">iridescenceThicknessSampler</span><span class="Operator">*</span><span class="Other">:</span> <a href="#TextureSampler"><span class="Identifier">TextureSampler</span></a>
+  <span class="Identifier">hasClearcoat</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">clearcoatFactor</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">clearcoatRoughnessFactor</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">clearcoatNormalScale</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">clearcoat</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">clearcoatRoughness</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">clearcoatNormal</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Image</span>
+  <span class="Identifier">clearcoatKtx2</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">clearcoatName</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">clearcoatRoughnessKtx2</span><span class="Operator">*</span><span class="Other">,</span>
+  <span class="Identifier">clearcoatRoughnessName</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
+  <span class="Identifier">clearcoatNormalKtx2</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">clearcoatNormalName</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
+  <span class="Identifier">clearcoatTransform</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">clearcoatRoughnessTransform</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">clearcoatNormalTransform</span><span class="Operator">*</span><span class="Other">:</span> <a href="#TextureTransform"><span class="Identifier">TextureTransform</span></a>
+  <span class="Identifier">clearcoatSampler</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">clearcoatRoughnessSampler</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">clearcoatNormalSampler</span><span class="Operator">*</span><span class="Other">:</span> <a href="#TextureSampler"><span class="Identifier">TextureSampler</span></a>
   <span class="Identifier">materialVersion</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint64</span>
   <span class="Identifier">data</span><span class="Operator">*</span><span class="Other">:</span> <a href="backends/opengl/common.html#MaterialData"><span class="Identifier">MaterialData</span></a></pre></dt>
   <dd>
     
-    Texture slots the source file left empty are filled with a 1x1 constant image so renderers always have something to sample. Those fills are marked with the matching <tt class="docutils literal"><span class="pre"><span class="Operator">*</span><span class="Identifier">Placeholder</span></span></tt> flag, since a 1x1 image is otherwise indistinguishable from a real one that small.
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L181" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L181" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    Texture Image buffers store straight RGBA, including RGB at zero alpha. Load them with loadStraightAlphaImage; Pixie drawing images premultiply. Texture slots the source file left empty are filled with a 1x1 constant image so renderers always have something to sample. Those fills are marked with the matching <tt class="docutils literal"><span class="pre"><span class="Operator">*</span><span class="Identifier">Placeholder</span></span></tt> flag, since a 1x1 image is otherwise indistinguishable from a real one that small.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L229" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L229" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="MaterialTextureSlot">
+  <dt><pre><a href="#MaterialTextureSlot"><span class="Identifier">MaterialTextureSlot</span></a> <span class="Other">=</span> <span class="Keyword">enum</span>
+  <span class="Identifier">BaseColorTextureSlot</span><span class="Other">,</span> <span class="Identifier">MetallicRoughnessTextureSlot</span><span class="Other">,</span> <span class="Identifier">NormalTextureSlot</span><span class="Other">,</span>
+  <span class="Identifier">OcclusionTextureSlot</span><span class="Other">,</span> <span class="Identifier">EmissiveTextureSlot</span><span class="Other">,</span> <span class="Identifier">TransmissionTextureSlot</span><span class="Other">,</span>
+  <span class="Identifier">ThicknessTextureSlot</span><span class="Other">,</span> <span class="Identifier">DiffuseTransmissionTextureSlot</span><span class="Other">,</span>
+  <span class="Identifier">DiffuseTransmissionColorTextureSlot</span><span class="Other">,</span> <span class="Identifier">AnisotropyTextureSlot</span><span class="Other">,</span>
+  <span class="Identifier">ClearcoatTextureSlot</span><span class="Other">,</span> <span class="Identifier">ClearcoatRoughnessTextureSlot</span><span class="Other">,</span>
+  <span class="Identifier">ClearcoatNormalTextureSlot</span><span class="Other">,</span> <span class="Identifier">IridescenceTextureSlot</span><span class="Other">,</span>
+  <span class="Identifier">IridescenceThicknessTextureSlot</span><span class="Other">,</span> <span class="Identifier">SpecularTextureSlot</span><span class="Other">,</span>
+  <span class="Identifier">SpecularColorTextureSlot</span><span class="Other">,</span> <span class="Identifier">SheenColorTextureSlot</span><span class="Other">,</span> <span class="Identifier">SheenRoughnessTextureSlot</span><span class="Other">,</span>
+  <span class="Identifier">DiffuseTextureSlot</span><span class="Other">,</span> <span class="Identifier">SpecularGlossinessTextureSlot</span></pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L167" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L167" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -573,6 +838,7 @@
   <span class="Identifier">baseMorphWeights</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">float32</span><span class="Other">]</span>
   <span class="Identifier">skin</span><span class="Operator">*</span><span class="Other">:</span> <a href="#Skin"><span class="Identifier">Skin</span></a>
   <span class="Identifier">camera</span><span class="Operator">*</span><span class="Other">:</span> <a href="#Camera"><span class="Identifier">Camera</span></a>
+  <span class="Identifier">punctualLight</span><span class="Operator">*</span><span class="Other">:</span> <a href="#PunctualLight"><span class="Identifier">PunctualLight</span></a>
   <span class="Identifier">nodes</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="#Node"><span class="Identifier">Node</span></a><span class="Other">]</span></pre></dt>
   <dd>
     
@@ -650,6 +916,33 @@
 
   </dd>
 </div>
+<div id="PunctualLight">
+  <dt><pre><a href="#PunctualLight"><span class="Identifier">PunctualLight</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
+  <span class="Identifier">kind</span><span class="Operator">*</span><span class="Other">:</span> <a href="#PunctualLightKind"><span class="Identifier">PunctualLightKind</span></a>
+  <span class="Identifier">name</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
+  <span class="Identifier">color</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Color</span>
+  <span class="Identifier">intensity</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>
+  <span class="Identifier">range</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span>            <span class="Comment">## Zero means unlimited; independent of node scale.</span>
+  <span class="Identifier">innerConeAngle</span><span class="Operator">*</span><span class="Other">,</span> <span class="Identifier">outerConeAngle</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">float32</span></pre></dt>
+  <dd>
+    
+    KHR_lights_punctual; directional and spot lights emit along local -Z.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L146" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L146" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="PunctualLightKind">
+  <dt><pre><a href="#PunctualLightKind"><span class="Identifier">PunctualLightKind</span></a> <span class="Other">=</span> <span class="Keyword">enum</span>
+  <span class="Identifier">DirectionalLightKind</span><span class="Other">,</span> <span class="Identifier">PointLightKind</span><span class="Other">,</span> <span class="Identifier">SpotLightKind</span></pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L143" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L143" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
 <div id="Scene">
   <dt><pre><a href="#Scene"><span class="Identifier">Scene</span></a> <span class="Other">=</span> <span class="Keyword">ref</span> <span class="Keyword">object</span>
   <span class="Identifier">name</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
@@ -657,8 +950,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L142" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L142" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L157" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L157" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -671,8 +964,8 @@
   <dd>
     
     
-    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L146" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L146" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L161" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L161" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -742,6 +1035,116 @@
 
   </dl>
 </div>
+<div class="section" id="10">
+  <h1><a class="toc-backref" href="#10">Consts</a></h1>
+  <dl class="item">
+    <div id="MaterialTexturePaths">
+  <dt><pre><a href="#MaterialTexturePaths"><span class="Identifier">MaterialTexturePaths</span></a><span class="Other">:</span> <span class="Identifier">array</span><span class="Other">[</span><span class="Identifier">MaterialTextureSlot</span><span class="Other">,</span> <span class="Identifier">string</span><span class="Other">]</span> <span class="Other">=</span> <span class="Other">[</span>
+    <span class="StringLit">&quot;pbrMetallicRoughness/baseColorTexture&quot;</span><span class="Other">,</span>
+    <span class="StringLit">&quot;pbrMetallicRoughness/metallicRoughnessTexture&quot;</span><span class="Other">,</span> <span class="StringLit">&quot;normalTexture&quot;</span><span class="Other">,</span>
+    <span class="StringLit">&quot;occlusionTexture&quot;</span><span class="Other">,</span> <span class="StringLit">&quot;emissiveTexture&quot;</span><span class="Other">,</span>
+    <span class="StringLit">&quot;extensions/KHR_materials_transmission/transmissionTexture&quot;</span><span class="Other">,</span>
+    <span class="StringLit">&quot;extensions/KHR_materials_volume/thicknessTexture&quot;</span><span class="Other">,</span>
+    <span class="StringLit">&quot;extensions/KHR_materials_diffuse_transmission/diffuseTransmissionTexture&quot;</span><span class="Other">,</span> <span class="StringLit">&quot;extensions/KHR_materials_diffuse_transmission/diffuseTransmissionColorTexture&quot;</span><span class="Other">,</span>
+    <span class="StringLit">&quot;extensions/KHR_materials_anisotropy/anisotropyTexture&quot;</span><span class="Other">,</span>
+    <span class="StringLit">&quot;extensions/KHR_materials_clearcoat/clearcoatTexture&quot;</span><span class="Other">,</span>
+    <span class="StringLit">&quot;extensions/KHR_materials_clearcoat/clearcoatRoughnessTexture&quot;</span><span class="Other">,</span>
+    <span class="StringLit">&quot;extensions/KHR_materials_clearcoat/clearcoatNormalTexture&quot;</span><span class="Other">,</span>
+    <span class="StringLit">&quot;extensions/KHR_materials_iridescence/iridescenceTexture&quot;</span><span class="Other">,</span>
+    <span class="StringLit">&quot;extensions/KHR_materials_iridescence/iridescenceThicknessTexture&quot;</span><span class="Other">,</span>
+    <span class="StringLit">&quot;extensions/KHR_materials_specular/specularTexture&quot;</span><span class="Other">,</span>
+    <span class="StringLit">&quot;extensions/KHR_materials_specular/specularColorTexture&quot;</span><span class="Other">,</span>
+    <span class="StringLit">&quot;extensions/KHR_materials_sheen/sheenColorTexture&quot;</span><span class="Other">,</span>
+    <span class="StringLit">&quot;extensions/KHR_materials_sheen/sheenRoughnessTexture&quot;</span><span class="Other">,</span>
+    <span class="StringLit">&quot;extensions/KHR_materials_pbrSpecularGlossiness/diffuseTexture&quot;</span><span class="Other">,</span>
+    <span class="StringLit">&quot;extensions/KHR_materials_pbrSpecularGlossiness/specularGlossinessTexture&quot;</span><span class="Other">]</span></pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L381" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L381" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+  </dl>
+</div>
+<div class="section" id="12">
+  <h1><a class="toc-backref" href="#12">Procs</a></h1>
+  <dl class="item">
+    <div id="directionalLight-procs-all">
+  <div id="directionalLight,Node">
+  <dt><pre><span class="Keyword">proc</span> <a href="#directionalLight%2CNode"><span class="Identifier">directionalLight</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="#Node"><span class="Identifier">Node</span></a><span class="Other">)</span><span class="Other">:</span> <a href="#DirectionalLight"><span class="Identifier">DirectionalLight</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Compatibility with the original directional-only API.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L437" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L437" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="directionalLight=-procs-all">
+  <div id="directionalLight=,Node,DirectionalLight">
+  <dt><pre><span class="Keyword">proc</span> <a href="#directionalLight%3D%2CNode%2CDirectionalLight"><span class="Identifier">directionalLight=</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="#Node"><span class="Identifier">Node</span></a><span class="Other">;</span> <span class="Identifier">light</span><span class="Other">:</span> <a href="#DirectionalLight"><span class="Identifier">DirectionalLight</span></a><span class="Other">)</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L443" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L443" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="emissiveRadiance-procs-all">
+  <div id="emissiveRadiance,Material">
+  <dt><pre><span class="Keyword">proc</span> <a href="#emissiveRadiance%2CMaterial"><span class="Identifier">emissiveRadiance</span></a><span class="Other">(</span><span class="Identifier">material</span><span class="Other">:</span> <a href="#Material"><span class="Identifier">Material</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Color</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Preserve the core default for older code constructing Material directly.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L430" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L430" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="legacyAlphaMode-procs-all">
+  <div id="legacyAlphaMode,Material">
+  <dt><pre><span class="Keyword">proc</span> <a href="#legacyAlphaMode%2CMaterial"><span class="Identifier">legacyAlphaMode</span></a><span class="Other">(</span><span class="Identifier">material</span><span class="Other">:</span> <a href="#Material"><span class="Identifier">Material</span></a><span class="Other">)</span><span class="Other">:</span> <a href="#AlphaMode"><span class="Identifier">AlphaMode</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Keep the older renderers' transmission approximation at draw time, without changing the material's authored coverage or its exported value.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L446" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L446" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="textureTransform-procs-all">
+  <div id="textureTransform,Material,MaterialTextureSlot">
+  <dt><pre><span class="Keyword">proc</span> <a href="#textureTransform%2CMaterial%2CMaterialTextureSlot"><span class="Identifier">textureTransform</span></a><span class="Other">(</span><span class="Identifier">material</span><span class="Other">:</span> <a href="#Material"><span class="Identifier">Material</span></a><span class="Other">;</span> <span class="Identifier">slot</span><span class="Other">:</span> <a href="#MaterialTextureSlot"><span class="Identifier">MaterialTextureSlot</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Keyword">var</span> <a href="#TextureTransform"><span class="Identifier">TextureTransform</span></a> {.
+    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Select a texture transform without copying the material.
+    <a href="https://github.com/treeform/gltf/tree/master/src/gltf/common.nim#L405" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/treeform/gltf/edit/devel/src/gltf/common.nim#L405" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+
+  </dl>
+</div>
 
   </div>
 </div>
@@ -749,7 +1152,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-09-11 23:38:30 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-09-18 02:45:26 UTC</small>
       </div>
     </div>
   </div>
