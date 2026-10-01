@@ -155,6 +155,11 @@ type
     lightSpace: Mat4
     shadowTex: GLuint
 
+  UniformShadow = object
+    ## Raw bits of the last value uploaded to one uniform location.
+    valid: bool
+    bits: array[4, uint32]
+
   PbrPassValues = object
     ## Shadow copy of PBR uniform values already uploaded to pbrShader.
     ## Uniform values are per-program GL state, so this cache stays valid
@@ -265,8 +270,15 @@ type
     passDepth: int
     lastMaterial: Material
     lastMaterialVersion: uint64
+    uniformShadow: seq[UniformShadow]
+      ## Material uniform values already uploaded to pbrShader, by location.
+    lastJointMatrices: seq[Mat4]
+      ## The skin palette pbrShader holds, so parts of one rig upload it once.
 
-const TextureUnknown = high(GLuint)
+const
+  TextureUnknown = high(GLuint)
+  MaxShadowedUniforms = 4096
+    ## Locations past this upload every time instead of growing the shadow.
 
 var textureBindEpoch: uint64 = 1
   ## Bumped whenever GL texture ids are deleted anywhere, so per-unit bind
@@ -295,6 +307,8 @@ proc invalidateUniformCache*(ctx: PbrContext) =
     return
   ctx.passValues.valid = false
   ctx.lastMaterial = nil
+  ctx.uniformShadow.setLen(0)
+  ctx.lastJointMatrices.setLen(0)
 
 proc uniformLocation(shader: GLuint, name: cstring): GLint =
   ## Returns one shader uniform location.
@@ -477,6 +491,8 @@ proc setupPbr(ctx: PbrContext) =
   glUniform1i(ctx.pbrUniforms.environmentMap, 5)
   glUniform1i(ctx.pbrUniforms.shadowMap, 6)
   ctx.passValues = PbrPassValues()
+  ctx.uniformShadow.setLen(0)
+  ctx.lastJointMatrices.setLen(0)
   ctx.invalidateGlState()
   ctx.skyboxShader = compileShaderFiles(
     SkyboxVertexShader,
@@ -869,6 +885,8 @@ proc attachIblEnvironment*(ctx: PbrContext, environment: IblEnvironment,
   ctx.ownsEnvironmentMap = false
   ctx.environmentMapStrength = environment.intensityScale
   ctx.passValues = PbrPassValues()
+  ctx.uniformShadow.setLen(0)
+  ctx.lastJointMatrices.setLen(0)
   inc textureBindEpoch
   ctx.invalidateGlState()
 
@@ -1485,23 +1503,65 @@ proc clearFromGpu*(node: Node) =
   for child in node.nodes:
     child.clearFromGpu()
 
+proc uniformChanged(
+  ctx: PbrContext,
+  location: GLint,
+  bits: array[4, uint32]
+): bool =
+  ## Records one pbrShader uniform value. Returns true when it must upload.
+  if location < 0:
+    return false
+  if location >= MaxShadowedUniforms:
+    return true
+  if location >= ctx.uniformShadow.len:
+    ctx.uniformShadow.setLen(location + 1)
+  let slot = ctx.uniformShadow[location].addr
+  if slot.valid and slot.bits == bits:
+    return false
+  slot.valid = true
+  slot.bits = bits
+  true
+
+proc setUniform1i(ctx: PbrContext, location: GLint, x: GLint) =
+  if ctx.uniformChanged(location, [cast[uint32](x), 0, 0, 0]):
+    glUniform1i(location, x)
+
+proc setUniform1f(ctx: PbrContext, location: GLint, x: float32) =
+  if ctx.uniformChanged(location, [cast[uint32](x), 0, 0, 0]):
+    glUniform1f(location, x)
+
+proc setUniform2f(ctx: PbrContext, location: GLint, x, y: float32) =
+  if ctx.uniformChanged(location, [cast[uint32](x), cast[uint32](y), 0, 0]):
+    glUniform2f(location, x, y)
+
+proc setUniform3f(ctx: PbrContext, location: GLint, x, y, z: float32) =
+  if ctx.uniformChanged(location,
+      [cast[uint32](x), cast[uint32](y), cast[uint32](z), 0]):
+    glUniform3f(location, x, y, z)
+
+proc setUniform4f(ctx: PbrContext, location: GLint, x, y, z, w: float32) =
+  if ctx.uniformChanged(location,
+      [cast[uint32](x), cast[uint32](y), cast[uint32](z), cast[uint32](w)]):
+    glUniform4f(location, x, y, z, w)
+
 proc setTextureTransformUniform(
+  ctx: PbrContext,
   uniforms: TextureTransformUniforms,
   transform: TextureTransform
 ) =
   ## Sets UV transform uniforms for a texture input.
-  glUniform1i(uniforms.texCoord, transform.texCoord.GLint)
-  glUniform2f(
+  ctx.setUniform1i(uniforms.texCoord, transform.texCoord.GLint)
+  ctx.setUniform2f(
     uniforms.offset,
     transform.offset.x,
     transform.offset.y
   )
-  glUniform2f(
+  ctx.setUniform2f(
     uniforms.scale,
     transform.scale.x,
     transform.scale.y
   )
-  glUniform1f(uniforms.rotation, transform.rotation)
+  ctx.setUniform1f(uniforms.rotation, transform.rotation)
 
 template syncPassValue(ctx: PbrContext, field, value, uploadStmt: untyped) =
   ## Uploads one shadowed pbrShader uniform only when its value changed.
@@ -1734,101 +1794,101 @@ proc applyMaterial(
       ctx.lastMaterialVersion == material.materialVersion:
     return
 
-  glUniform1i(u.unlitMaterial, material.unlit.ord.GLint)
-  glUniform1i(u.opaqueMaterial, (alphaMode == OpaqueAlphaMode).ord.GLint)
-  glUniform4f(
+  ctx.setUniform1i(u.unlitMaterial, material.unlit.ord.GLint)
+  ctx.setUniform1i(u.opaqueMaterial, (alphaMode == OpaqueAlphaMode).ord.GLint)
+  ctx.setUniform4f(
     u.baseColorFactor,
     material.baseColorFactor.r,
     material.baseColorFactor.g,
     material.baseColorFactor.b,
     material.baseColorFactor.a
   )
-  setTextureTransformUniform(u.baseColorTransform, material.baseColorTransform)
-  glUniform1f(u.metallicFactor, material.metallicFactor)
-  glUniform1f(u.roughnessFactor, material.roughnessFactor)
-  glUniform1f(u.transmissionFactor, material.transmissionFactor)
-  glUniform1f(u.diffuseTransmissionFactor, material.diffuseTransmissionFactor)
-  glUniform3f(u.diffuseTransmissionColorFactor, material.diffuseTransmissionColorFactor.x,
+  ctx.setTextureTransformUniform(u.baseColorTransform, material.baseColorTransform)
+  ctx.setUniform1f(u.metallicFactor, material.metallicFactor)
+  ctx.setUniform1f(u.roughnessFactor, material.roughnessFactor)
+  ctx.setUniform1f(u.transmissionFactor, material.transmissionFactor)
+  ctx.setUniform1f(u.diffuseTransmissionFactor, material.diffuseTransmissionFactor)
+  ctx.setUniform3f(u.diffuseTransmissionColorFactor, material.diffuseTransmissionColorFactor.x,
     material.diffuseTransmissionColorFactor.y, material.diffuseTransmissionColorFactor.z)
-  glUniform1i(u.hasDiffuseTransmissionTexture, (materialData.diffuseTransmissionId != 0).GLint)
-  glUniform1i(u.hasDiffuseTransmissionColorTexture, (materialData.diffuseTransmissionColorId != 0).GLint)
-  setTextureTransformUniform(u.diffuseTransmissionTransform, material.diffuseTransmissionTransform)
-  setTextureTransformUniform(u.diffuseTransmissionColorTransform, material.diffuseTransmissionColorTransform)
+  ctx.setUniform1i(u.hasDiffuseTransmissionTexture, (materialData.diffuseTransmissionId != 0).GLint)
+  ctx.setUniform1i(u.hasDiffuseTransmissionColorTexture, (materialData.diffuseTransmissionColorId != 0).GLint)
+  ctx.setTextureTransformUniform(u.diffuseTransmissionTransform, material.diffuseTransmissionTransform)
+  ctx.setTextureTransformUniform(u.diffuseTransmissionColorTransform, material.diffuseTransmissionColorTransform)
   # The spec's explicit IOR=0 compatibility mode represents positive infinity.
   # At 1e8 the float32 Fresnel ratio rounds to exactly one without infinities.
-  glUniform1f(u.materialIor, if material.hasIor and material.ior == 0: 1e8'f
+  ctx.setUniform1f(u.materialIor, if material.hasIor and material.ior == 0: 1e8'f
     elif material.ior > 0: material.ior else: 1.5'f)
-  glUniform1f(u.thicknessFactor, material.thicknessFactor)
-  glUniform1f(u.attenuationDistance, material.attenuationDistance)
-  glUniform3f(u.attenuationColor, material.attenuationColor.x,
+  ctx.setUniform1f(u.thicknessFactor, material.thicknessFactor)
+  ctx.setUniform1f(u.attenuationDistance, material.attenuationDistance)
+  ctx.setUniform3f(u.attenuationColor, material.attenuationColor.x,
     material.attenuationColor.y, material.attenuationColor.z)
-  glUniform1i(u.hasTransmissionTexture, (materialData.transmissionId != 0).GLint)
-  glUniform1i(u.hasThicknessTexture, (materialData.thicknessId != 0).GLint)
-  setTextureTransformUniform(u.transmissionTransform, material.transmissionTransform)
-  setTextureTransformUniform(u.thicknessTransform, material.thicknessTransform)
-  glUniform1i(u.hasSpecularTexture, (materialData.specularId != 0).GLint)
-  glUniform1i(u.hasSpecularColorTexture, (materialData.specularColorId != 0).GLint)
-  setTextureTransformUniform(u.specularTransform, material.specularTransform)
-  setTextureTransformUniform(u.specularColorTransform, material.specularColorTransform)
-  glUniform1i(u.specularGlossinessMaterial, material.hasSpecularGlossiness.GLint)
-  glUniform4f(u.diffuseFactor, material.diffuseFactor.r, material.diffuseFactor.g,
+  ctx.setUniform1i(u.hasTransmissionTexture, (materialData.transmissionId != 0).GLint)
+  ctx.setUniform1i(u.hasThicknessTexture, (materialData.thicknessId != 0).GLint)
+  ctx.setTextureTransformUniform(u.transmissionTransform, material.transmissionTransform)
+  ctx.setTextureTransformUniform(u.thicknessTransform, material.thicknessTransform)
+  ctx.setUniform1i(u.hasSpecularTexture, (materialData.specularId != 0).GLint)
+  ctx.setUniform1i(u.hasSpecularColorTexture, (materialData.specularColorId != 0).GLint)
+  ctx.setTextureTransformUniform(u.specularTransform, material.specularTransform)
+  ctx.setTextureTransformUniform(u.specularColorTransform, material.specularColorTransform)
+  ctx.setUniform1i(u.specularGlossinessMaterial, material.hasSpecularGlossiness.GLint)
+  ctx.setUniform4f(u.diffuseFactor, material.diffuseFactor.r, material.diffuseFactor.g,
     material.diffuseFactor.b, material.diffuseFactor.a)
-  glUniform3f(u.specularGlossinessFactor, material.specularGlossinessFactor.x,
+  ctx.setUniform3f(u.specularGlossinessFactor, material.specularGlossinessFactor.x,
     material.specularGlossinessFactor.y, material.specularGlossinessFactor.z)
-  glUniform1f(u.glossinessFactor, material.glossinessFactor)
-  glUniform1i(u.hasDiffuseTexture, (materialData.diffuseId != 0).GLint)
-  glUniform1i(u.hasSpecularGlossinessTexture, (materialData.specularGlossinessId != 0).GLint)
-  setTextureTransformUniform(u.diffuseTransform, material.diffuseTransform)
-  setTextureTransformUniform(u.specularGlossinessTransform, material.specularGlossinessTransform)
+  ctx.setUniform1f(u.glossinessFactor, material.glossinessFactor)
+  ctx.setUniform1i(u.hasDiffuseTexture, (materialData.diffuseId != 0).GLint)
+  ctx.setUniform1i(u.hasSpecularGlossinessTexture, (materialData.specularGlossinessId != 0).GLint)
+  ctx.setTextureTransformUniform(u.diffuseTransform, material.diffuseTransform)
+  ctx.setTextureTransformUniform(u.specularGlossinessTransform, material.specularGlossinessTransform)
   let specularColor = if material.hasSpecular: material.specularColorFactor else: vec3(1)
-  glUniform1f(u.specularFactor, if material.hasSpecular: material.specularFactor else: 1.0'f)
-  glUniform3f(u.specularColorFactor, specularColor.x, specularColor.y, specularColor.z)
-  glUniform1i(u.hasSheenColorTexture, (materialData.sheenColorId != 0).GLint)
-  glUniform1i(u.hasSheenRoughnessTexture, (materialData.sheenRoughnessId != 0).GLint)
-  setTextureTransformUniform(u.sheenColorTransform, material.sheenColorTransform)
-  setTextureTransformUniform(u.sheenRoughnessTransform, material.sheenRoughnessTransform)
-  glUniform1i(u.sheenEnabled, (ctx.iblEnvironment.charlie != 0 and
+  ctx.setUniform1f(u.specularFactor, if material.hasSpecular: material.specularFactor else: 1.0'f)
+  ctx.setUniform3f(u.specularColorFactor, specularColor.x, specularColor.y, specularColor.z)
+  ctx.setUniform1i(u.hasSheenColorTexture, (materialData.sheenColorId != 0).GLint)
+  ctx.setUniform1i(u.hasSheenRoughnessTexture, (materialData.sheenRoughnessId != 0).GLint)
+  ctx.setTextureTransformUniform(u.sheenColorTransform, material.sheenColorTransform)
+  ctx.setTextureTransformUniform(u.sheenRoughnessTransform, material.sheenRoughnessTransform)
+  ctx.setUniform1i(u.sheenEnabled, (ctx.iblEnvironment.charlie != 0 and
     material.sheenColorFactor != vec3(0)).GLint)
-  glUniform3f(u.sheenColorFactor, material.sheenColorFactor.x,
+  ctx.setUniform3f(u.sheenColorFactor, material.sheenColorFactor.x,
     material.sheenColorFactor.y, material.sheenColorFactor.z)
-  glUniform1f(u.sheenRoughnessFactor, material.sheenRoughnessFactor)
-  glUniform1i(u.anisotropyEnabled, (material.hasAnisotropy or material.anisotropyStrength > 0).GLint)
-  glUniform3f(u.anisotropyParameters, cos(material.anisotropyRotation),
+  ctx.setUniform1f(u.sheenRoughnessFactor, material.sheenRoughnessFactor)
+  ctx.setUniform1i(u.anisotropyEnabled, (material.hasAnisotropy or material.anisotropyStrength > 0).GLint)
+  ctx.setUniform3f(u.anisotropyParameters, cos(material.anisotropyRotation),
     sin(material.anisotropyRotation), material.anisotropyStrength)
-  glUniform1i(u.hasAnisotropyTexture, (materialData.anisotropyId != 0).GLint)
-  setTextureTransformUniform(u.anisotropyTransform, material.anisotropyTransform)
-  glUniform1f(u.iridescenceFactor, material.iridescenceFactor)
-  glUniform1f(u.iridescenceIor, material.iridescenceIor)
-  glUniform2f(u.iridescenceThicknessRange, material.iridescenceThicknessMinimum,
+  ctx.setUniform1i(u.hasAnisotropyTexture, (materialData.anisotropyId != 0).GLint)
+  ctx.setTextureTransformUniform(u.anisotropyTransform, material.anisotropyTransform)
+  ctx.setUniform1f(u.iridescenceFactor, material.iridescenceFactor)
+  ctx.setUniform1f(u.iridescenceIor, material.iridescenceIor)
+  ctx.setUniform2f(u.iridescenceThicknessRange, material.iridescenceThicknessMinimum,
     material.iridescenceThicknessMaximum)
-  glUniform1i(u.hasIridescenceTexture, (materialData.iridescenceId != 0).GLint)
-  glUniform1i(u.hasIridescenceThicknessTexture, (materialData.iridescenceThicknessId != 0).GLint)
-  setTextureTransformUniform(u.iridescenceTransform, material.iridescenceTransform)
-  setTextureTransformUniform(u.iridescenceThicknessTransform, material.iridescenceThicknessTransform)
-  glUniform1f(u.clearcoatFactor, material.clearcoatFactor)
-  glUniform1f(u.clearcoatRoughnessFactor, material.clearcoatRoughnessFactor)
-  glUniform1f(u.clearcoatNormalScale, material.clearcoatNormalScale)
-  glUniform1i(u.hasClearcoatTexture, (materialData.clearcoatId != 0).GLint)
-  glUniform1i(u.hasClearcoatRoughnessTexture, (materialData.clearcoatRoughnessId != 0).GLint)
-  glUniform1i(u.hasClearcoatNormalTexture, (materialData.clearcoatNormalId != 0).GLint)
-  setTextureTransformUniform(u.clearcoatTransform, material.clearcoatTransform)
-  setTextureTransformUniform(u.clearcoatRoughnessTransform, material.clearcoatRoughnessTransform)
-  setTextureTransformUniform(u.clearcoatNormalTransform, material.clearcoatNormalTransform)
-  setTextureTransformUniform(
+  ctx.setUniform1i(u.hasIridescenceTexture, (materialData.iridescenceId != 0).GLint)
+  ctx.setUniform1i(u.hasIridescenceThicknessTexture, (materialData.iridescenceThicknessId != 0).GLint)
+  ctx.setTextureTransformUniform(u.iridescenceTransform, material.iridescenceTransform)
+  ctx.setTextureTransformUniform(u.iridescenceThicknessTransform, material.iridescenceThicknessTransform)
+  ctx.setUniform1f(u.clearcoatFactor, material.clearcoatFactor)
+  ctx.setUniform1f(u.clearcoatRoughnessFactor, material.clearcoatRoughnessFactor)
+  ctx.setUniform1f(u.clearcoatNormalScale, material.clearcoatNormalScale)
+  ctx.setUniform1i(u.hasClearcoatTexture, (materialData.clearcoatId != 0).GLint)
+  ctx.setUniform1i(u.hasClearcoatRoughnessTexture, (materialData.clearcoatRoughnessId != 0).GLint)
+  ctx.setUniform1i(u.hasClearcoatNormalTexture, (materialData.clearcoatNormalId != 0).GLint)
+  ctx.setTextureTransformUniform(u.clearcoatTransform, material.clearcoatTransform)
+  ctx.setTextureTransformUniform(u.clearcoatRoughnessTransform, material.clearcoatRoughnessTransform)
+  ctx.setTextureTransformUniform(u.clearcoatNormalTransform, material.clearcoatNormalTransform)
+  ctx.setTextureTransformUniform(
     u.metallicRoughnessTransform,
     material.metallicRoughnessTransform
   )
-  glUniform1f(u.normalScale, material.normalScale)
-  setTextureTransformUniform(u.normalTransform, material.normalTransform)
-  glUniform1f(u.occlusionStrength, material.occlusionStrength)
-  setTextureTransformUniform(u.occlusionTransform, material.occlusionTransform)
-  glUniform3f(
+  ctx.setUniform1f(u.normalScale, material.normalScale)
+  ctx.setTextureTransformUniform(u.normalTransform, material.normalTransform)
+  ctx.setUniform1f(u.occlusionStrength, material.occlusionStrength)
+  ctx.setTextureTransformUniform(u.occlusionTransform, material.occlusionTransform)
+  ctx.setUniform3f(
     u.emissiveFactor,
     material.emissiveRadiance.r,
     material.emissiveRadiance.g,
     material.emissiveRadiance.b
   )
-  setTextureTransformUniform(u.emissiveTransform, material.emissiveTransform)
+  ctx.setTextureTransformUniform(u.emissiveTransform, material.emissiveTransform)
   ctx.lastMaterial = material
   ctx.lastMaterialVersion = material.materialVersion
 
@@ -1920,13 +1980,14 @@ proc renderPbrPrimitive(
   let useSkinning = ctx.jointMatrices.len > 0
   ctx.syncPassValue(useSkinning, useSkinning):
     glUniform1i(pbrUniforms.useSkinning, useSkinning.ord.GLint)
-  if useSkinning:
+  if useSkinning and ctx.jointMatrices != ctx.lastJointMatrices:
     glUniformMatrix4fv(
       pbrUniforms.jointMatrices,
       ctx.jointMatrices.len.GLsizei,
       GL_FALSE,
       cast[ptr float32](ctx.jointMatrices[0].addr)
     )
+    ctx.lastJointMatrices = ctx.jointMatrices
 
   primitive.uploadToGpu()
   let primitiveData = primitive.data
